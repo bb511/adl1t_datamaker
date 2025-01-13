@@ -1,4 +1,4 @@
-# Instructions to make L1T emulator ntuple and convert to h5 dataset
+# Instructions to make L1T emulator ntuple
 
 ## Make L1T ntuple for Campaign Run3Summer22DR (CMSSW_12_4_X)
 
