@@ -1,0 +1,138 @@
+configfile: 'config.yaml'
+ 
+rule convert:
+    ''' Convert given root tuple to h5 format '''
+    input:
+        script = 'convert_to_h5.py',
+        input_file = config['path'] + config['eos_root_samples'] +'L1Ntuple_{id}.root'
+    output:
+        output_file = config['output_h5'] + '/NuGun/L1Ntuple_{id}.h5'
+    params:
+        tree_name = 'l1UpgradeEmuTree/L1UpgradeTree'
+    shell:
+        'python {input.script} --input-file {input.input_file} \
+                               --mc --hw \
+                               --prescale-file L1Menu_Collisions2023_v1_2_0.csv \
+                               --output-file {output} \
+                               --tree-name {params.tree_name}'
+
+
+IDS = list(range(1,201))
+rule convert_all:
+    ''' Convert all root tuples to h5 format '''
+    input:
+        expand(rules.convert.output, id=IDS)
+
+rule merge_h5_tuples:
+    ''' Merge all converted to h5 format tuples into one file '''
+    input:
+        script = 'merge_h5_tuples.py',
+        input_files = expand(rules.convert.output, id=IDS)
+    output:
+        file = config['output_h5'] + '/L1Ntuple_NuGun.h5'
+    shell:
+        'python {input.script} --input-files {input.input_files} \
+                               --output-file {output.file}'
+
+rule preprocess:
+    ''' Concatenate and normalize input dataset '''
+    input:
+        script = 'preprocess.py',
+        file = rules.merge_h5_tuples.output.file
+    output:
+        h5 = config['output_h5'] + '/NuGun_preprocessed.h5'
+    shell:
+        'python {input.script} --input-file {input.file} \
+                               --output-file {output.h5}'
+
+rule convert_bsm:
+    ''' Convert given root tuple to h5 format '''
+    input:
+        script = 'convert_to_h5.py',
+        input_file = lambda wildcards: config['path'] + config[wildcards.bsm_type] + 'L1Ntuple_{id}.root'
+    output:
+        output_file = config['output_h5'] + '/{bsm_type}/L1Ntuple_{id}.h5'
+    params:
+        tree_name = 'l1UpgradeEmuTree/L1UpgradeTree'
+    shell:
+        'python {input.script} --input-file {input.input_file} \
+                               --mc --hw \
+                               --prescale-file L1Menu_Collisions2023_v1_2_0.csv \
+                               --output-file {output} \
+                               --tree-name {params.tree_name}'
+
+IDS_BSM = {
+    'HHHTo6B': list(range(1,104)),
+    'HHHto4B2Tau': list(range(1,110)),
+    'VBFHToTauTau': list(range(1,84)),
+    'ttHto2B': list(range(1,56)),
+    'ttHto2C': list(range(1,54)),
+    'GluGluHToGG_M-125': list(range(1,105)),
+    'GluGluHToGG_M-90': list(range(1,105)),
+    'GluGluHToBB_M-125': list(range(1,109)),
+    'GluGluHToTauTau': list(range(1,85)),
+    'GluGlutoHHto2B2WtoLNu2Q': list(range(1,103)),
+    'SMS-Higgsino': list(range(1,24)),
+    'SUSYGluGluToBBHToBB_NarrowWidth_M-1200': list(range(1,12)),
+    'SUSYGluGluToBBHToBB_NarrowWidth_M-120': list(range(1,116)),
+    'SUSYGluGluToBBHToBB_NarrowWidth_M-350': list(range(1,47)),
+    'SUSYGluGluToBBHToBB_NarrowWidth_M-600': list(range(1,14)),
+    'VBFHToCC': list(range(1,116)),
+    'VBFHToInvisible': list(range(1,71)),
+    'VBFHto2B': list(range(1,106)),
+    'WToTauTo3Mu': list(range(1,23)),
+    'ggXToJpsiJpsiTo2Mu2E_m7': list(range(1,46)),
+    #'ggXToYYTo2Mu2E_m14': list(range(1,42)),
+    'ggXToYYTo2Mu2E_m18': list(range(1,47)),
+    'ggXToYYTo2Mu2E_m26': list(range(1,46)), 
+    #'HTo2LongLivedTo4mu_MH-1000_MFF-450_CTau-10000mm': list(range(1,11)),
+    'HTo2LongLivedTo4mu_MH-125_MFF-12_CTau-900mm': list(range(1,10)),
+    'HTo2LongLivedTo4mu_MH-125_MFF-25_CTau-1500mm': list(range(1,11)),
+    'HTo2LongLivedTo4mu_MH-125_MFF-50_CTau-3000mm': list(range(1,10)),
+    'HTo2LongLivedTo4b_MH-1000_MFF-450_CTau-100000mm': list(range(1,12)),
+    'HTo2LongLivedTo4b_MH-1000_MFF-450_CTau-10000mm': list(range(1,9)),
+    'HTo2LongLivedTo4b_MH-125_MFF-12_CTau-900mm': list(range(1,11)),
+    'HTo2LongLivedTo4b_MH-125_MFF-25_CTau-1500mm': list(range(1,11)),
+    'HTo2LongLivedTo4b_MH-125_MFF-50_CTau-3000mm': list(range(1,11)),
+    'haa4b-ma15-noPU': [i for i in range(1,101) if i!=48],
+
+    }
+
+rule merge_h5_bsm_type:
+    ''' Merge all converted to h5 format tuples into one file '''
+    input:
+        script = 'merge_h5_tuples.py',
+        input_files = lambda wildcards: expand(rules.convert_bsm.output.output_file,
+          id=IDS_BSM[wildcards.bsm_type],
+          bsm_type=wildcards.bsm_type)
+    output:
+        file = config['output_h5']+'/L1Ntuple_{bsm_type}.h5'
+    shell:
+        'python {input.script} --input-files {input.input_files} \
+                               --output-file {output.file}'
+
+rule preprocess_bsm:
+    ''' Concatenate and normalize input dataset '''
+    input:
+        script = 'preprocess.py',
+        file = lambda wildcards: expand(rules.merge_h5_bsm_type.output,
+            bsm_type=wildcards.bsm_type)
+    output:
+        config['output_h5']+'/BSM_preprocessed_{bsm_type}.h5'
+    shell:
+        'python {input.script} --input-file {input.file} \
+                               --output-file {output}'
+
+rule merge_all_bsm_types:
+    ''' Merge all converted to h5 format tuples into one file '''
+    input:
+        script = 'merge_h5_tuples.py',
+        input_files = expand(rules.preprocess_bsm.output,
+            bsm_type=IDS_BSM.keys())
+    output:
+        file = config['output_h5']+'/BSM_preprocessed.h5'
+    shell:
+        'python {input.script} --input-files {input.input_files} \
+                               --output-file {output.file} --bsm'
+
+

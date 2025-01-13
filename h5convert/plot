@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+
+# Plots the data given a folder of h5 files.
+import argparse
+from pathlib import Path
+
+import h5py
+import numpy as np
+
+from root2h5 import Root2h5
+import plots
+
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--folder', type=str, help="Path to the folder with the h5s.")
+args = parser.parse_args()
+
+folder = Path(args.folder)
+reader = Root2h5()
+reader.read_folder(folder)
+
+for obj in reader.particles.keys():
+    first_file_name = reader.files[0].stem
+    plotting_data = reader.h5file[first_file_name][obj]
+    for file in reader.h5file.keys():
+        plotting_data = np.concatenate([plotting_data, reader.h5file[file][obj]])
+    plots.plot_hist_3d(plotting_data, obj, reader.particles[obj], folder)
+
+for obj in reader.energies.keys():
+    first_file_name = reader.files[0].stem
+    plotting_data = reader.h5file[first_file_name][obj]
+    for file in reader.h5file.keys():
+        plotting_data = np.concatenate([plotting_data, reader.h5file[file][obj]])
+    plots.plot_hist_2d(plotting_data, obj, reader.energies[obj], folder)
+
+for obj in reader.cicada.keys():
+    first_file_name = reader.files[0].stem
+    plotting_data = reader.h5file[first_file_name][obj]
+    for file in reader.h5file.keys():
+        plotting_data = np.concatenate([plotting_data, reader.h5file[file][obj]])
+    plots.plot_hist_1d(plotting_data, reader.cicada[obj], folder)
+
+reader.close_h5()
