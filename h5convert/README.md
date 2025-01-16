@@ -14,6 +14,11 @@ Each object also has an associated `[object_name]Bx` feature in the L1TNtuple wh
 
 The generated h5 files follow the structure outlined in the rest of the readme, i.e., `event|objects|features`, and the order of the features is the same as shown below. A tick in the h5 column means that the feature is stored in the h5 files upon conversion.
 
+> 📘 Info
+> The MC simulation data uses the prescale file `L1Menu_Collisions2023_v1_2_0.csv`.
+> Meanwhile, the ZB data uses the prescale file `L1Menu_Collisions2024_v1_1_0.csv`.
+> Make sure to use the correct prescale file when running the code.
+
 ## Muon Objects
 
 Additional to the features listed below, the L1TNtuples also contain the following muon variables: `nMuons`, `muonIEta`, `muonIDEta`, `muonIDPhi`, `nMuonShowers`, `muonShowerBx`, `muonShowerOneNominal`, `muonShowerOneTight`, `muonShowerTwoLoose`, `muonShowerTwoLooseDiffSectors`; as well as float versions of the `muonIEt`, `muonIEtUnconstrained`, `muonIEta`, `muonIPhi`, `muonIEtaAtVtx`, `muonIPhiAtVtx`, i.e., without `I` in the name. These features are not converted to the produced h5 since they do not pertain to the global trigger, and hence not relevant for our algorithm.
