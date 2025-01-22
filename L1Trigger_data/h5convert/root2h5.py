@@ -11,7 +11,7 @@ import numpy as np
 import uproot
 import awkward as ak
 
-from terminal_colors import tcols
+from L1Trigger_data.h5convert.terminal_colors import tcols
 
 
 class Root2h5(object):

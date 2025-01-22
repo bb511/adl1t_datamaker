@@ -1,0 +1,13 @@
+Metadata-Version: 2.2
+Name: level1trigger_data
+Version: 0.1
+Summary: Process raw root data files recorded using the CMS detector into level 1 trigger root files. Emulate data to a specific set of conditions in the CMS detector. Convert the level 1 trigger root files into h5 files containing only information available in the global trigger, given some exceptions. The details of the h5 conversion process are found in the README.md in the h5convert folder.
+Home-page: github.com/bb511/L1Trigger_data
+Author: Patrick Odagiu
+Author-email: podagiu@ethz.ch
+Classifier: Development Status :: 4 - Beta
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Operating System :: Unix
+Classifier: Topic :: Scientific/Engineering :: Physics
+Classifier: Typing :: Typed
+Description-Content-Type: text/markdown
