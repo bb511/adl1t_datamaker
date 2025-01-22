@@ -1,7 +1,6 @@
 # Script that extracts all the global trigger data from the L1Tntuples and saves it
 # into h5 files. Not all the global trigger objects are saved to the h5s, since some
-# objects/features are not useful for analysis; see comments in code about which
-# features are ignored.
+# objects/features are not useful for analysis; see README.md for more details..
 
 import re
 from pathlib import Path

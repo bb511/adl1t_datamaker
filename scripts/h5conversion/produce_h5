@@ -3,7 +3,7 @@
 # Run the conversion script from L1TNtuple to h5.
 import argparse
 
-from root2h5 import Root2h5
+from L1Trigger_data import h5convert
 
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -26,4 +26,4 @@ parser.add_argument('--gen_tree_name', type=str, default='l1GeneratorTree/L1GenT
 args = parser.parse_args()
 
 
-Root2h5().convert(**vars(args))
+h5convert.root2h5.Root2h5().convert(**vars(args))
