@@ -43,8 +43,8 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-mkdir ${OUTPUT}
-mkdir ${OUTPUT}/logs
+mkdir -p ${OUTPUT}
+mkdir -p ${OUTPUT}/logs
 
 for file in ${FOLDER}/*.root; do
     [ -f "${file}" ] || break

@@ -7,15 +7,16 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from root2h5 import Root2h5
-import plots
+from L1Trigger_data.h5convert import root2h5
+from L1Trigger_data.h5convert import plots
+
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--folder', type=str, help="Path to the folder with the h5s.")
 args = parser.parse_args()
 
 folder = Path(args.folder)
-reader = Root2h5()
+reader = root2h5.Root2h5()
 reader.read_folder(folder)
 
 for obj in reader.particles.keys():

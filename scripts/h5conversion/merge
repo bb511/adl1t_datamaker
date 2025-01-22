@@ -1,36 +1,39 @@
 #!/usr/bin/env python
 
-# Plots the data given a folder of h5 files.
+# Merges the data given a folder.
 import argparse
 from pathlib import Path
 
 import h5py
 import numpy as np
 
-from root2h5 import Root2h5
-import plots
+from L1Trigger_data.h5convert import root2h5
+from L1Trigger_data.h5convert import plots
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--folder', type=str, help="Path to the folder with the h5s.")
 args = parser.parse_args()
 
 folder = Path(args.folder)
-reader = Root2h5()
+reader = root2h5.Root2h5()
 reader.read_folder(folder)
 
-file_names = reader.h5file.keys()
-dataset_names = reader.h5file[file_names[0]].keys()
-merged_data = {dataset_name: np.array for dataset_name in dataset_names}
+file_names = list(reader.h5file.keys())
+dataset_names = list(reader.h5file[file_names[0]].keys())
 
+merged_data = {dataset_name: np.array for dataset_name in dataset_names}
 for dataset_name in dataset_names:
-    merged_data[dataset_name] = np.concatenate(
-        [reader.h5file[file][dataset_name] for file in file_names], axis=0
-    )
+    all_datasets = []
+    for file in file_names:
+        all_datasets.append(reader.h5file[file][dataset_name])
+    merged_data[dataset_name] = np.concatenate(all_datasets, axis=0)
 
 # Write the data in a file.
-h5file = h5py.File(folder / "links.h5", mode='w')
+h5file = h5py.File(folder / "merged_folder.h5", mode='w')
 for dataset_name in dataset_names:
-    h5file.create_dataset(dataset_name, data=data[dataset_name])
+    h5file.create_dataset(dataset_name, data=merged_data[dataset_name])
+
+print(f"Merged all data into {folder / 'merged_folder.h5'}!")
 
 h5file.close()
 reader.close_h5()

@@ -1,13 +1,16 @@
 # Example on how to run the production script for one file. Replace the input paths and output paths with relevant paths to the data.
 # Additionally, if converting zero bias data and not MC, remove the --mc flag.
-./produce_h5 --input_file /eos/user/d/deodagiu/L1TNtupleRun3-133XWinter24/SingleNeutrino_E-10-gun/mcRun3_Run3Winter24Digi-133X_v8-v2/240125_010155/0000/L1Ntuple_100.root --prescale_file L1Menus/L1Menu_Collisions2023_v1_2_0.csv --output_path /eos/user/d/deodagiu/L1Th5Run3-133XWinter24/SingleNeutrino_E-10-gun --l1_tree_name l1UpgradeEmuTree/L1UpgradeTree --mc
+./produce_h5 --input_file /eos/user/d/deodagiu/L1TNtupleRun3-133XWinter24/SingleNeutrino_E-10-gun/mcRun3_Run3Winter24Digi-133X_v8-v2/240125_010155/0000/L1Ntuple_100.root --prescale_file ../../L1Trigger_data/h5convert/L1Menus/L1Menu_Collisions2023_v1_2_0.csv --output_path /eos/user/d/deodagiu/L1Th5Run3-133XWinter24/SingleNeutrino_E-10-gun --l1_tree_name l1UpgradeEmuTree/L1UpgradeTree --mc
 
 # Example on how to convert a whole folder of L1TNtuple files. Replace the input and output paths with relevant paths to the data.
 # Run on at most 10 CPUs at a time.
-./convert_folder.sh --folder /eos/user/d/deodagiu/L1TNtupleRun3-133XWinter24/SingleNeutrino_E-10-gun/mcRun3_Run3Winter24Digi-133X_v8-v2/240125_010155/0000/ --prescale_file L1Menus/L1Menu_Collisions2023_v1_2_0.csv --output_path /eos/user/d/deodagiu/L1Th5Run3-133XWinter24/SingleNeutrino_E-10-gun --mc --njobs 10
+./convert_folder.sh --folder /eos/user/d/deodagiu/L1TNtupleRun3-133XWinter24/SingleNeutrino_E-10-gun/mcRun3_Run3Winter24Digi-133X_v8-v2/240125_010155/0000/ --prescale_file ../../L1Trigger_data/h5convert/L1Menus/L1Menu_Collisions2023_v1_2_0.csv --output_path /eos/user/d/deodagiu/L1Th5Run3-133XWinter24/SingleNeutrino_E-10-gun --mc --njobs 10
 
 # Example on how to plot the data. Replace the folder path with relevant path to folder containing h5 files converted using the above scripts.
 ./plot --folder /eos/user/d/deodagiu/L1Th5Run3-155XWinter24/SingleNeutrino_E-10-gun 
+
+# Example for converting a specific folder.
+./convert_folder.sh --folder /eos/user/d/deodagiu/L1TNtupleRun3-133XWinter24/GluGluHToBB_M-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter24Digi-133X_v8-v2/240125_012902/0000/ --prescale_file ../../L1Trigger_data/h5convert/L1Menus/L1Menu_Collisions2023_v1_2_0.csv --output_path /eos/user/d/deodagiu/L1Th5Run3-133XWinter24/GluGluHToBB_M-125_TuneCP5_13p6TeV_powheg-pythia8 --mc --njobs 10
 
 # Example of running the conversion for all the simulation files.
 ./convert_all.sh
