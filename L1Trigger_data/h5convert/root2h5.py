@@ -120,9 +120,12 @@ class Root2h5(object):
 
     def read_folder(self, folder: Path):
         """Read and merge all h5 files inside a folder."""
-        self.files = list(folder.glob("L1N*.h5"))
+        self.files = list(folder.glob("*.h5"))
         if folder / "links.h5" in self.files:
             self.files.remove(folder / "links.h5")
+
+        if folder / "merged_folder.h5" in self.files:
+            self.files.remove(folder / "merged.h5")
 
         self.h5file = h5py.File(folder / "links.h5", mode="w")
         for file in self.files:

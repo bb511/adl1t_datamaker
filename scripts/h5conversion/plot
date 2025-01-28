@@ -19,6 +19,7 @@ folder = Path(args.folder)
 reader = root2h5.Root2h5()
 reader.read_folder(folder)
 
+print("Plotting the particle objects...\n")
 for obj in reader.particles.keys():
     first_file_name = reader.files[0].stem
     plotting_data = reader.h5file[first_file_name][obj]
@@ -26,6 +27,7 @@ for obj in reader.particles.keys():
         plotting_data = np.concatenate([plotting_data, reader.h5file[file][obj]])
     plots.plot_hist_3d(plotting_data, obj, reader.particles[obj], folder)
 
+print("Plotting the energy objects...\n")
 for obj in reader.energies.keys():
     first_file_name = reader.files[0].stem
     plotting_data = reader.h5file[first_file_name][obj]
@@ -33,7 +35,9 @@ for obj in reader.energies.keys():
         plotting_data = np.concatenate([plotting_data, reader.h5file[file][obj]])
     plots.plot_hist_2d(plotting_data, obj, reader.energies[obj], folder)
 
+print("Plotting the cicada objects...\n")
 for obj in reader.cicada.keys():
+    reader.read_folder(folder)
     first_file_name = reader.files[0].stem
     plotting_data = reader.h5file[first_file_name][obj]
     for file in reader.h5file.keys():
