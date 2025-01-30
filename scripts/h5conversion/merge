@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 
 from L1Trigger_data.h5convert import root2h5
-from L1Trigger_data.h5convert import plots
+
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--folder', type=str, help="Path to the folder with the h5s.")

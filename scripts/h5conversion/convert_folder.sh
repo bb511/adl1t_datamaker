@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Convert a full folder of L1TNtuple files to h5s.
-# Calls the produce_h5 script within the same folder..
+# Calls the produce_h5 script within the same folder.
 
 # Read folder path given by user.
 while [ $# -gt 0 ]; do
@@ -46,6 +46,10 @@ done
 mkdir -p ${OUTPUT}
 mkdir -p ${OUTPUT}/logs
 
+if [[ -z ${mc} ]];then
+    mc=false
+fi
+
 for file in ${FOLDER}/*.root; do
     [ -f "${file}" ] || break
 
@@ -60,7 +64,7 @@ for file in ${FOLDER}/*.root; do
 
     # Produce h5 given the input file is Zero Bias data.
     if [ "$mc" = false ] ; then
-        ./produce_h5 --input_file ${file} --prescale_file ${PRESCALE} --output_path ${OUTPUT} > ${OUTPUT}/logs.out &
+        ./produce_h5 --input_file ${file} --prescale_file ${PRESCALE} --output_path ${OUTPUT} > ${OUTPUT}/logs/${filename}.out 2>&1 &
     fi
 
     # Check how many background jobs there are.

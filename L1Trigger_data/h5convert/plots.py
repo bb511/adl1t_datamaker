@@ -5,6 +5,7 @@ import operator
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+import  matplotlib.font_manager
 
 
 def plot_hist_3d(data: np.ndarray, object_type: str, feats: list, outdir: Path):
@@ -26,21 +27,22 @@ def plot_hist_3d(data: np.ndarray, object_type: str, feats: list, outdir: Path):
     colors = ["#648FFF", "#785EF0", "#DC267F", "#FE6100", "#FFB000"]
 
     for feat_nb in range(data.shape[2]):
-        plt.xlim(np.amin(data[:, :, feat_nb]), np.amax(data[:, :, feat_nb]))
+        plt.xlim(np.nanmin(data[:, :, feat_nb]), np.nanmax(data[:, :, feat_nb]))
         plt.figure(figsize=(12, 10))
-        plt.hist(
+        counts, edges, bars = plt.hist(
             x=data[:, :, feat_nb].flatten(),
-            bins=60,
+            bins=30,
             alpha=0.5,
-            histtype="step",
-            linewidth=2.5,
-            density=True,
-            color="midnightblue",
+            linewidth=1.5,
+            color="lavender",
+            edgecolor="midnightblue"
         )
 
         plt.xlabel(feats[feat_nb])
-        plt.ylabel("Density")
+        plt.ylabel("Counts")
         plt.gca().set_yscale("log")
+        plt.text(0.68, 0.95, f"Total Counts: {int(sum(counts))}", transform=plt.gca().transAxes, fontsize=15)
+
         plt.savefig(outdir / f"{feats[feat_nb]}.png")
         plt.close()
 
@@ -65,21 +67,21 @@ def plot_hist_2d(data: np.ndarray, object_type: str, feats: list, outdir: Path):
     colors = ["#648FFF", "#785EF0", "#DC267F", "#FE6100", "#FFB000"]
 
     for feat_nb in range(data.shape[1]):
-        plt.xlim(np.amin(data[:, feat_nb]), np.amax(data[:, feat_nb]))
+        plt.xlim(np.nanmin(data[:, feat_nb]), np.nanmax(data[:, feat_nb]))
         plt.figure(figsize=(12, 10))
-        plt.hist(
+        counts, edges, bars = plt.hist(
             x=data[:, feat_nb].flatten(),
-            bins=60,
+            bins=30,
             alpha=0.5,
-            histtype="step",
-            linewidth=2.5,
-            density=True,
-            color="midnightblue",
+            linewidth=1.5,
+            color="lavender",
+            edgecolor="midnightblue"
         )
 
         plt.xlabel(feats[feat_nb])
         plt.ylabel("Density")
         plt.gca().set_yscale("log")
+        plt.text(0.68, 0.95, f"Total Counts: {int(sum(counts))}", transform=plt.gca().transAxes, fontsize=15)
         plt.savefig(outdir / f"{feats[feat_nb]}.png")
         plt.close()
 
@@ -99,20 +101,20 @@ def plot_hist_1d(data: np.ndarray, feat: str, outdir: Path):
 
     colors = ["#648FFF", "#785EF0", "#DC267F", "#FE6100", "#FFB000"]
 
-    plt.xlim(np.amin(data), np.amax(data))
+    plt.xlim(np.nanmin(data), np.nanmax(data))
     plt.figure(figsize=(12, 10))
-    plt.hist(
-        x=data.flatten(),
-        bins=60,
+    counts, edges, bars = plt.hist(
+        x=np.array(data).flatten(),
+        bins=30,
         alpha=0.5,
-        histtype="step",
-        linewidth=2.5,
-        density=True,
-        color="midnightblue",
+        linewidth=1.5,
+        color="lavender",
+        edgecolor="midnightblue"
     )
     plt.xlabel(feat)
     plt.ylabel("Density")
     plt.gca().set_yscale("log")
+    plt.text(0.68, 0.95, f"Total Counts: {int(sum(counts))}", transform=plt.gca().transAxes, fontsize=15)
     plt.savefig(outdir / f"{feat}.png")
     plt.close()
 

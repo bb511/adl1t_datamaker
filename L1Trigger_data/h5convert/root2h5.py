@@ -120,16 +120,47 @@ class Root2h5(object):
 
     def read_folder(self, folder: Path):
         """Read and merge all h5 files inside a folder."""
-        self.files = list(folder.glob("*.h5"))
-        if folder / "links.h5" in self.files:
-            self.files.remove(folder / "links.h5")
+        print(f"Reading folder of h5 files {folder}...")
+        self.file_names = list(folder.glob("*.h5"))
+        if folder / "merged_folder.h5" in self.file_names:
+            self.h5file = h5py.File(folder / "merged_folder.h5", mode="r")
+            return
 
-        if folder / "merged_folder.h5" in self.files:
-            self.files.remove(folder / "merged.h5")
+        print("Could not find merged h5 so merging the folder now...")
+        # Get the names of the datasets that are found in every h5 file in the folder.
+        initial_file = h5py.File(folder / self.file_names[0], mode="r")
+        dataset_names = list(initial_file.keys())
 
-        self.h5file = h5py.File(folder / "links.h5", mode="w")
-        for file in self.files:
-            self.h5file[file.stem] = h5py.ExternalLink(file, "/")
+        # Write empty file with dataset names.
+        merged_h5 = h5py.File(folder / "merged_folder.h5", mode="w")
+        for dataset_name in dataset_names:
+            merged_h5.create_dataset(
+                dataset_name,
+                data=np.empty(initial_file[dataset_name].shape),
+                chunks=True,
+                maxshape=[None] * len(initial_file[dataset_name].shape)
+            )
+        initial_file.close()
+
+        # Populate this empty file.
+        for filename in self.file_names:
+            print(f"Currently merging {filename}...", end="\r")
+            current_file = h5py.File(folder / filename, mode="r")
+            for dataset_name in dataset_names:
+                merged_h5[dataset_name].resize(
+                    (
+                        merged_h5[dataset_name].shape[0] +
+                        current_file[dataset_name].shape[0]
+                    ),
+                    axis=0
+                )
+                merged_h5[dataset_name][-current_file[dataset_name].shape[0]:] = \
+                    current_file[dataset_name]
+            current_file.close()
+        merged_h5.close()
+        print(f"Finished merging folder. Saved to {folder / 'merged_folder.h5'}.")
+
+        self.h5file = h5py.File(folder / "merged_folder.h5", mode="r")
 
     def close_h5(self):
         """Closes the h5 file that is opened using this class."""
@@ -161,8 +192,6 @@ class Root2h5(object):
 
         algo_map = self._get_algo_map()
         algo_map = self._filter_algo_map(algo_map)
-        # algo_map = self._filter_algo_map_alt(algo_map)
-        # exit(1)
         seeds = self._get_level1_seeds(algo_map, final_decision_bits)
 
         for seed, values in seeds.items():
@@ -185,31 +214,6 @@ class Root2h5(object):
             algo_map[name] = int(matchbit.group(1))
 
         return algo_map
-
-    # WIP getting rid of the prescale file dependency.
-    # def _filter_algo_map_alt(self, algo_map: dict):
-    #     """Filter the algorithm dict to include only algos that are not prescaled.
-
-    #     Each run has certain conditions for every uGT algorithm, i.e., how often they
-    #     are allowed to trigger. For example, the L1_SingleMu0_BMTF algorithm triggers
-    #     at most once in 2000 events.
-    #     """
-    #     algo_names =  self._global_trigger_tree[
-    #         "L1uGT/m_algoDecisionPreScaled"
-    #     ].aliases.keys()
-    #     bit_arrays = self._global_trigger_tree.arrays(
-    #         ["m_algoDecisionInitial", "m_algoDecisionPreScaled"], library="np"
-    #     )
-    #     initial_bits = np.stack(bit_arrays["m_algoDecisionInitial"], axis=0)
-    #     prescale_bits = np.stack(bit_arrays["m_algoDecisionPreScaled"], axis=0)
-    #     del bit_arrays
-    #     prescaled_algo_bits = set(np.array([
-    #         bit
-    #         for bit
-    #         in  range(prescale_bits.shape[1])
-    #         if (initial_bits[:, bit] != prescale_bits[:, bit]).any()
-    #     ]).flatten())
-    #     print(prescaled_algo_bits)
 
     def _filter_algo_map(self, algo_map: dict):
         """Filter the algorithm dictionary to only the ones present in prescale file."""
