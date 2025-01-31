@@ -147,6 +147,17 @@ The missing transverse energy object including data from the forward hadronic ca
 | CENT[7:4] | - | - | 4 | The centrality of the missing transverse energy vector, defined by the last 4 bits. It specifies the degree of overlap between colliding ions. **Only used for heavy ion runs and thus ignored for the current h5 generation.**  | :x: |
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
+## Event Information
+
+All the following features are integers.
+
+| `run` | The CMS run that the event corresponds to. | :heavy_check_mark: |
+| `lumi` | The luminosity section, i.e., a range of events that the event is included in. | :heavy_check_mark: |
+| `event` | The event number. | :heavy_check_mark: |
+| `bx` | The bunch crossing number. Bunches of protons are collided at the LHC. The highest energy event in the bunch crossing is recorded.  | :heavy_check_mark: |
+| `orbit` | The orbit includes all bunch crossings that happen in the time it takes for the 2500 bunches introduced into the LHC to complete one orbit. | :heavy_check_mark: |
+| `time`  | The time since the start of the run in seconds. | :heavy_check_mark: |
+| `nPV_true` | The pileup of the events, i.e., the number of auxiliary proton collisions that happen in the same event. | :heavy_check_mark: |
 
 # Prescale Files
 
