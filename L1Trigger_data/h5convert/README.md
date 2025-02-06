@@ -19,6 +19,7 @@ Also, a lot of the descriptions are based on word of mouth and exchanges with th
 > and then use the read method
 > `reader = root2h5.Root2h5(); h5file = reader.read_folder(folder)`.
 > For an example of how this is done, check the `scripts/plot` script.
+> The reader class contains dictionaries of all the objects and features stored in each object, but ultimately it just reads a file using `h5py`.
 
 # Prescale Files
 
