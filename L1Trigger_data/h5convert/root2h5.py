@@ -49,6 +49,18 @@ class Root2h5(object):
             "FET": ["Et", "phi"],
             "FHT": ["Et", "phi"],
         }
+        self.event_info = {
+            "event_info": ["run", "lumi", "event", "bx", "orbit", "time", "nPV_True"]
+        }
+        self.gen_info = {
+            "generator_HT":
+        }
+
+        self.all_objects = {}
+        self.all_objects.update(self.particles)
+        self.all_objects.update(self.energies)
+        self.all_objects.update(self.cicada)
+        self.all_objects.update(self.event_info)
 
     def convert(
         self,
@@ -116,12 +128,13 @@ class Root2h5(object):
 
     def read_file(self, file: Path):
         """Read an h5 that was produced using this class."""
-        self.h5file = h5py.File(file, mode="r")
+        return h5py.File(file, mode="r")
 
     def read_folder(self, folder: Path):
         """Read and merge all h5 files inside a folder."""
         print(f"Reading folder of h5 files {folder}...")
         self.file_names = list(folder.glob("*.h5"))
+
         if folder / "merged_folder.h5" in self.file_names:
             self.h5file = h5py.File(folder / "merged_folder.h5", mode="r")
             return
@@ -160,7 +173,7 @@ class Root2h5(object):
         merged_h5.close()
         print(f"Finished merging folder. Saved to {folder / 'merged_folder.h5'}.")
 
-        self.h5file = h5py.File(folder / "merged_folder.h5", mode="r")
+        return h5py.File(folder / "merged_folder.h5", mode="r")
 
     def close_h5(self):
         """Closes the h5 file that is opened using this class."""
