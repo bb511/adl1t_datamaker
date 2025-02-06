@@ -52,9 +52,6 @@ class Root2h5(object):
         self.event_info = {
             "event_info": ["run", "lumi", "event", "bx", "orbit", "time", "nPV_True"]
         }
-        self.gen_info = {
-            "generator_HT":
-        }
 
         self.all_objects = {}
         self.all_objects.update(self.particles)
@@ -136,8 +133,7 @@ class Root2h5(object):
         self.file_names = list(folder.glob("*.h5"))
 
         if folder / "merged_folder.h5" in self.file_names:
-            self.h5file = h5py.File(folder / "merged_folder.h5", mode="r")
-            return
+            return h5py.File(folder / "merged_folder.h5", mode="r")
 
         print("Could not find merged h5 so merging the folder now...")
         # Get the names of the datasets that are found in every h5 file in the folder.
@@ -174,17 +170,6 @@ class Root2h5(object):
         print(f"Finished merging folder. Saved to {folder / 'merged_folder.h5'}.")
 
         return h5py.File(folder / "merged_folder.h5", mode="r")
-
-    def close_h5(self):
-        """Closes the h5 file that is opened using this class."""
-        try:
-            self.h5file.close()
-        except AttributeError:
-            print(
-                tcols.WARNING
-                + "No h5 file open previously so nothing to close!"
-                + tcols.ENDC
-            )
 
     def _get_output_filepath(self) -> Path:
         """Creates output dir and determines the name of the output file."""

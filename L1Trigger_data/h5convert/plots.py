@@ -101,6 +101,10 @@ def plot_hist_1d(data: np.ndarray, feat: str, outdir: Path):
 
     colors = ["#648FFF", "#785EF0", "#DC267F", "#FE6100", "#FFB000"]
 
+    if not (np.array(data) > 0.1).any():
+        print("Array is full of 0s, skipping the plotting!")
+        return
+
     plt.xlim(np.nanmin(data), np.nanmax(data))
     plt.figure(figsize=(12, 10))
     counts, edges, bars = plt.hist(
