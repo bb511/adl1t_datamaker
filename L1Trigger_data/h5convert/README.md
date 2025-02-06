@@ -3,21 +3,35 @@
 Converts L1TNtuple files (root tree files) to h5.
 The scripts do not convert the data in the targeted L1TNtuples in its totality, but only a certain set of objects and corresponding features.
 The description of each feature that is available in the global trigger and whether it is included in the converted h5 is available below.
-Whatever features are found in the root files and are not present in the following list do not pertain to what is available to our algorithm and hence are ignored, although they are listed here for completeness.
+Whatever features are found in the root files and are not present in the following list do not pertain to what is available to our algorithm and hence are ignored.
 
 The information presented here is a synthesis of the information available in the [scales](https://gitlab.cern.ch/cms-l1-ad/l1tntuple-maker/-/blob/new_h5generation/h5convert/docs/scales_inputs_2_ugt.pdf?ref_type=heads) and [firmware](https://gitlab.cern.ch/cms-l1-ad/l1tntuple-maker/-/blob/new_h5generation/h5convert/docs/gt-mp7-firmware-specification.pdf?ref_type=heads) pdf files.
-Also, a lot of it is based on word of mouth and exchanges with the experts of each subsystem.
+Also, a lot of the descriptions are based on word of mouth and exchanges with the experts of each subsystem.
+
+> [!NOTE]
+> The MC simulation data uses the prescale file `L1Menu_Collisions2023_v1_2_0.csv`.
+> Meanwhile, the ZB data uses the prescale file `L1Menu_Collisions2024_v1_1_0.csv`.
+> Make sure to use the correct prescale file when running the code.
+
+> [!TIP]
+> To read the h5 files generated with this code, import the h5converter class
+> `from L1Trigger_data.h5convert import root2h5`
+> and then use the read method
+> `reader = root2h5.Root2h5(); h5file = reader.read_folder(folder)`.
+> For an example of how this is done, check the `scripts/plot` script.
+
+# Prescale Files
+
+The menu files are prescale files that determine the rate of certain objects as they are recorded by the trigger.
+For example, `L1_SigleMuOpen` might trigger all the time, and hence only one in `n` values are actually recorded, where `n=63000` for the 2022 and specifies the number of successfull triggerings.
+
+# Objects
 
 Note, the `I` in the feature names is short for `Integer`, and specifies that the feature is obtained from hardware.
 The features that do not have a `root_file_name` are not found in the current vesion of the L1TNtuples generated from the raw data.
 Each object also has an associated `[object_name]Bx` feature in the L1TNtuple which specifies the bunch crossing that the object belongs to, since each event contains objects from $\pm 2$ bunch crossings.
 
 The generated h5 files follow the structure outlined in the rest of the readme, i.e., `event|objects|features`, and the order of the features is the same as shown below. A tick in the h5 column means that the feature is stored in the h5 files upon conversion.
-
-> [!NOTE]
-> The MC simulation data uses the prescale file `L1Menu_Collisions2023_v1_2_0.csv`.
-> Meanwhile, the ZB data uses the prescale file `L1Menu_Collisions2024_v1_1_0.csv`.
-> Make sure to use the correct prescale file when running the code.
 
 ## Muon Objects
 
@@ -158,8 +172,3 @@ All the following features are integers.
 | `orbit` | The orbit includes all bunch crossings that happen in the time it takes for the 2500 bunches introduced into the LHC to complete one orbit. | :heavy_check_mark: |
 | `time`  | The time since the start of the run in seconds. | :heavy_check_mark: |
 | `nPV_true` | The pileup of the events, i.e., the number of auxiliary proton collisions that happen in the same event. | :heavy_check_mark: |
-
-# Prescale Files
-
-The menu files are prescale files that determine the rate of certain objects as they are recorded by the trigger.
-For example, `L1_SigleMuOpen` might trigger all the time, and hence only one in `n` values are actually recorded, where `n=63000` for the 2022 and specifies the number of successfull triggerings.
