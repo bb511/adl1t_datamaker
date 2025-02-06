@@ -165,6 +165,8 @@ The missing transverse energy object including data from the forward hadronic ca
 
 All the following features are integers.
 
+| Feature       |  Explanation  |      h5       |
+| ------------- | ------------- | ------------- |
 | `run` | The CMS run that the event corresponds to. | :heavy_check_mark: |
 | `lumi` | The luminosity section, i.e., a range of events that the event is included in. | :heavy_check_mark: |
 | `event` | The event number. | :heavy_check_mark: |
