@@ -7,9 +7,9 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from L1Trigger_data.h5convert import root2h5
-from L1Trigger_data.h5convert import plots
-from L1Trigger_data.h5convert.terminal_colors import tcols
+from l1trigger_datamaker.h5convert import root2h5
+from l1trigger_datamaker.h5convert import plots
+from l1trigger_datamaker.h5convert.terminal_colors import tcols
 
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -18,7 +18,10 @@ args = parser.parse_args()
 
 folder = Path(args.folder)
 reader = root2h5.Root2h5()
-h5file = reader.read_folder(folder)
+# h5file = reader.read_folder(folder)
+df = reader.read_folder_pandas(folder)
+
+exit(1)
 
 print(tcols.OKGREEN + "\nPlotting the particle objects..." + tcols.ENDC)
 for obj in reader.particles.keys():

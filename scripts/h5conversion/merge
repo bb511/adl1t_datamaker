@@ -7,7 +7,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from L1Trigger_data.h5convert import root2h5
+from l1trigger_datamaker.h5convert import root2h5
 
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)

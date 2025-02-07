@@ -3,7 +3,7 @@
 # Run the conversion script from L1TNtuple to h5.
 import argparse
 
-from L1Trigger_data.h5convert import root2h5
+from l1trigger_datamaker.h5convert import root2h5
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--input_file', type=str, help="Path to root file for converison.")
