@@ -9,3 +9,6 @@ dependencies:
   - h5py=3.12.*
   - uproot=5.5.*
   - awkward=2.7.*
+  - pandas=2.2.*
+  - matplotlib=3.10.*
+  - pytables=3.8.*

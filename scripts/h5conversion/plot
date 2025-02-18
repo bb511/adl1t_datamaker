@@ -18,10 +18,7 @@ args = parser.parse_args()
 
 folder = Path(args.folder)
 reader = root2h5.Root2h5()
-# h5file = reader.read_folder(folder)
-df = reader.read_folder_pandas(folder)
-
-exit(1)
+h5file = reader.read_folder(folder)
 
 print(tcols.OKGREEN + "\nPlotting the particle objects..." + tcols.ENDC)
 for obj in reader.particles.keys():
@@ -30,6 +27,10 @@ for obj in reader.particles.keys():
 print(tcols.OKGREEN + "\nPlotting the energy objects...\n" + tcols.ENDC)
 for obj in reader.energies.keys():
     plots.plot_hist_2d(h5file[obj], obj, reader.energies[obj], folder)
+
+print(tcols.OKGREEN + "\nPlotting the event information objects...\n" + tcols.ENDC)
+for obj in reader.event_info.keys():
+    plots.plot_hist_2d(h5file[obj], obj, reader.event_info[obj], folder)
 
 print(tcols.OKGREEN + "\nPlotting the cicada objects...\n" + tcols.ENDC)
 for obj in reader.cicada.keys():

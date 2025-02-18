@@ -85,7 +85,7 @@ def plot_hist_2d(data: np.ndarray, object_type: str, feats: list, outdir: Path):
         )
 
         plt.xlabel(feats[feat_nb])
-        plt.ylabel("Density")
+        plt.ylabel("Counts")
         plt.gca().set_yscale("log")
         plt.text(
             0.68,
@@ -128,7 +128,7 @@ def plot_hist_1d(data: np.ndarray, feat: str, outdir: Path):
         edgecolor="midnightblue",
     )
     plt.xlabel(feat)
-    plt.ylabel("Density")
+    plt.ylabel("Counts")
     plt.gca().set_yscale("log")
     plt.text(
         0.68,

@@ -24,6 +24,14 @@ class Root2h5(object):
 
     def __init__(self):
         # See README for meaning of each object and their corresponding features.
+
+        # Define the number of objects present for each type of particle.
+        self.muon_nobjects = 8
+        self.egammas_nobjects = 12
+        self.taus_nobjects = 12
+        self.jets_nobjects = 12
+
+        # Define the particle object names and the features that describe them.
         self.particles = {
             "muons": [
                 "muonIPhiAtVtx",
@@ -40,7 +48,8 @@ class Root2h5(object):
             "egammas": ["egIEt", "egIEta", "egIPhi", "egIso"],
             "taus": ["tauIEt", "tauIEta", "tauIPhi", "tauIso"],
         }
-        self.cicada = {"cicada": "CICADAScore"}
+
+        # Define the energy objects of the each event and their features.
         self.energies = {
             "ET": ["Et", "ETTEM"],
             "HT": ["Et", "tower_count"],
@@ -49,17 +58,71 @@ class Root2h5(object):
             "FET": ["Et", "phi"],
             "FHT": ["Et", "phi"],
         }
+
+        # Define the cicada (calo anomaly detector) object.
+        self.cicada = {"cicada": "CICADAScore"}
+
+        # Define the metadata of the event and the corresponding features.
         self.event_info = {
             "event_info": ["run", "lumi", "event", "bx", "orbit", "time", "nPV_True"]
         }
+
+        # Define the generator information, only useful for data generated with MC.
         self.geninfo = {"generator_HT": ["jetPt", "jetEta"]}
 
-        self.all_objects = {}
-        self.all_objects.update(self.particles)
-        self.all_objects.update(self.energies)
-        self.all_objects.update(self.cicada)
-        self.all_objects.update(self.event_info)
-        self.all_objects.update(self.geninfo)
+    def read_file(self, file: Path):
+        """Read an h5 that was produced using this class."""
+        return h5py.File(file, mode="r")
+
+    def read_folder(self, folder: Path):
+        """Read and merge all h5 files inside a folder."""
+        print(f"Reading folder of h5 files {folder}...")
+        self.file_names = list(folder.glob("*.h5"))
+
+        if folder / "merged_folder.h5" in self.file_names:
+            return h5py.File(folder / "merged_folder.h5", mode="r")
+
+        print("Could not find merged h5 so merging the folder now...")
+        self._merge_folder(folder)
+
+        return h5py.File(folder / "merged_folder.h5", mode="r")
+
+    def _merge_folder(self, folder: Path):
+        """Merge folder of h5s into one h5 file."""
+        # Get the names of the datasets that are found in every h5 file in the folder.
+        initial_file = h5py.File(folder / self.file_names[0], mode="r")
+        dataset_names = list(initial_file.keys())
+
+        # Write empty file with dataset names.
+        merged_h5 = h5py.File(folder / "merged_folder.h5", mode="w")
+        for dataset_name in dataset_names:
+            merged_h5.create_dataset(
+                dataset_name,
+                data=np.empty(initial_file[dataset_name].shape),
+                chunks=True,
+                maxshape=[None] * len(initial_file[dataset_name].shape),
+            )
+        initial_file.close()
+
+        # Populate this empty file.
+        for filename in self.file_names:
+            print(f"Currently merging {filename}...", end="\r")
+            current_file = h5py.File(folder / filename, mode="r")
+            for dataset_name in dataset_names:
+                merged_h5[dataset_name].resize(
+                    (
+                        merged_h5[dataset_name].shape[0]
+                        + current_file[dataset_name].shape[0]
+                    ),
+                    axis=0,
+                )
+                merged_h5[dataset_name][
+                    -current_file[dataset_name].shape[0] :
+                ] = current_file[dataset_name]
+            current_file.close()
+
+        merged_h5.close()
+        print(f"Finished merging folder. Saved to {folder / 'merged_folder.h5'}.")
 
     def convert(
         self,
@@ -114,85 +177,19 @@ class Root2h5(object):
         self.output_file = h5py.File(self._get_output_filepath(), "w")
         self._store_seeds()
         self._store_eventinfo()
+        self._store_geninfo()
 
         self._store_muons()
         self._store_jets()
         self._store_egammas()
         self._store_taus()
-        self._store_cica()
         self._store_energies()
-        self._store_geninfo()
+        self._store_cica()
 
         self.output_file.close()
 
-    def read_file(self, file: Path):
-        """Read an h5 that was produced using this class."""
-        return h5py.File(file, mode="r")
-
-    def read_folder(self, folder: Path):
-        """Read and merge all h5 files inside a folder."""
-        print(f"Reading folder of h5 files {folder}...")
-        self.file_names = list(folder.glob("*.h5"))
-
-        if folder / "merged_folder.h5" in self.file_names:
-            return h5py.File(folder / "merged_folder.h5", mode="r")
-
-        print("Could not find merged h5 so merging the folder now...")
-        self._merge_folder(folder)
-
-        return h5py.File(folder / "merged_folder.h5", mode="r")
-
-    def read_folder_pandas(self, folder):
-        """Read folder of h5s to a pandas dataframe object."""
-        import pandas
-
-        print(f"Reading folder of h5 files {folder}...")
-        self.file_names = list(folder.glob("*.h5"))
-
-        if folder / "merged_folder.h5" in self.file_names:
-            return pandas.read_hdf(folder / "merged_folder.h5")\
-
-        print("Could not find merged h5 so merging the folder now...")
-        self._merge_folder(folder)
-
-        return pandas.read_hdf(folder / "merged_folder.h5")\
-
-    def _merge_folder(self, folder: Path):
-        """Merge folder of h5s into one h5 file."""
-        # Get the names of the datasets that are found in every h5 file in the folder.
-        initial_file = h5py.File(folder / self.file_names[0], mode="r")
-        dataset_names = list(initial_file.keys())
-
-        # Write empty file with dataset names.
-        merged_h5 = h5py.File(folder / "merged_folder.h5", mode="w")
-        for dataset_name in dataset_names:
-            merged_h5.create_dataset(
-                dataset_name,
-                data=np.empty(initial_file[dataset_name].shape),
-                chunks=True,
-                maxshape=[None] * len(initial_file[dataset_name].shape),
-            )
-        initial_file.close()
-
-        # Populate this empty file.
-        for filename in self.file_names:
-            print(f"Currently merging {filename}...", end="\r")
-            current_file = h5py.File(folder / filename, mode="r")
-            for dataset_name in dataset_names:
-                merged_h5[dataset_name].resize(
-                    (
-                        merged_h5[dataset_name].shape[0]
-                        + current_file[dataset_name].shape[0]
-                    ),
-                    axis=0,
-                )
-                merged_h5[dataset_name][
-                    -current_file[dataset_name].shape[0] :
-                ] = current_file[dataset_name]
-            current_file.close()
-
-        merged_h5.close()
-        print(f"Finished merging folder. Saved to {folder / 'merged_folder.h5'}.")
+        print(tcols.OKGREEN + "Conversion to h5 finished!" + tcols.ENDC)
+        print(tcols.OKGREEN + f"Saved: {self._get_output_filepath()}" + tcols.ENDC)
 
     def _get_output_filepath(self) -> Path:
         """Creates output dir and determines the name of the output file."""
@@ -291,7 +288,7 @@ class Root2h5(object):
         """Store the event information data to a numpy array and save to given h5."""
         event_info = ["run", "lumi", "event", "bx", "orbit", "time", "nPV_True"]
         event_data = self._gtrigger_event_tree.arrays(event_info)
-        event_data = ak.to_pandas(event_data).to_numpy()
+        event_data = ak.to_dataframe(event_data).to_numpy()
         self.output_file.create_dataset(
             "event_info", data=event_data, compression="gzip"
         )
@@ -326,229 +323,23 @@ class Root2h5(object):
             "generator_HT", data=generator_HT, compression="gzip"
         )
 
-    def _store_energies(self):
-        """Store the different types of energies associated with the event to np array.
-
-        The 'bx' in 'sum_bx' refers to the bunch crossing number. The global trigger
-        looks at ±2 bunch crossings in the LHC, and setting the '[var]_bx' to 0
-        establishes that we are looking only at the current bunch crossing data.
-        Confusingly, the energies are stored in the L1TNtuple trees all in the same leaf,
-        and the way to separate each energy type is through the sum_type flag.
-        """
-        sums_feats = ["nSums", "sumType", "sumBx", "sumIEt", "sumIPhi"]
-        sums_data = self._level1_trigger_tree.arrays(sums_feats)
-
-        # Convert everything to numpy arrays for easier manipulation.
-        sum_type = self._to_np_array(sums_data["sumType"], maxN=sums_data["nSums"][0])
-        sum_bx = self._to_np_array(sums_data["sumBx"], maxN=sums_data["nSums"][0])
-        sum_et = self._to_np_array(sums_data["sumIEt"], maxN=sums_data["nSums"][0])
-        sum_phi = self._to_np_array(sums_data["sumIPhi"], maxN=sums_data["nSums"][0])
-
-        # Construct energy objects.
-        ET_idx = np.where((sum_type == 0) & (sum_bx == 0))
-        ETTEM_idx = np.where((sum_type == 16) & (sum_bx == 0))
-        self._store_ET(ET_idx, ETTEM_idx, sum_et)
-
-        HT_idx = np.where((sum_type == 1) & (sum_bx == 0))
-        HT_twrcnt_idx = np.where((sum_type == 21) & (sum_bx == 0))
-        self._store_HT(HT_idx, HT_twrcnt_idx, sum_et)
-
-        MET_idx = np.where((sum_type == 2) & (sum_bx == 0))
-        ASYMET_idx = np.where((sum_type == 23) & (sum_bx == 0))
-        self._store_MET(MET_idx, ASYMET_idx, sum_et, sum_phi)
-
-        MHT_idx = np.where((sum_type == 3) & (sum_bx == 0))
-        ASYMHT_idx = np.where((sum_type == 24) & (sum_bx == 0))
-        self._store_MHT(MHT_idx, ASYMHT_idx, sum_et, sum_phi)
-
-        FET_idx = np.where((sum_type == 8) & (sum_bx == 0))
-        ASYFET_idx = np.where((sum_type == 25) & (sum_bx == 0))
-        CENT_idx = np.where((sum_type == 22) & (sum_bx == 0))
-        self._store_FET(FET_idx, ASYFET_idx, CENT_idx, sum_et, sum_phi)
-
-        FHT_idx = np.where((sum_type == 20) & (sum_bx == 0))
-        ASYFHT_idx = np.where((sum_type == 26) & (sum_bx == 0))
-        CENT_idx = np.where((sum_type == 22) & (sum_bx == 0))
-        self._store_FHT(FHT_idx, ASYFHT_idx, CENT_idx, sum_et, sum_phi)
-
-        print("Conversion of energy objects finished! \U0001F504")
-
-    def _to_np_array(self, ak_array, maxN=100, pad=0, dtype=np.float16):
-        """Convert awkward array to a numpy array."""
-        return (
-            ak.fill_none(ak.pad_none(ak_array, maxN, clip=True, axis=-1), pad)
-            .to_numpy()
-            .astype(dtype)
-        )
-
-    def _store_ET(self, ET_idx: list, ETTEM_idx: list, sum_et: np.ndarray):
-        """Store the transverse energy object to a numpy array and save to h5.
-
-        The ETTEM feature refers to the missing transverse energy recorded by the
-        electromagnetic calorimeter of the detector and only that.
-        """
-        ET_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        ET_data[:, 0] = sum_et[ET_idx]
-        ET_data[:, 1] = sum_et[ETTEM_idx]
-
-        self.output_file.create_dataset("ET", data=ET_data, compression="gzip")
-
-    def _store_HT(self, HT_idx: list, HT_twrcnt_idx: list, sum_et: np.ndarray):
-        """Store the hardonic transverse energy object to a numpy array and save to h5.
-
-        twr_count refers to the number of towers detected in the hadronic calorimeter.
-        """
-        HT_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        HT_data[:, 0] = sum_et[HT_idx]
-        HT_data[:, 1] = sum_et[HT_twrcnt_idx]
-
-        self.output_file.create_dataset("HT", data=HT_data, compression="gzip")
-
-    def _store_MET(
-        self, MET_idx: list, ASYMET_idx: list, sum_et: np.ndarray, sum_phi: np.ndarray
-    ):
-        """Store the missing transverse energy object to a numpy array and save to h5.
-
-        ASY refers to the asymmetry in the missing transverse energy; only used for
-        heavy ion collisions, hence ignore for now. If you want to include this feat
-        in the h5 data, uncomment below and change the length of the array to 3.
-        """
-        MET_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        MET_data[:, 0] = sum_et[MET_idx]
-        MET_data[:, 1] = sum_phi[MET_idx]
-        # MET_data[:, 2] = sum_et[ASYMET_idx]
-
-        self.output_file.create_dataset("MET", data=MET_data, compression="gzip")
-
-    def _store_MHT(
-        self, MHT_idx: list, ASYMHT_idx: list, sum_et: np.ndarray, sum_phi: np.ndarray
-    ):
-        """Store the missing hadronic transverse energy object to a numpy array and
-        save to h5.
-
-        ASY refers to the asymmetry in the missing hadronic transverse energy; only used
-        for heavy ion collisions, hence ignore for now. If you want to include this feat
-        in the h5 data, uncomment below and change the length of the array to 3.
-        """
-        MHT_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        MHT_data[:, 0] = sum_et[MHT_idx]
-        MHT_data[:, 1] = sum_phi[MHT_idx]
-        # MHT_data[:, 2] = sum_et[ASYMHT_idx]
-
-        self.output_file.create_dataset("MHT", data=MHT_data, compression="gzip")
-
-    def _store_FET(
-        self,
-        FET_idx: list,
-        ASYFET_idx: list,
-        CENT_idx: list,
-        sum_et: np.ndarray,
-        sum_phi: np.ndarray,
-    ):
-        """Store the forward missing transverse energy object, i.e., missing transverse
-        energy object that includes data from the hadronic forward calorimeter object,
-        to a numpy array and save to h5.
-
-        ASY refers to the asymmetry in the missing forward transverse energy; only used
-        for heavy ion collisions, hence ignore for now.
-        CEN refers to the centrality of this object. Again, only used for heavy ion
-        collisions and ignored for now.
-        If you want to include these feats in the h5 data, uncomment below and change
-        the length of the array to 4.
-        """
-        FET_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        FET_data[:, 0] = sum_et[FET_idx]
-        FET_data[:, 1] = sum_phi[FET_idx]
-        # FET_data[:, 2] = sum_et[ASYFET_idx]
-        # Store the same centrality bits to both the FHT and FET, for comfort.
-        # FET_data[:, 3] = sum_et[CENT_idx]
-
-        self.output_file.create_dataset("FET", data=FET_data, compression="gzip")
-
-    def _store_FHT(
-        self,
-        FHT_idx: list,
-        ASYFHT_idx: list,
-        CENT_idx: list,
-        sum_et: np.ndarray,
-        sum_phi: np.ndarray,
-    ):
-        """Store the forward missing transverse hadronic energy object, i.e., missing
-        hadronic transverse energy object that includes data from the hadronic forward
-        calorimeter object, to a numpy array and save to h5.
-
-        ASY refers to the asymmetry in the missing forward hadronic transverse energy;
-        only used for heavy ion collisions, hence ignore for now.
-        CEN refers to the centrality of this object. Again, only used for heavy ion
-        collisions and ignored for now.
-        If you want to include these feats in the h5 data, uncomment below and change
-        the length of the array to 4.
-        """
-        FHT_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        FHT_data[:, 0] = sum_et[FHT_idx]
-        FHT_data[:, 1] = sum_phi[FHT_idx]
-        # FHT_data[:, 2] = sum_et[ASYFHT_idx]
-        # Store the same centrality bits to both the FHT and FET, for comfort.
-        # FHT_data[:, 3] = sum_et[CENT_idx]
-
-        self.output_file.create_dataset("FHT", data=FHT_data, compression="gzip")
-
     def _store_muons(self):
         """Store the muon feature data into numpy arrays and save to h5."""
 
         # See README.md for information on what each feature means.
-        # Still missing: charge valid, index bits, phi (out), hadronic shower trigger
         data = self._level1_trigger_tree.arrays(self.particles["muons"])
 
         # We have info ±2 bunch crossings, so select data concerning only current one.
         mask = self._level1_trigger_tree.arrays(["muonBx"])["muonBx"] == 0
 
-        # Total number of muon objects should be 8 max, zero pad otherwise.
-        nobjects = 8
-        # Convert the tree data to numpy arrays.
-        muon_phi = self._to_np_array(
-            data["muonIPhiAtVtx"][mask], maxN=nobjects, dtype=np.int16
-        )
-        muon_pt = self._to_np_array(
-            data["muonIEt"][mask], maxN=nobjects, dtype=np.int16
-        )
-        muon_qul = self._to_np_array(
-            data["muonQual"][mask], maxN=nobjects, dtype=np.int16
-        )
-        muon_eta = self._to_np_array(
-            data["muonIEtaAtVtx"][mask], maxN=nobjects, dtype=np.int16
-        )
-        muon_chg = self._to_np_array(
-            data["muonChg"][mask], maxN=nobjects, dtype=np.int16
-        )
-        muon_free_phi = self._to_np_array(
-            data["muonIPhi"][mask], maxN=nobjects, dtype=np.int16
-        )
-        muon_free_eta = self._to_np_array(
-            data["muonIEta"][mask], maxN=nobjects, dtype=np.int16
-        )
-        muon_idx = self._to_np_array(
-            data["muonTfMuonIdx"][mask], maxN=nobjects, dtype=np.int16
-        )
-        muon_upt = self._to_np_array(
-            data["muonIEtUnconstrained"][mask], maxN=nobjects, dtype=np.int16
-        )
+        nobjects = self.muon_nobjects
+        # Pad and convert variable length awkward arrays extracted from tree to np.
+        muon_data = []
+        for feature in self.particles["muons"]:
+            feature_data = self._awk_to_np(data[feature][mask], nobjects, 0, np.int16)
+            muon_data.append(feature_data)
 
-        muon_data = np.stack(
-            [
-                muon_phi,
-                muon_pt,
-                muon_qul,
-                muon_eta,
-                muon_chg,
-                muon_idx,
-                muon_free_phi,
-                muon_free_eta,
-                muon_upt,
-            ],
-            axis=2,
-        )
-
+        muon_data = np.stack(muon_data, axis=2)
         print("Conversion of muon objects finished! \U0001F504")
         self.output_file.create_dataset("muons", data=muon_data, compression="gzip")
 
@@ -562,24 +353,14 @@ class Root2h5(object):
         mask = self._level1_trigger_tree.arrays(["jetBx"])["jetBx"] == 0
 
         # Total number of jets objects should be 12 max, zero pad otherwise.
-        nobjects = 12
+        nobjects = self.jets_nobjects
         # Convert the tree data to numpy arrays.
-        jets_pt = self._to_np_array(data["jetIEt"][mask], maxN=nobjects, dtype=np.int16)
-        jets_eta = self._to_np_array(
-            data["jetIEta"][mask], maxN=nobjects, dtype=np.int16
-        )
-        jets_phi = self._to_np_array(
-            data["jetIPhi"][mask], maxN=nobjects, dtype=np.int16
-        )
-        jets_qul = self._to_np_array(
-            data["jetHwQual"][mask], maxN=nobjects, dtype=np.int16
-        )
-        jets_upt = self._to_np_array(
-            data["jetRawEt"][mask], maxN=nobjects, dtype=np.int16
-        )
+        jets_data = []
+        for feature in self.particles["jets"]:
+            feature_data = self._awk_to_np(data[feature][mask], nobjects, 0, np.int16)
+            jets_data.append(feature_data)
 
-        jets_data = np.stack([jets_pt, jets_eta, jets_phi, jets_qul, jets_upt], axis=2)
-
+        jets_data = np.stack(jets_data, axis=2)
         print("Conversion of jet objects finished! \U0001F504")
         self.output_file.create_dataset("jets", data=jets_data, compression="gzip")
 
@@ -593,21 +374,17 @@ class Root2h5(object):
         mask = self._level1_trigger_tree.arrays(["egBx"])["egBx"] == 0
 
         # Total number of elec objects should be 12 max, zero pad otherwise.
-        nobjects = 12
+        nobjects = self.egammas_nobjects
         # Convert the tree data to numpy arrays.
-        elec_pt = self._to_np_array(data["egIEt"][mask], maxN=nobjects, dtype=np.int16)
-        elec_eta = self._to_np_array(
-            data["egIEta"][mask], maxN=nobjects, dtype=np.int16
-        )
-        elec_phi = self._to_np_array(
-            data["egIPhi"][mask], maxN=nobjects, dtype=np.int16
-        )
-        elec_iso = self._to_np_array(data["egIso"][mask], maxN=nobjects, dtype=np.int16)
+        egammas_data = []
+        for feature in self.particles["egammas"]:
+            feature_data = self._awk_to_np(data[feature][mask], nobjects, 0, np.int16)
+            egammas_data.append(feature_data)
 
-        elec_data = np.stack([elec_pt, elec_eta, elec_phi, elec_iso], axis=2)
+        egammas_data = np.stack(egammas_data, axis=2)
 
         print("Conversion of egamma objects finished! \U0001F504")
-        self.output_file.create_dataset("egammas", data=elec_data, compression="gzip")
+        self.output_file.create_dataset("egammas", data=egammas_data, compression="gzip")
 
     def _store_taus(self):
         """Store the taus feature data into numpy arrays and save to h5."""
@@ -619,36 +396,144 @@ class Root2h5(object):
         mask = self._level1_trigger_tree.arrays(["tauBx"])["tauBx"] == 0
 
         # Total number of taus objects should be 12 max, zero pad otherwise.
-        nobjects = 12
+        nobjects = self.taus_nobjects
         # Convert the tree data to numpy arrays.
-        taus_pt = self._to_np_array(data["tauIEt"][mask], maxN=nobjects, dtype=np.int16)
-        taus_eta = self._to_np_array(
-            data["tauIEta"][mask], maxN=nobjects, dtype=np.int16
-        )
-        taus_phi = self._to_np_array(
-            data["tauIPhi"][mask], maxN=nobjects, dtype=np.int16
-        )
-        taus_iso = self._to_np_array(
-            data["tauIso"][mask], maxN=nobjects, dtype=np.int16
-        )
+        taus_data = []
+        for feature in self.particles["taus"]:
+            feature_data = self._awk_to_np(data[feature][mask], nobjects, 0, np.int16)
+            taus_data.append(feature_data)
 
-        taus_data = np.stack([taus_pt, taus_eta, taus_phi, taus_iso], axis=2)
-
+        taus_data = np.stack(taus_data, axis=2)
         print("Conversion of tau objects finished! \U0001F504")
         self.output_file.create_dataset("taus", data=taus_data, compression="gzip")
+
+    def _store_energies(self):
+        """Store the different types of energies associated with the event to np array.
+
+        The 'bx' in 'sum_bx' refers to the bunch crossing number. The global trigger
+        looks at ±2 bunch crossings in the LHC, and setting the '[var]_bx' to 0
+        establishes that we are looking only at the current bunch crossing data.
+        The energies are stored in the L1TNtuple trees all in the same leaf,
+        and the way to separate each energy type is through the sum_type flag.
+        """
+        sums_feats = ["nSums", "sumType", "sumBx", "sumIEt", "sumIPhi"]
+        sums_data = self._level1_trigger_tree.arrays(sums_feats)
+        # Convert everything to numpy arrays for easier manipulation.
+
+        nsums = sums_data["nSums"][0]
+        sum_type = sums_data["sumType"].to_numpy().astype(np.int16)
+        sum_bx = sums_data["sumBx"].to_numpy().astype(np.int16)
+        sum_et = sums_data["sumIEt"].to_numpy().astype(np.int16)
+        sum_phi = sums_data["sumIPhi"].to_numpy().astype(np.int16)
+
+        # Construct energy objects.
+        ET_idx = np.where((sum_type == 0) & (sum_bx == 0))
+        ETTEM_idx = np.where((sum_type == 16) & (sum_bx == 0))
+        self._store_ET(ET_idx, ETTEM_idx, sum_et)
+
+        HT_idx = np.where((sum_type == 1) & (sum_bx == 0))
+        HT_twrcnt_idx = np.where((sum_type == 21) & (sum_bx == 0))
+        self._store_HT(HT_idx, HT_twrcnt_idx, sum_et)
+
+        MET_idx = np.where((sum_type == 2) & (sum_bx == 0))
+        self._store_MET(MET_idx, sum_et, sum_phi)
+
+        MHT_idx = np.where((sum_type == 3) & (sum_bx == 0))
+        self._store_MHT(MHT_idx, sum_et, sum_phi)
+
+        FET_idx = np.where((sum_type == 8) & (sum_bx == 0))
+        self._store_FET(FET_idx, sum_et, sum_phi)
+
+        FHT_idx = np.where((sum_type == 20) & (sum_bx == 0))
+        self._store_FHT(FHT_idx, sum_et, sum_phi)
+
+        print("Conversion of energy objects finished! \U0001F504")
+
+    def _store_ET(self, ET_idx: list, ETTEM_idx: list, sum_et: np.ndarray):
+        """Store the transverse energy event object to a numpy array and save to h5.
+
+        The ETTEM feature refers to the missing transverse energy recorded by the
+        electromagnetic calorimeter of the detector and only that.
+        """
+        ET_data = np.zeros((self.nentries, 2), dtype=np.uint16)
+        ET_data[:, 0] = sum_et[ET_idx]
+        ET_data[:, 1] = sum_et[ETTEM_idx]
+
+        self.output_file.create_dataset("ET", data=ET_data, compression="gzip")
+
+    def _store_HT(self, HT_idx: list, HT_twrcnt_idx: list, sum_et: np.ndarray):
+        """Store the hardonic transverse energy event object.
+
+        twr_count refers to the number of towers detected in the hadronic calorimeter.
+        """
+        HT_data = np.zeros((self.nentries, 2), dtype=np.uint16)
+        HT_data[:, 0] = sum_et[HT_idx]
+        HT_data[:, 1] = sum_et[HT_twrcnt_idx]
+
+        self.output_file.create_dataset("HT", data=HT_data, compression="gzip")
+
+    def _store_MET(self, MET_idx: list, sum_et: np.ndarray, sum_phi: np.ndarray):
+        """Store the missing transverse energy event object."""
+        MET_data = np.zeros((self.nentries, 2), dtype=np.uint16)
+        MET_data[:, 0] = sum_et[MET_idx]
+        MET_data[:, 1] = sum_phi[MET_idx]
+
+        self.output_file.create_dataset("MET", data=MET_data, compression="gzip")
+
+    def _store_MHT(self, MHT_idx: list, sum_et: np.ndarray, sum_phi: np.ndarray):
+        """Store the missing hadronic transverse energy object."""
+        MHT_data = np.zeros((self.nentries, 2), dtype=np.uint16)
+        MHT_data[:, 0] = sum_et[MHT_idx]
+        MHT_data[:, 1] = sum_phi[MHT_idx]
+
+        self.output_file.create_dataset("MHT", data=MHT_data, compression="gzip")
+
+    def _store_FET(self, FET_idx: list, sum_et: np.ndarray, sum_phi: np.ndarray):
+        """Store the forward missing transverse energy event object.
+
+        Missing transverse energy object that includes data from the hadronic forward
+        calorimeter object, to a numpy array and save to h5.
+        """
+        FET_data = np.zeros((self.nentries, 2), dtype=np.uint16)
+        FET_data[:, 0] = sum_et[FET_idx]
+        FET_data[:, 1] = sum_phi[FET_idx]
+
+        self.output_file.create_dataset("FET", data=FET_data, compression="gzip")
+
+    def _store_FHT(self, FHT_idx: list, sum_et: np.ndarray, sum_phi: np.ndarray):
+        """Store the forward missing transverse hadronic energy event object.
+
+        Missing hadronic transverse energy object that includes data from the hadronic
+        forward calorimeter object, to a numpy array and save to h5.
+        """
+        FHT_data = np.zeros((self.nentries, 2), dtype=np.uint16)
+        FHT_data[:, 0] = sum_et[FHT_idx]
+        FHT_data[:, 1] = sum_phi[FHT_idx]
+
+        self.output_file.create_dataset("FHT", data=FHT_data, compression="gzip")
 
     def _store_cica(self):
         """Store the Cicada (Anomaly detector for calo) feature data into arrays."""
 
         # See README.md for information on what each feature means.
         data = self._gtrigger_calos_tree.arrays(self.cicada["cicada"])
+        nobjects = len(data["CICADAScore"])
 
-        # Get the cicada score for all the events.
-        nobjects = ak.count(data)
         # Convert the tree data to numpy arrays.
-        cica_score = self._to_np_array(
-            data["CICADAScore"], maxN=nobjects, dtype=np.float16
-        )
-
+        cica_score = self._awk_to_np(data["CICADAScore"], nobjects, 0, np.float16)
         print("Conversion of cicada objects finished! \U0001F504")
         self.output_file.create_dataset("cicada", data=cica_score, compression="gzip")
+
+    def _awk_to_np(self, awk_array: ak.Array, length: int, padder, dtype: np.dtype):
+        """Convert awkward array to a numpy array.
+
+        Args:
+            ak_array: Awkward array to convert.
+            length: The length that the numpy array should have.
+            padder: The object to pad the awk array with, can be a number or None.
+            dtype: The data type of the generated numpy array.
+        """
+        # Pad the innermost dimension: axis=-1.
+        awk_array = ak.pad_none(awk_array, length, clip=True, axis=-1)
+        awk_array = ak.fill_none(awk_array, padder)
+        return awk_array.to_numpy().astype(dtype)
