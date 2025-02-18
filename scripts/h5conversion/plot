@@ -24,15 +24,15 @@ print(tcols.OKGREEN + "\nPlotting the particle objects..." + tcols.ENDC)
 for obj in reader.particles.keys():
     plots.plot_hist_3d(h5file[obj], obj, reader.particles[obj], folder)
 
-print(tcols.OKGREEN + "\nPlotting the energy objects...\n" + tcols.ENDC)
+print(tcols.OKGREEN + "\nPlotting the energy objects..." + tcols.ENDC)
 for obj in reader.energies.keys():
     plots.plot_hist_2d(h5file[obj], obj, reader.energies[obj], folder)
 
-print(tcols.OKGREEN + "\nPlotting the event information objects...\n" + tcols.ENDC)
+print(tcols.OKGREEN + "\nPlotting the event information objects..." + tcols.ENDC)
 for obj in reader.event_info.keys():
     plots.plot_hist_2d(h5file[obj], obj, reader.event_info[obj], folder)
 
-print(tcols.OKGREEN + "\nPlotting the cicada objects...\n" + tcols.ENDC)
+print(tcols.OKGREEN + "\nPlotting the cicada objects..." + tcols.ENDC)
 for obj in reader.cicada.keys():
     plots.plot_hist_1d(h5file[obj], reader.cicada[obj], folder)
 
