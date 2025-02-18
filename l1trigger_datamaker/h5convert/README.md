@@ -19,7 +19,7 @@ Also, a lot of the descriptions are based on word of mouth and exchanges with th
 > and then use the read method
 > `reader = root2h5.Root2h5(); h5file = reader.read_folder(folder)`.
 > For an example of how this is done, check the `scripts/plot` script.
-> The reader class contains dictionaries of all the objects and features stored in each object, but ultimately it just reads a file using `h5py`.
+> The reader class contains dictionaries of all the objects, see: `reader.particles`, `reader.energies`, `reader.event_info`, `reader.cicada`, `reader.geninfo`. 
 
 # Prescale Files
 
@@ -35,6 +35,10 @@ Each object also has an associated `[object_name]Bx` feature in the L1TNtuple wh
 The generated h5 files follow the structure outlined in the rest of the readme, i.e., `event|objects|features`, and the order of the features is the same as shown below. A tick in the h5 column means that the feature is stored in the h5 files upon conversion.
 
 ## Muon Objects
+
+> [!NOTE]
+> There are 8 muon objects in the h5 files. Access them with `h5file["muons"]`.
+> The features of the muons and whether they are included in the h5 are detailed below.
 
 Additional to the features listed below, the L1TNtuples also contain the following muon variables: `nMuons`, `muonIEta`, `muonIDEta`, `muonIDPhi`, `nMuonShowers`, `muonShowerBx`, `muonShowerOneNominal`, `muonShowerOneTight`, `muonShowerTwoLoose`, `muonShowerTwoLooseDiffSectors`; as well as float versions of the `muonIEt`, `muonIEtUnconstrained`, `muonIEta`, `muonIPhi`, `muonIEtaAtVtx`, `muonIPhiAtVtx`, i.e., without `I` in the name. These features are not converted to the produced h5 since they do not pertain to the global trigger, and hence not relevant for our algorithm.
 
@@ -56,6 +60,10 @@ Additional to the features listed below, the L1TNtuples also contain the followi
 
 ## Jet Objects
 
+> [!NOTE]
+> There are 12 jet objects in the h5 files. Access them with `h5file["jets"]`.
+> The features of the jets and whether they are included in the h5 are detailed below.
+
 Additional to the features listed below, the L1TNtuples contain the following jet variables: `jetSeedEt`, `jetTowerIEta`, `jetTowerIPhi`, `jetPUEt`, `jetPUDonutEt0`, `jetPUDonutEt1`, `jetPUDonutEt2`, `jetPUDonutEt3`; as well as float versions of the `jetIEt`, `jetIEta`, `jetIPhi`, and `jetIRawEt` features, i.e., without `I` in the name. These features are not converted to the produced h5 since they do not pertain to the global trigger, and hence not relevant for our algorithm.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      h5       |
@@ -69,6 +77,10 @@ Additional to the features listed below, the L1TNtuples contain the following je
 
 ## Egamma Objects
 
+> [!NOTE]
+> There are 12 egamma objects in the h5 files. Access them with `h5file["egammas"]`.
+> The features of the egammas and whether they are included in the h5 are detailed below.
+
 Additional to the features listed below, the L1TNtuples contain the following egamma variables: `nEGs`, `egTowerIPhi`, `egTowerIEta`, `egRawEt`, `egIsoEt`, `egFootprintEt`, `egNTT`, `egShape`, `egTowerHoE`, `egHwQual`; as well as float versions of the `egIEt`, `egIEta`, `egIPhi`, and `egIRawEt` features, i.e., without `I` in the name. These features are not converted to the produced h5 since they do not pertain to the global trigger, and hence not relevant for our algorithm.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      h5       |
@@ -79,6 +91,10 @@ Additional to the features listed below, the L1TNtuples contain the following eg
 | `egIso` iso  |  -  | - | 2 | Little activity around the cluster of energy representing the electron/photon means higher isolation: less likely to be a jet. The lowest bit is defined as `isolated` while the highest bit is named `undefined`. Three degrees of isolation are possible, but only two are used, i.e., the `isolated` bit is set and the other is optional, or vice versa. Thus, it's either these two options, or `no isolation`, when all bits are 0. Whatever quality is larger than 0 is treated as the same degree of isolation. Still unclear how these bits are set, i.e., based on exactly what parameters. | :heavy_check_mark: |
 
 ## Tau Objects
+
+> [!NOTE]
+> There are 12 tau objects in the h5 files. Access them with `h5file["taus"]`.
+> The features of the taus and whether they are included in the h5 are detailed below.
 
 Additional to the features listed below, the L1TNtuples contain the following tau variables: `nTaus`, `tauTowerIPhi`, `tauTowerIEta`, `tauRawEt`, `tauRawIEt`, `tauIsoEt`, `tauNTT`, `tauHasEM`, `tauIsMerged`, `tauHwQual`; as well as float versions of the `tauIEt`, `tauIEta`, and `tauIPhi` features, i.e., without `I` in the name. These features are not converted to the produced h5.
 
@@ -94,6 +110,10 @@ Additional to the features listed below, the L1TNtuples contain the following ta
 
 Anomaly detection algorithm that uses data from the calorimeter. The `modelIInput` is also available for this object.
 
+> [!NOTE]
+> There is one cicada object in the h5 files. Access it with `h5file["cicada"]`.
+> The features of the cicada object and whether it is included in the h5 is detailed below.
+
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      h5       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
 | `CICADAScore` |  -  | - | 4 | Anomaly score generated using calorimeter tower data. | :heavy_check_mark: |
@@ -102,8 +122,12 @@ Anomaly detection algorithm that uses data from the calorimeter. The `modelIInpu
 
 The energy objects do not have `root_file_name` due to how they are stored in the root files. For more details on how the energy objects are stored, see the code.
 
+> [!NOTE]
+> There are 6 energy objects in the h5 files. Go to the corresponding object to see how to access it.
+> The features of the each energy object are detailed below.
+
 ### $ET$
-The transverse energy object.
+The transverse energy object. Access it using `h5file["ET"]`.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      h5       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -112,7 +136,7 @@ The transverse energy object.
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### $HT$
-The `HT` is the magnitude of the vectorial sum of transverse energy jets over ECAL and HCAL.
+The `HT` is the magnitude of the vectorial sum of transverse energy jets over ECAL and HCAL. Access it using `h5file["HT"]`.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      h5       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -121,7 +145,7 @@ The `HT` is the magnitude of the vectorial sum of transverse energy jets over EC
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### $ET_\mathrm{miss}$
-The missing transverse energy object.
+The missing transverse energy object. Access it using `h5file["MET"]`.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      h5       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -131,7 +155,7 @@ The missing transverse energy object.
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### $HT_\mathrm{miss}$
-The missing transverse hadronic energy object.
+The missing transverse hadronic energy object. Access it using `h5file["MHT"]`.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      h5       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -141,7 +165,7 @@ The missing transverse hadronic energy object.
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### $ET^\mathrm{HF}_\mathrm{miss}$
-The missing transverse energy object including data from the forward hadronic calorimeter object.
+The missing transverse energy object including data from the forward hadronic calorimeter object. Access it using `h5file["FET"]`.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      h5       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -152,7 +176,7 @@ The missing transverse energy object including data from the forward hadronic ca
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### $HT^\mathrm{HF}_\mathrm{miss}$
-The missing transverse energy object including data from the forward hadronic calorimeter object.
+The missing transverse energy object including data from the forward hadronic calorimeter object. Access it using `h5file["FHT"]`.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      h5       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -164,7 +188,8 @@ The missing transverse energy object including data from the forward hadronic ca
 
 ## Event Information
 
-All the following features are integers.
+Access the metadata event information using `h5file["event_info"]`.
+All the following features are integers. 
 
 | Feature       |  Explanation  |      h5       |
 | ------------- | ------------- | ------------- |
