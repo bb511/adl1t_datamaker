@@ -287,7 +287,7 @@ class Root2h5(object):
 
     def _store_eventinfo(self):
         """Store the event information data to a numpy array and save to given h5."""
-        event_info = ["run", "lumi", "event", "bx", "orbit", "time", "nPV_true"]
+        event_info = ["run", "lumi", "event", "bx", "orbit", "time", "nPV_True"]
         event_data = self._gtrigger_event_tree.arrays(event_info)
         event_data = ak.to_dataframe(event_data).to_numpy()
         pileups_all_runs = self._get_pileup_array(event_data)
