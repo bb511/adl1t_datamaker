@@ -65,7 +65,7 @@ class Root2h5(object):
 
         # Define the metadata of the event and the corresponding features.
         self.event_info = {
-            "event_info": ["run", "lumi", "event", "bx", "orbit", "time", "PU"]
+            "event_info": ["run", "lumi", "event", "bx", "orbit", "time", "nPV_True", "PU"]
         }
 
         # Define the generator information, only useful for data generated with MC.
