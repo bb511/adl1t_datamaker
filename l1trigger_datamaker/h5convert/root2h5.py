@@ -341,8 +341,8 @@ class Root2h5(object):
         generator_feat = ["jetPt", "jetEta"]
         generator_data = generator_tree.arrays(generator_feat)
         generator_jets = np.zeros((self.nentries, 100, 2), dtype=np.float16)
-        generator_jets[:, :, 0] = self._to_np_array(generator_data["jetPt"], maxN=100)
-        generator_jets[:, :, 1] = self._to_np_array(generator_data["jetEta"], maxN=100)
+        generator_jets[:, :, 0] = self._awk_to_np(generator_data["jetPt"], maxN=100)
+        generator_jets[:, :, 1] = self._awk_to_np(generator_data["jetEta"], maxN=100)
         mask_pt = generator_jets[:, :, 0] > 30
         mask_eta = generator_jets[:, :, 1] < 2.5
         mask = (
