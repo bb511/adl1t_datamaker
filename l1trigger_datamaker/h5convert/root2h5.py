@@ -10,6 +10,7 @@ import h5py
 import numpy as np
 import uproot
 import awkward as ak
+import pandas as pd
 
 from l1trigger_datamaker.h5convert.terminal_colors import tcols
 
@@ -64,17 +65,17 @@ class Root2h5(object):
 
         # Define the metadata of the event and the corresponding features.
         self.event_info = {
-            "event_info": ["run", "lumi", "event", "bx", "orbit", "time", "nPV_True"]
+            "event_info": ["run", "lumi", "event", "bx", "orbit", "time", "PU"]
         }
 
         # Define the generator information, only useful for data generated with MC.
         self.geninfo = {"generator_HT": ["jetPt", "jetEta"]}
 
-    def read_file(self, file: Path):
+    def read_file(self, file: Path) -> h5py.File:
         """Read an h5 that was produced using this class."""
         return h5py.File(file, mode="r")
 
-    def read_folder(self, folder: Path):
+    def read_folder(self, folder: Path) -> h5py.File:
         """Read and merge all h5 files inside a folder."""
         print(f"Reading folder of h5 files {folder}...")
         self.file_names = list(folder.glob("*.h5"))
@@ -215,7 +216,7 @@ class Root2h5(object):
         for seed, values in seeds.items():
             self.output_file.create_dataset(seed, data=values, compression="gzip")
 
-    def _get_algo_map(self):
+    def _get_algo_map(self) -> dict:
         """Get all the algorithms in the global trigger and their corresp decision bit nbs.
 
         The branch that is accessed here is not exactly the same as the one in the func
@@ -233,7 +234,7 @@ class Root2h5(object):
 
         return algo_map
 
-    def _filter_algo_map(self, algo_map: dict):
+    def _filter_algo_map(self, algo_map: dict) -> dict:
         """Filter the algorithm dictionary to only the ones present in prescale file."""
         # [1] corresponds to algo name
         # [4] corresponds to "2.3E+34"
@@ -248,7 +249,7 @@ class Root2h5(object):
 
         return {key: algo_map[key] for key in wanted_keys}
 
-    def _get_decision_bits(self):
+    def _get_decision_bits(self) -> tuple[np.ndarray, np.ndarray]:
         """Get the decision bits for each algorithm in the global trigger for each event.
 
         The initial decision is the actual decision of the algorithm, while the final
@@ -265,7 +266,7 @@ class Root2h5(object):
 
         return initial_bits, final_bits
 
-    def _get_level1_seeds(self, algo_map: dict, final_decision_bits: np.ndarray):
+    def _get_level1_seeds(self, algo_map: dict, final_decision_bits: np.ndarray) -> dict:
         """Construct dictionary of level 1 algorithm seeds.
 
         Construct dictionary where for each trigger algorithm name corresponds to a
@@ -286,12 +287,45 @@ class Root2h5(object):
 
     def _store_eventinfo(self):
         """Store the event information data to a numpy array and save to given h5."""
-        event_info = ["run", "lumi", "event", "bx", "orbit", "time", "nPV_True"]
+        event_info = ["run", "lumi", "event", "bx", "orbit", "time", "nPV_true"]
         event_data = self._gtrigger_event_tree.arrays(event_info)
         event_data = ak.to_dataframe(event_data).to_numpy()
+        pileups_all_runs = self._get_pileup_array(event_data)
+        event_data = np.hstack([event_data, pileups_all_runs[:, 1].reshape(-1, 1)])
         self.output_file.create_dataset(
             "event_info", data=event_data, compression="gzip"
         )
+
+    def _get_pileup_array(self, event_data):
+        """Gets an array with the pileup corresponding to each event in the h5."""
+        pileups_all_runs = []
+        for run_number in set(event_data[:, 0]):
+            idxs_events_per_run = np.where(event_data[:, 0] == run_number)[0]
+            lumi_sections = event_data[idxs_events_per_run, 1]
+            lumi_vs_pileup = self._get_pileup_info(run_number, set(lumi_sections))
+            pileups = [lumi_vs_pileup[lumi] for lumi in lumi_sections]
+            pileups = np.stack([idxs_events_per_run, pileups], axis=1)
+            pileups_all_runs.append(pileups)
+
+        pileups_all_runs = np.concatenate(pileups_all_runs, axis=0)
+        pileups_all_runs = pileups_all_runs[pileups_all_runs[:, 0].argsort()]
+
+        return pileups_all_runs
+
+    def _get_pileup_info(self, run_number: int, lumi_sections: set) -> np.ndarray:
+        """Looks inside brilcalc file and gets pileup info for list of lumi sections."""
+        current_dir = Path(__file__).parent.resolve()
+        pileup_files_folder = Path(current_dir / "pileup_files")
+        pileup_file = next(pileup_files_folder.glob(f"run{run_number}*"))
+
+        pileup_data = pd.read_csv(pileup_file, skiprows=1)[:-3]
+        pileup_data['ls'] = pileup_data["ls"].astype(str).str.split(":").str[0].astype(int)
+
+        lumi_sections = list(lumi_sections)
+        pileup = pileup_data.query("ls == @lumi_sections")['avgpu'].to_numpy()
+        lumi_vs_pileup = dict(zip(lumi_sections, pileup))
+
+        return lumi_vs_pileup
 
     def _store_geninfo(self):
         """If the data file is monte carlo generated, then store additional info."""

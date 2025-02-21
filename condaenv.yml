@@ -11,4 +11,3 @@ dependencies:
   - awkward=2.7.*
   - pandas=2.2.*
   - matplotlib=3.10.*
-  - pytables=3.8.*
