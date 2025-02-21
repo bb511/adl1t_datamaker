@@ -290,7 +290,8 @@ class Root2h5(object):
         event_info = ["run", "lumi", "event", "bx", "orbit", "time", "nPV_True"]
         event_data = self._gtrigger_event_tree.arrays(event_info)
         event_data = ak.to_dataframe(event_data).to_numpy()
-        pileups_all_runs = self._get_pileup_array(event_data)
+        if not self.mc:
+            pileups_all_runs = self._get_pileup_array(event_data)
         event_data = np.hstack([event_data, pileups_all_runs[:, 1].reshape(-1, 1)])
         self.output_file.create_dataset(
             "event_info", data=event_data, compression="gzip"
