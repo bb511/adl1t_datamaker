@@ -300,6 +300,7 @@ class Root2h5(object):
     def _get_pileup_array(self, event_data):
         """Gets an array with the pileup corresponding to each event in the h5."""
         pileups_all_runs = []
+        print(f"Getting pileup for run numbers: {set(event_data[:, 0])}")
         for run_number in set(event_data[:, 0]):
             idxs_events_per_run = np.where(event_data[:, 0] == run_number)[0]
             lumi_sections = event_data[idxs_events_per_run, 1]
@@ -315,9 +316,15 @@ class Root2h5(object):
 
     def _get_pileup_info(self, run_number: int, lumi_sections: set) -> np.ndarray:
         """Looks inside brilcalc file and gets pileup info for list of lumi sections."""
+        run_number = int(run_number)
         current_dir = Path(__file__).parent.resolve()
         pileup_files_folder = Path(current_dir / "pileup_files")
-        pileup_file = next(pileup_files_folder.glob(f"run{run_number}*"))
+        pileup_file = pileup_files_folder.glob(f"run{run_number}*")
+
+        try:
+            pileup_file = next(pileup_file)
+        except StopIteration:
+            raise ValueError(f"No file for this run number in {pileup_files_folder}")
 
         pileup_data = pd.read_csv(pileup_file, skiprows=1)[:-3]
         pileup_data['ls'] = pileup_data["ls"].astype(str).str.split(":").str[0].astype(int)

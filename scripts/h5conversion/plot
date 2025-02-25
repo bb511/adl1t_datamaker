@@ -4,9 +4,6 @@
 import argparse
 from pathlib import Path
 
-import h5py
-import numpy as np
-
 from l1trigger_datamaker.h5convert import root2h5
 from l1trigger_datamaker.h5convert import plots
 from l1trigger_datamaker.h5convert.terminal_colors import tcols

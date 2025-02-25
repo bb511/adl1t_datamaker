@@ -117,8 +117,8 @@ def plot_hist_1d(data: np.ndarray, feat: str, outdir: Path):
         print("Array is full of 0s, skipping the plotting!")
         return
 
-    plt.xlim(np.nanmin(data), np.nanmax(data))
     plt.figure(figsize=(12, 10))
+    plt.xlim(np.nanmin(data), np.nanmax(data))
     counts, edges, bars = plt.hist(
         x=np.array(data).flatten(),
         bins=30,
