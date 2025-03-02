@@ -61,7 +61,7 @@ class Root2h5(object):
         }
 
         # Define the cicada (calo anomaly detector) object.
-        self.cicada = {"cicada": "CICADAScore"}
+        self.cicada = {"cicada": ["CICADAScore"]}
 
         # Define the metadata of the event and the corresponding features.
         self.event_info = {
@@ -79,6 +79,9 @@ class Root2h5(object):
         """Read and merge all h5 files inside a folder."""
         print(f"Reading folder of h5 files {folder}...")
         self.file_names = list(folder.glob("*.h5"))
+
+        if not self.file_names:
+            raise ValueError("Given folder of h5 files is empty!")
 
         if folder / "merged_folder.h5" in self.file_names:
             return h5py.File(folder / "merged_folder.h5", mode="r")
@@ -235,11 +238,10 @@ class Root2h5(object):
         return algo_map
 
     def _filter_algo_map(self, algo_map: dict) -> dict:
-        """Filter the algorithm dictionary to only the ones present in prescale file."""
+        """Filter the algorithm dictionary to only the ones that are not prescaled."""
         # [1] corresponds to algo name
         # [4] corresponds to "2.3E+34"
 
-        # MAYBE REMOVE AT SOME LATER POINT.
         with open(self.prescale_file) as prescale_file:
             wanted_keys = [
                 line.split(",")[1]
@@ -324,7 +326,10 @@ class Root2h5(object):
         try:
             pileup_file = next(pileup_file)
         except StopIteration:
-            raise ValueError(f"No file for this run number in {pileup_files_folder}")
+            raise ValueError(
+                f"No file for this run number in {pileup_files_folder}. "
+                f"Check if this is truly data or might be simulation!"
+            )
 
         pileup_data = pd.read_csv(pileup_file, skiprows=1)[:-3]
         pileup_data['ls'] = pileup_data["ls"].astype(str).str.split(":").str[0].astype(int)
@@ -497,9 +502,9 @@ class Root2h5(object):
         The ETTEM feature refers to the missing transverse energy recorded by the
         electromagnetic calorimeter of the detector and only that.
         """
-        ET_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        ET_data[:, 0] = sum_et[ET_idx]
-        ET_data[:, 1] = sum_et[ETTEM_idx]
+        ET_data = np.zeros((self.nentries, 1, 2), dtype=np.uint16)
+        ET_data[:, 0, 0] = sum_et[ET_idx]
+        ET_data[:, 0, 1] = sum_et[ETTEM_idx]
 
         self.output_file.create_dataset("ET", data=ET_data, compression="gzip")
 
@@ -508,25 +513,25 @@ class Root2h5(object):
 
         twr_count refers to the number of towers detected in the hadronic calorimeter.
         """
-        HT_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        HT_data[:, 0] = sum_et[HT_idx]
-        HT_data[:, 1] = sum_et[HT_twrcnt_idx]
+        HT_data = np.zeros((self.nentries, 1, 2), dtype=np.uint16)
+        HT_data[:, 0, 0] = sum_et[HT_idx]
+        HT_data[:, 0, 1] = sum_et[HT_twrcnt_idx]
 
         self.output_file.create_dataset("HT", data=HT_data, compression="gzip")
 
     def _store_MET(self, MET_idx: list, sum_et: np.ndarray, sum_phi: np.ndarray):
         """Store the missing transverse energy event object."""
-        MET_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        MET_data[:, 0] = sum_et[MET_idx]
-        MET_data[:, 1] = sum_phi[MET_idx]
+        MET_data = np.zeros((self.nentries, 1, 2), dtype=np.uint16)
+        MET_data[:, 0, 0] = sum_et[MET_idx]
+        MET_data[:, 0, 1] = sum_phi[MET_idx]
 
         self.output_file.create_dataset("MET", data=MET_data, compression="gzip")
 
     def _store_MHT(self, MHT_idx: list, sum_et: np.ndarray, sum_phi: np.ndarray):
         """Store the missing hadronic transverse energy object."""
-        MHT_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        MHT_data[:, 0] = sum_et[MHT_idx]
-        MHT_data[:, 1] = sum_phi[MHT_idx]
+        MHT_data = np.zeros((self.nentries, 1, 2), dtype=np.uint16)
+        MHT_data[:, 0, 0] = sum_et[MHT_idx]
+        MHT_data[:, 0, 1] = sum_phi[MHT_idx]
 
         self.output_file.create_dataset("MHT", data=MHT_data, compression="gzip")
 
@@ -536,9 +541,9 @@ class Root2h5(object):
         Missing transverse energy object that includes data from the hadronic forward
         calorimeter object, to a numpy array and save to h5.
         """
-        FET_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        FET_data[:, 0] = sum_et[FET_idx]
-        FET_data[:, 1] = sum_phi[FET_idx]
+        FET_data = np.zeros((self.nentries, 1, 2), dtype=np.uint16)
+        FET_data[:, 0, 0] = sum_et[FET_idx]
+        FET_data[:, 0, 1] = sum_phi[FET_idx]
 
         self.output_file.create_dataset("FET", data=FET_data, compression="gzip")
 
@@ -548,9 +553,9 @@ class Root2h5(object):
         Missing hadronic transverse energy object that includes data from the hadronic
         forward calorimeter object, to a numpy array and save to h5.
         """
-        FHT_data = np.zeros((self.nentries, 2), dtype=np.uint16)
-        FHT_data[:, 0] = sum_et[FHT_idx]
-        FHT_data[:, 1] = sum_phi[FHT_idx]
+        FHT_data = np.zeros((self.nentries, 1, 2), dtype=np.uint16)
+        FHT_data[:, 0, 0] = sum_et[FHT_idx]
+        FHT_data[:, 0, 1] = sum_phi[FHT_idx]
 
         self.output_file.create_dataset("FHT", data=FHT_data, compression="gzip")
 
@@ -562,9 +567,12 @@ class Root2h5(object):
         nobjects = len(data["CICADAScore"])
 
         # Convert the tree data to numpy arrays.
+        cicada_data = np.zeros((self.nentries, 1, 1))
         cica_score = self._awk_to_np(data["CICADAScore"], nobjects, 0, np.float16)
+
+        cicada_data[:, 0, 0] = cica_score
         print("Conversion of cicada objects finished! \U0001F504")
-        self.output_file.create_dataset("cicada", data=cica_score, compression="gzip")
+        self.output_file.create_dataset("cicada", data=cicada_data, compression="gzip")
 
     def _awk_to_np(self, awk_array: ak.Array, length: int, padder, dtype: np.dtype):
         """Convert awkward array to a numpy array.
