@@ -80,6 +80,13 @@ class Root2h5(object):
         # Define the generator information, only useful for data generated with MC.
         self.geninfo = {"generator_HT": ["jetPt", "jetEta"]}
 
+        self.all_objects_feats = {}
+        self.all_objects_feats.update(self.particles)
+        self.all_objects_feats.update(self.energies)
+        self.all_objects_feats.update(self.cicada)
+        self.all_objects_feats.update(self.event_info)
+        self.all_objects_feats.update(self.gen_info)
+
     def read_file(self, file: Path) -> h5py.File:
         """Read an h5 that was produced using this class."""
         return h5py.File(file, mode="r")
