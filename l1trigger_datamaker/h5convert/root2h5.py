@@ -65,7 +65,16 @@ class Root2h5(object):
 
         # Define the metadata of the event and the corresponding features.
         self.event_info = {
-            "event_info": ["run", "lumi", "event", "bx", "orbit", "time", "nPV_True", "PU"]
+            "event_info": [
+                "run",
+                "lumi",
+                "event",
+                "bx",
+                "orbit",
+                "time",
+                "nPV_True",
+                "PU",
+            ]
         }
 
         # Define the generator information, only useful for data generated with MC.
@@ -268,7 +277,9 @@ class Root2h5(object):
 
         return initial_bits, final_bits
 
-    def _get_level1_seeds(self, algo_map: dict, final_decision_bits: np.ndarray) -> dict:
+    def _get_level1_seeds(
+        self, algo_map: dict, final_decision_bits: np.ndarray
+    ) -> dict:
         """Construct dictionary of level 1 algorithm seeds.
 
         Construct dictionary where for each trigger algorithm name corresponds to a
@@ -332,11 +343,26 @@ class Root2h5(object):
             )
 
         pileup_data = pd.read_csv(pileup_file, skiprows=1)[:-3]
-        pileup_data['ls'] = pileup_data["ls"].astype(str).str.split(":").str[0].astype(int)
+        pileup_data["ls"] = (
+            pileup_data["ls"].astype(str).str.split(":").str[0].astype(int)
+        )
 
         lumi_sections = list(lumi_sections)
-        pileup = pileup_data.query("ls == @lumi_sections")['avgpu'].to_numpy()
-        lumi_vs_pileup = dict(zip(lumi_sections, pileup))
+        lumi_vs_pileup = {}
+        # Get the avg pileup from file or pad with 0 for every lumi section in data.
+        for idx, lumi_section in enumerate(lumi_sections):
+            if lumi_section in set(pileup_data["ls"].to_numpy()):
+                lumi_vs_pileup.update(
+                    {
+                        lumi_section: pileup_data.loc[
+                            pileup_data["ls"] == lumi_section, "avgpu"
+                        ].to_numpy()[0]
+                    }
+                )
+                continue
+            lumi_vs_pileup.update({lumi_section: 0})
+
+        print(lumi_vs_pileup)
 
         return lumi_vs_pileup
 
@@ -353,8 +379,12 @@ class Root2h5(object):
         generator_feat = ["jetPt", "jetEta"]
         generator_data = generator_tree.arrays(generator_feat)
         generator_jets = np.zeros((self.nentries, 100, 2), dtype=np.float16)
-        generator_jets[:, :, 0] = self._awk_to_np(generator_data["jetPt"], 100, 0, np.float16)
-        generator_jets[:, :, 1] = self._awk_to_np(generator_data["jetEta"], 100, 0, np.float16)
+        generator_jets[:, :, 0] = self._awk_to_np(
+            generator_data["jetPt"], 100, 0, np.float16
+        )
+        generator_jets[:, :, 1] = self._awk_to_np(
+            generator_data["jetEta"], 100, 0, np.float16
+        )
         mask_pt = generator_jets[:, :, 0] > 30
         mask_eta = generator_jets[:, :, 1] < 2.5
         mask = (
@@ -431,7 +461,9 @@ class Root2h5(object):
         egammas_data = np.stack(egammas_data, axis=2)
 
         print("Conversion of egamma objects finished! \U0001F504")
-        self.output_file.create_dataset("egammas", data=egammas_data, compression="gzip")
+        self.output_file.create_dataset(
+            "egammas", data=egammas_data, compression="gzip"
+        )
 
     def _store_taus(self):
         """Store the taus feature data into numpy arrays and save to h5."""

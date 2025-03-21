@@ -67,7 +67,6 @@ def createConfig(args, dataset):
     config = config()
 
     if args.set_input_files:
-
         print(dataset)
         isMC = True
         ext = ""
@@ -76,7 +75,6 @@ def createConfig(args, dataset):
         tag = ""
 
     else:
-
         tag = args.tag + "_"
         procname, vername, ext, isMC = parseDatasetName(dataset)
 
@@ -295,7 +293,6 @@ def status(args):
 
 
 def main():
-
     parser = argparse.ArgumentParser("Submit crab jobs")
     parser.add_argument("-i", "--inputfile", help="File with list of input datasets")
     parser.add_argument("-o", "--outputdir", help="Output directory")
@@ -446,7 +443,6 @@ def main():
     submit_failed = []
 
     if args.set_input_files:
-
         cfg, cfgpath = createConfig(args, args.inputfile)
         if args.dryrun:
             print("-" * 50)
@@ -460,7 +456,6 @@ def main():
             submit_failed.append(cfgpath)
 
     else:
-
         with open(args.inputfile) as inputfile:
             for l in inputfile:
                 l = l.strip()
