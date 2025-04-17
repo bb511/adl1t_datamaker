@@ -85,14 +85,17 @@ class Root2h5(object):
         self.all_objects_feats.update(self.energies)
         self.all_objects_feats.update(self.cicada)
         self.all_objects_feats.update(self.event_info)
-        self.all_objects_feats.update(self.gen_info)
+        self.all_objects_feats.update(self.geninfo)
 
     def read_file(self, file: Path) -> h5py.File:
         """Read an h5 that was produced using this class."""
         return h5py.File(file, mode="r")
 
-    def read_folder(self, folder: Path) -> h5py.File:
+    def read_folder(self, folder: str | Path) -> h5py.File:
         """Read and merge all h5 files inside a folder."""
+        if isinstance(folder, str):
+            folder = Path(folder)
+
         print(f"Reading folder of h5 files {folder}...")
         self.file_names = list(folder.glob("*.h5"))
 
