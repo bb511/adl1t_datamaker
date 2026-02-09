@@ -14,6 +14,8 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 parser.add_argument('--folder', type=str, help="Path to the root folder with pq files.")
 args = parser.parse_args()
 
+# Select which features to plot.
+# Default is plot everything except for seeds.
 select_feats = {
   'muons': [
     'muonIPhiAtVtx', 'muonIEt', 'muonQual',

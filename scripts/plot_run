@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-# Plot converted h5 files.
+# Plot a whole run of parquet files. This is useful for a lot of simulations
+# corresponding to a specific run.
+# This uses hydra to set the config.
+# See scripts/configs for the available configuration files.
 from pathlib import Path
 
 import hydra
@@ -13,6 +16,8 @@ from adl1t_datamaker import util
 from adl1t_datamaker.terminal_colors import tcols
 
 
+# Select which features to plot.
+# Default is plot everything except for seeds.
 select_feats = {
   'muons': [
     'muonIPhiAtVtx', 'muonIEt', 'muonQual',

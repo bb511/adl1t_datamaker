@@ -1,6 +1,6 @@
 # Script that extracts all the global trigger data from the L1Tntuples and saves it
-# into h5 files. Not all the global trigger objects are saved to the h5s, since some
-# objects/features are not useful for analysis; see README.md for more details..
+# into parquet files. Not all the global trigger objects are saved to the parquets,
+# since some objects/features are not useful for analysis; see README.md for details..
 
 import io
 import pathlib
@@ -129,9 +129,9 @@ class Root2Parquet(object):
         output_path: str,
         ncores: int = 1,
     ):
-        """Extract objects/features from folder of root files and convert to h5s.
+        """Extract objects/features from folder of root files and convert to parquet.
 
-        Include in the h5 only the relevant quantities from each given TTree, which are
+        Include in the parquet only the relevant quantities from each given TTree, which are
         defined apriori (see README for more details).
 
         Args:
@@ -191,7 +191,7 @@ class Root2Parquet(object):
             self._store_objects()
 
     def _store_objects(self) -> None:
-        """Store objects of interest to the h5 files."""
+        """Store objects of interest to the parquet files."""
         self._store_seeds()
         self._store_eventinfo()
         self._store_muons()
@@ -202,7 +202,7 @@ class Root2Parquet(object):
         self._store_cica()
 
     def _store_seeds(self):
-        """Store the level 1 global trigger seeds to a given h5 file.
+        """Store the level 1 global trigger seeds to a given parquet file.
 
         This corresponds to constructing a dictionary that contains the name of each
         relevant algorithm in the global trigger and the corresponding decision bit
@@ -228,7 +228,7 @@ class Root2Parquet(object):
         ak.to_parquet(seeds, seeds_file, compression='snappy')
 
     def _store_eventinfo(self):
-        """Store the event information data to a numpy array and save to given h5."""
+        """Store the event information data to a numpy array and save to given parquet."""
         einfo_directory = self.output_path / "event_info"
         einfo_directory.mkdir(parents=True, exist_ok=True)
         einfo_file = einfo_directory / f'{self.output_filename}.parquet'
@@ -244,7 +244,7 @@ class Root2Parquet(object):
         ak.to_parquet(event_data, einfo_file, compression='snappy')
 
     def _store_muons(self):
-        """Store the muon feature data into numpy arrays and save to h5."""
+        """Store the muon feature data into numpy arrays and save to parquet."""
         muons_directory = self.output_path / "muons"
         muons_directory.mkdir(parents=True, exist_ok=True)
         muons_file = muons_directory / f'{self.output_filename}.parquet'
@@ -263,7 +263,7 @@ class Root2Parquet(object):
         print("Conversion of muon objects finished! \U0001F504")
 
     def _store_jets(self):
-        """Store the jets feature data into numpy arrays and save to h5."""
+        """Store the jets feature data into numpy arrays and save to parquet."""
         jets_directory = self.output_path / "jets"
         jets_directory.mkdir(parents=True, exist_ok=True)
         jets_file = jets_directory / f'{self.output_filename}.parquet'
@@ -276,7 +276,7 @@ class Root2Parquet(object):
         print("Conversion of jet objects finished! \U0001F504")
 
     def _store_egammas(self):
-        """Store the electron/gamma feature data into numpy arrays and save to h5."""
+        """Store the electron/gamma feature data into numpy arrays and save to parquet."""
         egammas_directory = self.output_path / "egammas"
         egammas_directory.mkdir(parents=True, exist_ok=True)
         egammas_file = egammas_directory / f'{self.output_filename}.parquet'
@@ -289,7 +289,7 @@ class Root2Parquet(object):
         print("Conversion of egamma objects finished! \U0001F504")
 
     def _store_taus(self):
-        """Store the taus feature data into numpy arrays and save to h5."""
+        """Store the taus feature data into numpy arrays and save to parquet."""
         taus_directory = self.output_path / "taus"
         taus_directory.mkdir(parents=True, exist_ok=True)
         taus_file = taus_directory / f'{self.output_filename}.parquet'
@@ -324,7 +324,7 @@ class Root2Parquet(object):
         print("Conversion of energy objects finished! \U0001F504")
 
     def _store_ET(self, sums_data: ak.Array):
-        """Store the transverse energy event object to a numpy array and save to h5.
+        """Store the transverse energy event object to a numpy array and save to parquet.
 
         The ETTEM feature refers to the missing transverse energy recorded by the
         electromagnetic calorimeter of the detector and only that.
@@ -400,7 +400,7 @@ class Root2Parquet(object):
         """Store the forward missing transverse energy event object.
 
         Missing transverse energy object that includes data from the hadronic forward
-        calorimeter object, to a numpy array and save to h5.
+        calorimeter object, to a numpy array and save to parquet.
         """
         FET_directory = self.output_path / "FET"
         FET_directory.mkdir(parents=True, exist_ok=True)
@@ -422,7 +422,7 @@ class Root2Parquet(object):
         """Store the forward missing transverse hadronic energy event object.
 
         Missing hadronic transverse energy object that includes data from the hadronic
-        forward calorimeter object, to a numpy array and save to h5.
+        forward calorimeter object, to a numpy array and save to parquet.
         """
         FHT_directory = self.output_path / "FHT"
         FHT_directory.mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Plots the data given a folder of parquet files.
+# Plots data comparison between two folders containing parquet files.
 import argparse
 from pathlib import Path
 
@@ -18,7 +18,8 @@ args = parser.parse_args()
 folder1_path = Path(args.folder1)
 folder2_path = Path(args.folder2)
 
-
+# Select which features to plot.
+# Default is plot everything except for seeds.
 select_feats = {
   'muons': [
     'muonIPhiAtVtx', 'muonIEt', 'muonQual',
@@ -35,7 +36,7 @@ select_feats = {
   'FET': ['Et', 'phi'],
   'FHT': ['Et', 'phi'],
   'cicada': ['CICADAScore'],
-  'event_info': 'none',
+  'event_info': ['run', 'lumi', 'event', 'bx', 'orbit', 'time', 'nPV_True'],
   'seeds': 'none'
 }
 
