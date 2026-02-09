@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+# Plots the data given a folder of parquet files.
+import argparse
+from pathlib import Path
+import awkward as ak
+
+from adl1t_datamaker import loader
+from adl1t_datamaker import plots
+from adl1t_datamaker.terminal_colors import tcols
+
+
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--folder', type=str, help="Path to the root folder with pq files.")
+args = parser.parse_args()
+
+select_feats = {
+  'muons': [
+    'muonIPhiAtVtx', 'muonIEt', 'muonQual',
+    'muonIEtaAtVtx', 'muonChg', 'muonTfMuonIdx',
+    'muonIPhi', 'muonIEta', 'muonIEtUnconstrained'
+  ],
+  'jets': ['jetIEt', 'jetIEta', 'jetIPhi', 'jetHwQual', 'jetRawEt'],
+  'egammas': ['egIEt', 'egIEta', 'egIPhi', 'egIso'],
+  'taus': ['tauIEt', 'tauIEta', 'tauIPhi', 'tauIso'],
+  'ET': ['Et', 'ETTEM'],
+  'HT': ['Et', 'tower_count'],
+  'MET': ['Et', 'phi'],
+  'MHT': ['Et', 'phi'],
+  'FET': ['Et', 'phi'],
+  'FHT': ['Et', 'phi'],
+  'cicada': ['CICADAScore'],
+  'event_info': ['run', 'lumi', 'event', 'bx', 'orbit', 'time', 'nPV_True'],
+  'seeds': 'none'
+}
+
+data = loader.Parquet2Awkward(args.folder, select_feats=select_feats)
+
+output_folder = Path(args.folder) / "PLOTS"
+
+print(tcols.HEADER + f"Plotting data at {args.folder}..." + tcols.ENDC)
+for obj_name in data.object_names:
+    obj_folder = output_folder / obj_name
+    obj_folder.mkdir(parents=True, exist_ok=True)
+
+    obj_data = data[obj_name]
+    # Plot multiplicity of the object.
+    field = obj_data.fields[0]
+    nconsts = ak.num(obj_data[field], axis=1)
+    plots.plot_hist(nconsts, 'multiplicity', obj_folder)
+
+    for feature in obj_data.fields:
+        plots.plot_hist(obj_data[feature], feature, obj_folder)
+
+    print(tcols.OKGREEN + f"{obj_name} plots saved: " + tcols.ENDC, obj_folder)

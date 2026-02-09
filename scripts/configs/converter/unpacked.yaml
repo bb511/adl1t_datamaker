@@ -1,0 +1,9 @@
+# Arguments with which to instantiate the converter.
+# The trees here are unpacked, i.e., the data is not emulated to any conditions.
+# Notice there's no calo summary tree and hence no CICADA information.
+
+mc: ???
+l1_tree_name: l1UpgradeTree/L1UpgradeTree
+uGT_tree_name: l1uGTTree/L1uGTTree
+event_tree_name: l1EventTree/L1EventTree
+silent: True

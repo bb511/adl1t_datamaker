@@ -1,0 +1,7 @@
+# Arguments with which to instantiate the converter.
+mc: ???
+l1_tree_name: l1UpgradeEmuTree/L1UpgradeTree
+uGT_tree_name: l1uGTEmuTree/L1uGTTree
+event_tree_name: l1EventTree/L1EventTree
+calosumm_tree_name: l1CaloSummaryEmuTree/L1CaloSummaryTree
+silent: True

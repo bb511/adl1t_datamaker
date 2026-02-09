@@ -1,0 +1,11 @@
+# @package _global_
+
+paths:
+  input_root_path: root://eoscms.cern.ch//eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/caruta/condor/
+  input_output_folders:
+    EphZB_2024E_run381148-381149_all_14_0_7_menuv110_1716739892: EphZB_2024E_run381148-381149_all_14_0_7_menuv110_1716739892
+  auxiliary_files:
+    prescale_file: L1Menus/L1Menu_Collisions2024_v1_1_0.csv
+
+converter:
+  mc: False

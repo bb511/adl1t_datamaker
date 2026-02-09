@@ -1,0 +1,13 @@
+# @package _global_
+defaults:
+  - override /converter: unpacked
+
+paths:
+  input_root_path: root://eoscms.cern.ch//eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/emsmith/condor
+  input_output_folders:
+    ForAxoTraining_EphZB_2025E_run396102_15_0_10_menu2025_v130_1760604446: EphZB_2025E_run396102
+  auxiliary_files:
+    prescale_file: L1Menus/L1Menu_Collisions2025_v1_3_0.csv
+
+converter:
+  mc: False

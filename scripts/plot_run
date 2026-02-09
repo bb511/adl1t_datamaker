@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+
+# Plot converted h5 files.
+from pathlib import Path
+
+import hydra
+from omegaconf import DictConfig, OmegaConf
+import awkward as ak
+
+from adl1t_datamaker import loader
+from adl1t_datamaker import plots
+from adl1t_datamaker import util
+from adl1t_datamaker.terminal_colors import tcols
+
+
+select_feats = {
+  'muons': [
+    'muonIPhiAtVtx', 'muonIEt', 'muonQual',
+    'muonIEtaAtVtx', 'muonChg', 'muonTfMuonIdx',
+    'muonIPhi', 'muonIEta', 'muonIEtUnconstrained'
+  ],
+  'jets': ['jetIEt', 'jetIEta', 'jetIPhi', 'jetHwQual', 'jetRawEt'],
+  'egammas': ['egIEt', 'egIEta', 'egIPhi', 'egIso'],
+  'taus': ['tauIEt', 'tauIEta', 'tauIPhi', 'tauIso'],
+  'ET': ['Et', 'ETTEM'],
+  'HT': ['Et', 'tower_count'],
+  'MET': ['Et', 'phi'],
+  'MHT': ['Et', 'phi'],
+  'FET': ['Et', 'phi'],
+  'FHT': ['Et', 'phi'],
+  'cicada': ['CICADAScore'],
+  'event_info': ['run', 'lumi', 'event', 'bx', 'orbit', 'time', 'nPV_True'],
+  'seeds': 'none'
+}
+
+
+@hydra.main(version_base=None, config_path="configs", config_name="convert.yaml")
+def main(cfg: DictConfig) -> None:
+    util.print_config(cfg, resolve=True)
+    output_folders = set(cfg['paths']['input_output_folders'].values())
+    for output_folder in output_folders:
+        print(tcols.HEADER + f"\nPlotting {output_folder}." + tcols.ENDC)
+        output_folder = Path(cfg["output_root_path"]) / output_folder
+        data = loader.Parquet2Awkward(output_folder, select_feats=select_feats)
+
+        plot_folder = output_folder / 'PLOTS'
+
+        for obj_name in data.object_names:
+            obj_folder = plot_folder / obj_name
+            obj_folder.mkdir(parents=True, exist_ok=True)
+            obj_data = data[obj_name]
+
+            # Plot multiplicity of the object.
+            field = obj_data.fields[0]
+            nconsts = ak.num(obj_data[field], axis=1)
+            plots.plot_hist(nconsts, 'multiplicity', obj_folder)
+
+            for feature in obj_data.fields:
+                plots.plot_hist(obj_data[feature], feature, obj_folder)
+
+            print(tcols.OKGREEN + f"{obj_name} plots saved: " + tcols.ENDC, obj_folder)
+
+
+if __name__ == "__main__":
+    main()

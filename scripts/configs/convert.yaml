@@ -1,0 +1,11 @@
+# Base configuration for h5 conversion.
+defaults:
+  - converter: default
+  - paths: default
+  - _self_
+
+# Root directory where to write all the converted files to.
+output_root_path: ???
+
+# The number of root files to convert at the same time.
+ncores: 1

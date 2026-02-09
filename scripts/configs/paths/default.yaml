@@ -1,0 +1,11 @@
+# Relevant paths for the conversion process.
+
+# Path to the parent folders where there is one or more folders with root files to be converted into h5 files
+input_root_path: ???
+
+# Names of the input folders containing the root files and the corresponding output folders.
+input_output_folders: ???
+
+auxiliary_files:
+  prescale_file: ???
+  pileup_folder: pileup_files/

@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+
+# Plots the data given a folder of parquet files.
+import argparse
+from pathlib import Path
+
+from adl1t_datamaker import loader
+from adl1t_datamaker import plots
+from adl1t_datamaker.terminal_colors import tcols
+
+
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--folder1', type=str, help="Path to data pq files.")
+parser.add_argument('--folder2', type=str, help="Path to data pq files.")
+parser.add_argument('--output_folder')
+args = parser.parse_args()
+
+folder1_path = Path(args.folder1)
+folder2_path = Path(args.folder2)
+
+
+select_feats = {
+  'muons': [
+    'muonIPhiAtVtx', 'muonIEt', 'muonQual',
+    'muonIEtaAtVtx', 'muonChg', 'muonTfMuonIdx',
+    'muonIPhi', 'muonIEta', 'muonIEtUnconstrained'
+  ],
+  'jets': ['jetIEt', 'jetIEta', 'jetIPhi', 'jetHwQual', 'jetRawEt'],
+  'egammas': ['egIEt', 'egIEta', 'egIPhi', 'egIso'],
+  'taus': ['tauIEt', 'tauIEta', 'tauIPhi', 'tauIso'],
+  'ET': ['Et', 'ETTEM'],
+  'HT': ['Et', 'tower_count'],
+  'MET': ['Et', 'phi'],
+  'MHT': ['Et', 'phi'],
+  'FET': ['Et', 'phi'],
+  'FHT': ['Et', 'phi'],
+  'cicada': ['CICADAScore'],
+  'event_info': 'none',
+  'seeds': 'none'
+}
+
+data1 = loader.Parquet2Awkward(folder1_path, select_feats=select_feats)
+data2 = loader.Parquet2Awkward(folder2_path, select_feats=select_feats)
+data1_label = folder1_path.stem
+data2_label = folder2_path.stem
+
+output_folder = Path(args.output_folder)
+
+print(
+    tcols.HEADER +
+    f"Plotting comparison between {data1_label} and {data2_label}..."
+    + tcols.ENDC
+)
+
+common_objects = list(set(data1.object_names) & set(data2.object_names))
+for obj_name in common_objects:
+    obj_folder = output_folder / obj_name
+    obj_folder.mkdir(parents=True, exist_ok=True)
+
+    obj_data1 = data1[obj_name]
+    obj_data2 = data2[obj_name]
+    common_feats = list(set(obj_data1.fields) & set(obj_data2.fields))
+
+    for feature in common_feats:
+        plots.plot_comp_hist(
+          obj_data1[feature],
+          obj_data2[feature],
+          feature,
+          obj_folder,
+          data1_label,
+          data2_label,
+        )
+
+    print(tcols.OKGREEN + f"{obj_name} plots saved: " + tcols.ENDC, obj_folder)

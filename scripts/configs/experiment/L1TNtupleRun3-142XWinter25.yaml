@@ -1,0 +1,43 @@
+
+# @package _global_
+
+paths:
+  input_root_path: root://eoscms.cern.ch//eos/cms/store/cmst3/group/l1tr/axol1tl/MC/L1TNtupleRun3-142XWinter25/
+  input_output_folders:
+    ggH-suep-decay-POWHEGnoISR/mcRun3_Run3Winter25Digi-142X/250701_110748/0000/: ggH-suep-decay-POWHEGnoISR
+    GluGluHTo2B_Par-MH-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_093909/0000/: GluGluHTo2B_Par-MH-125_TuneCP5_13p6TeV_powhegMINLO-pythia8
+    GluGluHto2G_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_093935/0000/: GluGluHto2G_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    GluGluHto2G_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_093935/0001/: GluGluHto2G_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    GluGluHto2G_Par-MH-90_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_093957/0000: GluGluHto2G_Par-MH-90_TuneCP5_13p6TeV_powheg-pythia8
+    GluGluHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-minlo-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094019/0000/: GluGluHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-minlo-pythia8
+    GluGlutoHHto2B2WtoLNu2Q_Par-c2-0-kl-1-kt-1_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094041/0000: GluGlutoHHto2B2WtoLNu2Q_Par-c2-0-kl-1-kt-1_TuneCP5_13p6TeV_powheg-pythia8
+    GluGlutoHHto2B2WtoLNu2Q_Par-c2-0-kl-1-kt-1_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094041/0001: GluGlutoHHto2B2WtoLNu2Q_Par-c2-0-kl-1-kt-1_TuneCP5_13p6TeV_powheg-pythia8
+    HHHto4B2Tau_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094125/0000: HHHto4B2Tau_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8
+    HHHto4B2Tau_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094125/0001: HHHto4B2Tau_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8
+    HHHto4B2Tau_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094125/0002: HHHto4B2Tau_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8
+    HHHto4B2Tau_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094125/0003: HHHto4B2Tau_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8
+    HHHto6B_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094103/0000/: HHHto6B_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8
+    SUSYGluGluToBBHTo2B_Par-M-1200_TuneCP5_13p6TeV_pythia8/mcRun3_Run3Winter25Digi-RnD_142X_v7-v2/250417_094148/0000/: SUSYGluGluToBBHTo2B_Par-M-1200_TuneCP5_13p6TeV_pythia8
+    SUSYGluGluToBBHToBB_Par-M-120_TuneCP5_13p6TeV_pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094212/0000/: SUSYGluGluToBBHToBB_Par-M-120_TuneCP5_13p6TeV_pythia8
+    SUSYGluGluToBBHToBB_Par-M-350_TuneCP5_13p6TeV_pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094236/0000/: SUSYGluGluToBBHToBB_Par-M-350_TuneCP5_13p6TeV_pythia8
+    SUSYGluGluToBBHToBB_Par-M-600_TuneCP5_13p6TeV_pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094259/0000/: SUSYGluGluToBBHToBB_Par-M-600_TuneCP5_13p6TeV_pythia8
+    SingleNeutrino_E-10-gun/mcRun3_Run3Winter25Digi-SNB_142X_v7-v2/250417_095018/0000/: SingleNeutrino_E-10-gun
+    TTHTo2C_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094438/0000: TTHTo2C_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    TTHTo2C_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094438/0001: TTHTo2C_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    TTHTo2C_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094438/0002: TTHTo2C_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    TTHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094501/0000: TTHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    TTHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094501/0001: TTHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    TTHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094501/0002: TTHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    VBFHTo2C_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094324/0000/: VBFHTo2C_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    VBFHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2/250417_094414/0000/: VBFHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    VBFHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2-ext1/250417_094348/0000: VBFHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    VBFHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2-ext1/250417_094348/0001: VBFHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    VBFHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2-ext1/250417_094348/0002: VBFHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
+    WtoTauto3Mu_TuneCP5_13p6TeV_pythia8/mcRun3_Run3Winter25Digi-142X_v7-v3/250417_094524/0000/: WtoTauto3Mu_TuneCP5_13p6TeV_pythia8
+    haa-4b-ma15-POWHEG/mcRun3_Run3Winter25Digi-142XnoPU/250522_115555/0000/: haa-4b-ma15-POWHEG
+
+  auxiliary_files:
+    prescale_file: L1Menus/L1Menu_Collisions2024_v1_3_0_last.csv
+
+converter:
+  mc: True

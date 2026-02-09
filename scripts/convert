@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+
+# Run the conversion script from L1TNtuple to h5.
+import argparse
+
+from adl1t_datamaker import root2parquet
+
+
+parser = argparse.ArgumentParser(description="Convert root file to parquet.")
+
+# File configuration.
+file_config = parser.add_argument_group(
+    title="converter_config",
+    description="Paths to the required files for conversion."
+)
+file_config.add_argument(
+    '--input_file', type=str, help="Path to root file for converison."
+)
+file_config.add_argument(
+    '--prescale_file', type=str, help="Path to prescale file."
+)
+file_config.add_argument(
+    '--pileup_folder',
+    type=str,
+    default="pileup_files/",
+    help="Location of folder with pileup_files"
+)
+file_config.add_argument(
+    '--output_path', type=str, help="Path to folder containing output."
+)
+
+# The defaults are for emulated data trees.
+converter_config = parser.add_argument_group(
+    title="converter_config", description="Trees to convert in the given file."
+)
+converter_config.add_argument(
+    '--l1_tree_name',
+    type=str,
+    default='l1UpgradeEmuTree/L1UpgradeTree',
+    help="The name of the level 1 trigger tree to convert in the root input file."
+)
+converter_config.add_argument(
+    '--uGT_tree_name',
+    type=str,
+    default='l1uGTEmuTree/L1uGTTree',
+    help="The name of the global trigger tree inside the l1 trigger tree. "
+)
+converter_config.add_argument(
+    '--event_tree_name',
+    type=str,
+    default='l1EventTree/L1EventTree',
+    help="The name of the event tree in the global trigger tree."
+)
+converter_config.add_argument(
+    '--calosumm_tree_name',
+    type=str,
+    default=None,
+    help="The name of the calorimeter data summary tree that contains the cicada bits."
+)
+
+# Flags.
+converter_config.add_argument(
+    '--mc', action='store_true', help="Whether file is MC simulation or not."
+)
+converter_config.add_argument(
+    '--silent',
+    action='store_true',
+    help="Whether to do the conversion without printing to terminal all the steps."
+)
+
+# Setup.
+args = parser.parse_args()
+file_config = {
+    "input_file": args.input_file,
+    "prescale_file": args.prescale_file,
+    "pileup_folder": args.pileup_folder,
+    "output_path": args.output_path,
+}
+
+converter_config = {
+    "l1_tree_name": args.l1_tree_name,
+    "uGT_tree_name": args.uGT_tree_name,
+    "event_tree_name": args.event_tree_name,
+    "calosumm_tree_name": args.calosumm_tree_name,
+    "mc": args.mc,
+    "silent": args.silent
+}
+
+converter = root2parquet.Root2Parquet(**converter_config)
+
+converter.convert_file(**file_config)

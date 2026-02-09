@@ -1,0 +1,11 @@
+# @package _global_
+
+paths:
+  input_root_path: root://eoscms.cern.ch//eos/cms/store/cmst3/group/l1tr/axol1tl/
+  input_output_folders:
+    Data: EphZB_2025B_run392642
+  auxiliary_files:
+    prescale_file: L1Menus/L1Menu_Collisions2025_v1_1_1.csv
+
+converter:
+  mc: False
