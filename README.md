@@ -8,6 +8,7 @@ Examples of running commands are found in the `run.snip` of the `scripts` folder
 Explanations of all the objects and features found in the parquet files are [here](https://gitlab.cern.ch/cms-l1-ad/data_converter/-/blob/bb0d8c3592f3e420a54bcc007e6397dbd447a517/docs/README.md).
 
 ## Setup
+---
 
 This repository requires `python >= 3.10`.
 
@@ -42,6 +43,8 @@ You can also install the dependencies manually, as they are listed in `/pyprojec
 A docker image of this project is also available [here](https://gitlab.cern.ch/cms-l1-ad/data_converter/) **(TBA)**, under the tag `latest`.
 
 ## Usage
+---
+
 ### Converter
 
 See the `/.gitlab-ci.yaml` or `/scripts/convert/run.snip` for usage examples.
