@@ -8,4 +8,4 @@ input_output_folders: ???
 
 auxiliary_files:
   prescale_file: ???
-  pileup_folder: pileup_files/
+  pileup_folder: scripts/pileup_files/

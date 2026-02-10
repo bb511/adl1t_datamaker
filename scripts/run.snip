@@ -1,14 +1,14 @@
 # Example to convert a single (real data) file.
-./convert --input_file root://eoscms.cern.ch//eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/emsmith/condor/ForAxoTraining_EphZB_2025G_run398183_15_0_10_menu2025_v130_1760965469/0.root  --prescale_file L1Menus/L1Menu_Collisions2025_v1_3_0.csv --calosumm_tree_name l1CaloSummaryEmuTree/L1CaloSummaryTree --output_path ./parquet_files/test_data
+./convert --input_file root://eoscms.cern.ch//eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/emsmith/condor/ForAxoTraining_EphZB_2025G_run398183_15_0_10_menu2025_v130_1760965469/0.root  --prescale_file scripts/L1Menus/L1Menu_Collisions2025_v1_3_0.csv --pileup_folder scripts/pileup_files --calosumm_tree_name l1CaloSummaryEmuTree/L1CaloSummaryTree --output_path ./parquet_files/test_data
 
 # Example to convert a single (simulation) file.
-./convert --input_file root://eoscms.cern.ch//eos/cms/store/cmst3/group/l1tr/axol1tl/MC/L1TNtupleRun3-142XWinter25/SingleNeutrino_E-10-gun/mcRun3_Run3Winter24Digi-133X_v8-v2/240125_010155/0000/L1Ntuple_100.root  --prescale_file L1Menus/L1Menu_Collisions2024_v1_3_0_last.csv --calosumm_tree_name l1CaloSummaryEmuTree/L1CaloSummaryTree --output_path ./parquet_files/test_sim --mc
+./convert --input_file root://eoscms.cern.ch//eos/cms/store/cmst3/group/l1tr/axol1tl/MC/L1TNtupleRun3-142XWinter25/SingleNeutrino_E-10-gun/mcRun3_Run3Winter24Digi-133X_v8-v2/240125_010155/0000/L1Ntuple_100.root  --prescale_file scripts/L1Menus/L1Menu_Collisions2024_v1_3_0_last.csv --calosumm_tree_name l1CaloSummaryEmuTree/L1CaloSummaryTree --output_path ./parquet_files/test_sim --mc
 
 # Example to convert a folder.
-./convert_folder --folder root://eoscms.cern.ch//eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/emsmith/condor/ForAxoTraining_EphZB_2025G_run398183_15_0_10_menu2025_v130_1760965469/  --prescale_file L1Menus/L1Menu_Collisions2025_v1_3_0.csv --caolsumm_tree_name l1CaloSummaryEmuTree/L1CaloSummaryTree --output_path ./parquet_files --ncores 1
+./convert_folder --folder root://eoscms.cern.ch//eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/emsmith/condor/ForAxoTraining_EphZB_2025G_run398183_15_0_10_menu2025_v130_1760965469/  --prescale_file scripts/L1Menus/L1Menu_Collisions2025_v1_3_0.csv --pileup_folder scripts/pileup_files --caolsumm_tree_name l1CaloSummaryEmuTree/L1CaloSummaryTree --output_path ./parquet_files --ncores 1
 
 # Example to convert a whole run.
-./convert_run +experiment=EphZB_2025G_run398183 output_root_path=./parquet_files
+./convert_run +experiment=EphZB_2025G_run398183 output_root_path=./parquet_files --ncores 1
 
 # Example to plot a folder.
 ./plot --folder ./parquet_files/EphZB_2025G_run398183

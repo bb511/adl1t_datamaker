@@ -22,7 +22,7 @@ file_config.add_argument(
 file_config.add_argument(
     '--pileup_folder',
     type=str,
-    default="pileup_files/",
+    default="scripts/pileup_files/",
     help="Location of folder with pileup_files"
 )
 file_config.add_argument(

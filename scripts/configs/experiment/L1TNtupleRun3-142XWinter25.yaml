@@ -35,9 +35,10 @@ paths:
     VBFHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter25Digi-142X_v7-v2-ext1/250417_094348/0002: VBFHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8
     WtoTauto3Mu_TuneCP5_13p6TeV_pythia8/mcRun3_Run3Winter25Digi-142X_v7-v3/250417_094524/0000/: WtoTauto3Mu_TuneCP5_13p6TeV_pythia8
     haa-4b-ma15-POWHEG/mcRun3_Run3Winter25Digi-142XnoPU/250522_115555/0000/: haa-4b-ma15-POWHEG
+    smj-case-A-POWHEG/mcRun3_Run3Winter25Digi-142X/251208_153034/0000/: smj-case-A
 
   auxiliary_files:
-    prescale_file: L1Menus/L1Menu_Collisions2024_v1_3_0_last.csv
+    prescale_file: scripts/L1Menus/L1Menu_Collisions2024_v1_3_0_last.csv
 
 converter:
   mc: True
