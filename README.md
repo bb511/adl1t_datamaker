@@ -5,7 +5,7 @@ The code converts the level 1 trigger ntuples (L1Ntuple.root) to parquet files t
 The scripts used to run the code are in the `scripts` folder.
 Examples of running commands are found in the `run.snip` of the `scripts` folder.
 
-Explanations of all the objects and features found in the parquet files are [here](https://gitlab.cern.ch/cms-l1-ad/data_converter/-/blob/bb0d8c3592f3e420a54bcc007e6397dbd447a517/docs/README.md).
+Explanations of all the objects and features found in the parquet files are [here](docs/README.md).
 
 ## Setup
 ---

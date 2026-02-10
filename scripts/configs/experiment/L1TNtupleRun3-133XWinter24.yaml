@@ -43,7 +43,7 @@ paths:
     ttHto2C_M-125_TuneCP5_13p6TeV_powheg-pythia8/mcRun3_Run3Winter24Digi-133X_v8-v2/240125_012115/0000/: ttHto2C_M-125_TuneCP5_13p6TeV_powheg-pythia8/
 
   auxiliary_files:
-    prescale_file: L1Menus/L1Menu_Collisions2023_v1_2_0.csv
+    prescale_file: scripts/L1Menus/L1Menu_Collisions2023_v1_2_0.csv
 
 converter:
   mc: True
