@@ -723,9 +723,10 @@ tqdm = ["tqdm"]
 name = "fsspec-xrootd"
 version = "0.5.1"
 description = "xrootd implementation for fsspec"
-optional = false
+optional = true
 python-versions = ">=3.9"
 groups = ["main"]
+markers = "extra == \"xrootd\""
 files = [
     {file = "fsspec_xrootd-0.5.1-py3-none-any.whl", hash = "sha256:c92c700931801ca2530802f609468649e35db37158322feaa50bae547aaa0917"},
     {file = "fsspec_xrootd-0.5.1.tar.gz", hash = "sha256:76f2b3a0cfa58e2b26c2b67cf72769169f1eed44294ca98ec0648d19e45bfd85"},
@@ -2162,9 +2163,10 @@ files = [
 name = "xrootd"
 version = "5.9.1"
 description = "eXtended ROOT daemon"
-optional = false
+optional = true
 python-versions = "*"
 groups = ["main"]
+markers = "extra == \"xrootd\""
 files = [
     {file = "xrootd-5.9.1.tar.gz", hash = "sha256:99ded4a168ce4b435cb9f7683acbe414c49ebc6486266ed9099a7c448ddc5b13"},
 ]
@@ -2323,7 +2325,10 @@ enabler = ["pytest-enabler (>=2.2)"]
 test = ["big-O", "importlib-resources ; python_version < \"3.9\"", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-ignore-flaky"]
 type = ["pytest-mypy"]
 
+[extras]
+xrootd = ["fsspec-xrootd", "xrootd"]
+
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "e26cf93ca7a7de833cbefd144eece452c7e8391bb56afb56dd7be86b9801e1e6"
+content-hash = "1442e3842380c58567f327158a9a216867b366c2e50d775b0edc94ab20e863ee"
