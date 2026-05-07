@@ -8,7 +8,7 @@
 ./convert_folder --folder root://eoscms.cern.ch//eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/emsmith/condor/ForAxoTraining_EphZB_2025G_run398183_15_0_10_menu2025_v130_1760965469/  --prescale_file scripts/L1Menus/L1Menu_Collisions2025_v1_3_0.csv --pileup_folder scripts/pileup_files --caolsumm_tree_name l1CaloSummaryEmuTree/L1CaloSummaryTree --output_path ./parquet_files --ncores 1
 
 # Example to convert a whole run.
-./convert_run +experiment=EphZB_2025G_run398183 output_root_path=./parquet_files --ncores 1
+./convert_run +experiment=EphZB_2025G_run398183 output_root_path=./parquet_files ncores=1
 
 # Example to plot a folder.
 ./plot --folder ./parquet_files/EphZB_2025G_run398183
