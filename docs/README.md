@@ -4,7 +4,7 @@ The scripts in this repo do not convert the data in the targeted L1TNtuples in i
 The description of each feature that is available in the global trigger and whether it is included in the converted parquet files is available below.
 Whatever features are found in the root files and are not present in the following list do not pertain to what is available to our algorithm and hence are ignored.
 
-The information presented here is a synthesis of the information available in the [scales](https://gitlab.cern.ch/cms-l1-ad/l1tntuple-maker/-/blob/new_h5generation/docs/scales_inputs_2_ugt.pdf?ref_type=heads) and [firmware](https://gitlab.cern.ch/cms-l1-ad/l1tntuple-maker/-/blob/new_h5generation/docs/gt-mp7-firmware-specification.pdf?ref_type=heads) pdf files.
+The information presented here is a synthesis of the information available in the [scales](./scales_inputs_2_ugt.pdf) and [firmware](./gt-mp7-firmware-specification.pdf) pdf files.
 Also, a lot of the descriptions are based on word of mouth and exchanges with the experts of each subsystem.
 
 # Objects

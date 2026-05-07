@@ -3,7 +3,7 @@ name = "adl1t-datamaker"
 version = "1.0"
 description = ""
 authors = [
-    {name = "AXOL1TL Collaboration",email = "podagiu@ethz.ch"}
+    {name = "Anonymised Author",email = "anon@anon.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.10"
