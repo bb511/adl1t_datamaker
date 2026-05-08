@@ -5,7 +5,7 @@
 # with minimal patches to integrate into CERN computing environment
 ###############################
 FROM gitlab-registry.cern.ch/linuxsupport/alma9-base AS linux-base
-LABEL authors="anonym"
+LABEL authors="Patrick Odagiu"
 
 # Make sure everything is up to date.
 RUN yum update -y
