@@ -49,16 +49,15 @@ class ParquetLoader(object):
         """Build the select_feats dictionary.
 
         If an object that is present in the data is missing from this dictionary, do not
-        load this object.
+        load this object. The caller's dictionary is never modified, so the same one can
+        be reused across several loaders, as scripts/plot_comparison does.
         """
         if select_feats is None:
-            select_feats = {obj_name: None for obj_name in self.object_names}
-        if select_feats:
-            missing_obj_names = set(self.object_names) - set(select_feats.keys())
-            missing_objs = {obj_name: 'none' for obj_name in missing_obj_names}
-            select_feats.update(missing_objs)
+            return {obj_name: None for obj_name in self.object_names}
 
-        return select_feats
+        missing_obj_names = set(self.object_names) - set(select_feats.keys())
+
+        return {**select_feats, **{obj: 'none' for obj in missing_obj_names}}
 
     def _read_ds(self, data_path: Path, feats: list = None) -> pyarrow.dataset.Dataset:
         """Read a dataset, e.g., muons, to a pyarrow dataset that streams the data."""

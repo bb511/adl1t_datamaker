@@ -175,9 +175,12 @@ COPY scripts/ ./scripts/
 COPY src/ ./src/
 COPY README.md ./
 
-# Install the dependencies to the virtual environment specified in $VIRTUAL_ENV
+# Install the dependencies to the virtual environment specified in $VIRTUAL_ENV.
+# The xrootd extra is required: the yum python3-xrootd installed above belongs to
+# the system python3, not to $VIRTUAL_ENV, so without this the image cannot read
+# any root:// input.
 RUN --mount=type=cache,target=/root/.cache \
-    poetry install
+    poetry install --extras xrootd
 
 
 ################################
@@ -188,9 +191,14 @@ FROM builder-base AS development
 
 WORKDIR /adl1t_datamaker
 
-# Quicker install as runtime deps are already installed
+# The tests are only needed in this stage, not in production.
+COPY tests/ ./tests/
+COPY docs/ ./docs/
+
+# Quicker install as runtime deps are already installed. --with dev adds pytest,
+# which the optional dev group keeps out of the production image.
 RUN --mount=type=cache,target=/root/.cache \
-    poetry install
+    poetry install --extras xrootd --with dev
 
 CMD ["bash"]
 

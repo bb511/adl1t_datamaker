@@ -62,18 +62,36 @@ def test_iterator_and_getitem_agree(dataset):
     assert len(batched) == len(data["muons"])
 
 
-def test_select_feats_dict_is_mutated(dataset):
-    """Documents a sharp edge rather than endorsing it.
-
-    _get_select_feats stamps absent objects as 'none' in the caller's dict, so
-    scripts/plot_comparison reusing one dict for two folders lets the first folder
-    permanently disable objects for the second.
-    """
+def test_select_feats_dict_is_not_mutated(dataset):
+    """The caller's dict must survive being passed to a loader unchanged."""
     shared = {"muons": ["muonIEt"]}
     Parquet2Awkward(str(dataset), select_feats=shared)
 
-    assert shared["jets"] == "none"
-    assert shared["event_info"] == "none"
+    assert shared == {"muons": ["muonIEt"]}
+
+
+def test_two_loaders_can_share_one_dict(tmp_path, dataset):
+    """The scripts/plot_comparison case: one dict, two folders of different shape.
+
+    _get_select_feats used to stamp absent objects as 'none' in the caller's dict, so
+    an object missing from the first folder was permanently disabled for the second.
+    """
+    smaller = tmp_path / "smaller"
+    (smaller / "muons").mkdir(parents=True)
+    array = ak.Array({feat: [[1, 2], [3]] for feat in OBJECTS["muons"]})
+    ak.to_parquet(array, smaller / "muons" / "L1Ntuple_1.parquet", compression="snappy")
+
+    shared = {obj: feats for obj, feats in OBJECTS.items()}
+    first = Parquet2Awkward(str(smaller), select_feats=shared)
+    second = Parquet2Awkward(str(dataset), select_feats=shared)
+
+    assert first.object_names == ["muons"]
+    assert sorted(second.object_names) == sorted(OBJECTS), "jets/event_info were dropped"
+
+
+def test_empty_select_feats_loads_nothing(dataset):
+    """An empty dict means every object is unlisted, so nothing is read."""
+    assert Parquet2Awkward(str(dataset), select_feats={}).object_names == []
 
 
 def test_missing_folder_raises(tmp_path):
