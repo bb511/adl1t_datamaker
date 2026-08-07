@@ -24,9 +24,10 @@ def silent(fn):
     return silent_fn
 
 
-def check_xrootd_path(path: str) -> Path | str:
-    if 'root://' in path:
-        return path
+def check_xrootd_path(path: Path | str) -> Path | str:
+    """Keep remote paths as strings, turn everything else into a Path."""
+    if 'root://' in str(path):
+        return str(path)
 
     return Path(path)
 

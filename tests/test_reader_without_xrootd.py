@@ -11,15 +11,15 @@ import sys
 
 import pytest
 
-# Make any import of XRootD fail, however it is spelled.
+# Make any import of XRootD fail, however it is spelled. Uses find_spec because the
+# old find_module hook is ignored on new Pythons, which would silently no-op this.
 BLOCK_XROOTD = """
 import sys
 class Blocker:
-    def find_module(self, name, path=None):
+    def find_spec(self, name, path=None, target=None):
         if name == "XRootD" or name.startswith("XRootD."):
-            return self
-    def load_module(self, name):
-        raise ImportError("XRootD blocked by test")
+            raise ModuleNotFoundError(f"No module named {name!r} (blocked by test)")
+        return None
 sys.meta_path.insert(0, Blocker())
 """
 
@@ -84,10 +84,20 @@ except ModuleNotFoundError as err:
     assert "ok" in result.stdout
 
 
+def test_the_blocker_itself_works():
+    """Without this, every test above could pass by never importing XRootD at all."""
+    result = run_isolated("import XRootD")
+    assert result.returncode != 0
+    assert "blocked by test" in result.stderr
+
+
 @pytest.mark.parametrize("field", ["dependencies", "optional-dependencies"])
 def test_xrootd_stays_an_extra(repo_root, field):
     """Guard the packaging contract itself, not just the imports."""
-    import tomllib
+    try:
+        import tomllib  # Python 3.11+
+    except ModuleNotFoundError:
+        import tomli as tomllib  # Python 3.10
 
     with open(repo_root / "pyproject.toml", "rb") as handle:
         project = tomllib.load(handle)["project"]

@@ -11,20 +11,42 @@ RUNS = [381148, 381149, 386554, 386593, 392642, 396102, 398183]
 
 @pytest.mark.parametrize("run", RUNS)
 def test_every_checked_in_run_is_readable(pileup_files, run):
-    header = _first_lumi_sections(pileup_files, run)
-    pileup_map = pileup.get_pileup_map(pileup_files, run, header)
+    """Each brilcalc file parses and yields pileup keyed by (run, lumi section).
+
+    Values are only required to be non-negative: lumi sections recorded outside
+    stable beams (beamstatus ADJUST or SQUEEZE) genuinely have avgpu 0.
+    """
+    sections = _first_lumi_sections(pileup_files, run)
+    pileup_map = pileup.get_pileup_map(pileup_files, run, sections)
 
     assert pileup_map, f"no pileup recovered for run {run}"
     assert all(key[0] == run for key in pileup_map)
-    assert all(value > 0 for value in pileup_map.values())
+    assert all(value >= 0 for value in pileup_map.values())
 
 
-def _first_lumi_sections(folder, run, n=5):
-    """A handful of lumi sections that genuinely appear in the run's brilcalc file."""
+@pytest.mark.parametrize("run", RUNS)
+def test_stable_beam_sections_have_real_pileup(pileup_files, run):
+    """Somewhere in every run there must be genuine, non-zero pileup."""
+    import pandas as pd
+
+    path = next(pileup_files.glob(f"run{run}*"))
+    frame = pd.read_csv(path, skiprows=1)[:-3]
+    assert (frame["avgpu"] > 0).any(), f"run {run} has no lumi section with pileup"
+
+
+def _first_lumi_sections(folder, run, n=5, only_with_pileup=False):
+    """Lumi sections that genuinely appear in the run's brilcalc file.
+
+    With only_with_pileup, restrict to sections recorded during stable beams, whose
+    avgpu is non-zero; otherwise a zero reading is indistinguishable from the 0 that
+    lookup_pileup returns for a section it cannot find.
+    """
     import pandas as pd
 
     path = next(folder.glob(f"run{run}*"))
     frame = pd.read_csv(path, skiprows=1)[:-3]
+    if only_with_pileup:
+        frame = frame[frame["avgpu"] > 0]
     sections = frame["ls"].astype(str).str.split(":").str[0].astype(int)
     return set(sections.to_numpy()[:n].tolist())
 
@@ -46,8 +68,8 @@ def test_two_run_map_is_merged_not_overwritten(pileup_files):
     survived and every event of the other run silently fell back to 0.
     """
     early, late = 381148, 381149
-    lumis_early = sorted(_first_lumi_sections(pileup_files, early, n=3))
-    lumis_late = sorted(_first_lumi_sections(pileup_files, late, n=3))
+    lumis_early = sorted(_first_lumi_sections(pileup_files, early, 3, only_with_pileup=True))
+    lumis_late = sorted(_first_lumi_sections(pileup_files, late, 3, only_with_pileup=True))
 
     event_data = ak.Array({
         "run": [early] * len(lumis_early) + [late] * len(lumis_late),

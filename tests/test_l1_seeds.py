@@ -5,7 +5,7 @@ import pytest
 
 from adl1t_datamaker.components import l1_seeds
 
-# Number of unprescaled algorithms in each checked-in menu, and the header of the
+# Distinct unprescaled algorithms in each checked-in menu, and the header of the
 # column that decides it. Pinning these makes any change to PRESCALE_COLUMN, or to a
 # menu file, a visible test failure rather than a silent shift in the seeds schema.
 MENUS = {
@@ -14,7 +14,8 @@ MENUS = {
     "L1Menu_Collisions2024_v1_1_0.csv": ("2p0E34", 161),
     "L1Menu_Collisions2024_v1_2_1.csv": ("2p0E34", 170),
     "L1Menu_Collisions2024_v1_3_0_last.csv": ("2p0E34+ZeroBias+HLTPhysics", 164),
-    "L1Menu_Collisions2025_v1_1_1.csv": ("1p95E34", 190),
+    # 190 rows but only 187 distinct names; see test_duplicate_seed_names below.
+    "L1Menu_Collisions2025_v1_1_1.csv": ("1p95E34", 187),
     "L1Menu_Collisions2025_v1_1_1_original.csv": ("1p95E34", 190),
     "L1Menu_Collisions2025_v1_3_0.csv": ("1p95E34", 190),
     "Prescale_2022_v0_1_1.csv": ("1.5E+34", 150),
@@ -74,7 +75,27 @@ def test_get_level1_seeds_adds_combined_l1bit():
     np.testing.assert_array_equal(seeds["L1bit"], [True, False, True])
 
 
-def test_get_level1_seeds_rejects_empty_algo_map():
-    """np.logical_or.reduce over no algorithms cannot produce a decision."""
-    with pytest.raises(ValueError):
-        l1_seeds.get_level1_seeds({}, np.zeros((3, 2)))
+def test_duplicate_seed_names_collapse(menus):
+    """L1Menu_Collisions2025_v1_1_1.csv repeats three tau seed names.
+
+    filter_algo_map returns a dict, so those rows collapse and the seeds parquet gets
+    187 columns rather than 190. The _original menu it was derived from has all 190
+    distinct, so the duplication was introduced by an edit.
+    """
+    edited = menus / "L1Menu_Collisions2025_v1_1_1.csv"
+    original = menus / "L1Menu_Collisions2025_v1_1_1_original.csv"
+
+    assert len(l1_seeds.filter_algo_map(edited, _all_names_map(edited))) == 187
+    assert len(l1_seeds.filter_algo_map(original, _all_names_map(original))) == 190
+
+
+def test_get_level1_seeds_with_empty_algo_map_yields_a_scalar():
+    """Pins a sharp edge: no algorithms means L1bit is a scalar, not per-event.
+
+    np.logical_or.reduce([]) is False rather than an error, so an empty menu produces
+    a seeds record whose L1bit does not line up with the event axis.
+    """
+    seeds = l1_seeds.get_level1_seeds({}, np.zeros((3, 2)))
+
+    assert set(seeds) == {"L1bit"}
+    assert seeds["L1bit"].shape == ()  # not (3,), which is what events would need

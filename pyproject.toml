@@ -9,7 +9,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "uproot (>=5.6.2,<6.0.0)",
-    "awkward (>=2.8.3,<3.0.0)",
+    # 2.8.6 is the first release that works with pyarrow >= 21, which dropped
+    # pyarrow.lib.PyExtensionType. Anything older cannot read the parquet at all.
+    "awkward (>=2.8.6,<3.0.0)",
     "pandas (>=2.2.3,<3.0.0)",
     "matplotlib (>=3.10.3,<4.0.0)",
     "joblib (>=1.5.0,<2.0.0)",
@@ -32,6 +34,8 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0"
+# Reading pyproject.toml in the packaging tests; stdlib tomllib only exists on 3.11+.
+tomli = {version = ">=2.0", python = "<3.11"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
