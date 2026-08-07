@@ -72,12 +72,19 @@ def filter_algo_map(prescale_file_path: Path, algo_map: dict) -> dict:
     """
     with open(prescale_file_path, newline="") as prescale_file:
         rows = csv.reader(prescale_file)
-        next(rows)  # Discard the header; see PRESCALE_COLUMN for what it names.
+        header = next(rows)  # See PRESCALE_COLUMN for what this column names.
         unprescaled_keys = [
             row[NAME_COLUMN]
             for row in rows
             if len(row) > PRESCALE_COLUMN and row[PRESCALE_COLUMN] == "1"
         ]
+
+    if not unprescaled_keys:
+        raise ValueError(
+            f"No unprescaled algorithms found in {prescale_file_path}. Column "
+            f"{PRESCALE_COLUMN} ({header[PRESCALE_COLUMN]!r}) never holds '1', so this "
+            "menu probably does not have the column layout this code expects."
+        )
 
     return {key: algo_map[key] for key in unprescaled_keys}
 

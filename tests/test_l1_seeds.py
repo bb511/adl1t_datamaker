@@ -76,17 +76,35 @@ def test_get_level1_seeds_adds_combined_l1bit():
 
 
 def test_duplicate_seed_names_collapse(menus):
-    """L1Menu_Collisions2025_v1_1_1.csv repeats three tau seed names.
+    """L1Menu_Collisions2025_v1_1_1.csv repeats three tau seed names, deliberately.
 
-    filter_algo_map returns a dict, so those rows collapse and the seeds parquet gets
-    187 columns rather than 190. The _original menu it was derived from has all 190
-    distinct, so the duplication was introduced by an edit.
+    Rows 276-278 were edited to duplicate rows 273-275, replacing the Jet70 and Iso23
+    variants that _original still carries. filter_algo_map returns a dict, so those
+    rows collapse and the menu yields 187 seeds rather than 190. This is intended:
+    do not "restore" the names from _original without asking.
     """
     edited = menus / "L1Menu_Collisions2025_v1_1_1.csv"
     original = menus / "L1Menu_Collisions2025_v1_1_1_original.csv"
 
     assert len(l1_seeds.filter_algo_map(edited, _all_names_map(edited))) == 187
     assert len(l1_seeds.filter_algo_map(original, _all_names_map(original))) == 190
+
+
+def test_menu_selecting_nothing_names_the_column(tmp_path):
+    """A menu whose layout does not match must say so, not fail deep in awkward.
+
+    An empty selection used to reach get_level1_seeds, where np.logical_or.reduce([])
+    gives a scalar L1bit, and only blew up later in ak.Array with a message about
+    scalar promotion that says nothing about the menu.
+    """
+    menu = tmp_path / "wrong_layout.csv"
+    menu.write_text(
+        "Index,Name,Emergency,a,b,c,9p9E34,extra\n"
+        "0,L1_Something,,,,,63000,x\n"
+    )
+
+    with pytest.raises(ValueError, match="9p9E34"):
+        l1_seeds.filter_algo_map(menu, {"L1_Something": 3})
 
 
 def test_get_level1_seeds_with_empty_algo_map_yields_a_scalar():
