@@ -24,6 +24,7 @@ def main(cfg: DictConfig) -> None:
             output_path=output_folder_path,
             **cfg["paths"]["auxiliary_files"],
             ncores=cfg["ncores"],
+            allow_overwrite=cfg["allow_overwrite"],
         )
 
 if __name__ == "__main__":

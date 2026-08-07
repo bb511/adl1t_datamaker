@@ -1,10 +1,19 @@
 # Helper methods to convert the level 1 seeds from the root file into a better format
 # that is then stored into the parquet files.
 
+import csv
 import numpy as np
 import uproot
 import re
 from pathlib import Path
+
+
+# Column of the prescale menu holding the prescale at nominal luminosity. Its header
+# names the luminosity and differs per menu generation (2p1E34 in the 2023 menus,
+# 2p0E34 in 2024, 1p95E34 in 2025, 1.5E+34 in Prescale_2022), but the position is
+# the same in every menu shipped with this repo. A value of "1" means unprescaled.
+PRESCALE_COLUMN = 6
+NAME_COLUMN = 1
 
 
 def get_initial_decision(global_trigger_tree: uproot.TTree) -> np.ndarray:
@@ -61,16 +70,22 @@ def filter_algo_map(prescale_file_path: Path, algo_map: dict) -> dict:
             prescaling information for each algorithm.
         algo_map: Dictionary of algorithm names and corresponding bit that they flip.
     """
-    # [1] corresponds to algo name
-    # [4] corresponds to "2.3E+34"
-    with open(prescale_file_path) as prescale_file:
+    with open(prescale_file_path, newline="") as prescale_file:
+        rows = csv.reader(prescale_file)
+        next(rows)  # Discard the header; see PRESCALE_COLUMN for what it names.
         unprescaled_keys = [
-            line.split(",")[1]
-            for line in prescale_file
-            if line.split(",")[6] == "1"
+            row[NAME_COLUMN]
+            for row in rows
+            if len(row) > PRESCALE_COLUMN and row[PRESCALE_COLUMN] == "1"
         ]
 
     return {key: algo_map[key] for key in unprescaled_keys}
+
+
+def prescale_column_header(prescale_file_path: Path) -> str:
+    """Name of the luminosity column that decides which seeds count as unprescaled."""
+    with open(prescale_file_path, newline="") as prescale_file:
+        return next(csv.reader(prescale_file))[PRESCALE_COLUMN]
 
 def get_level1_seeds(algo_map: dict, final_decision_bits: np.ndarray) -> dict:
     """Construct dictionary of level 1 algorithm seeds.

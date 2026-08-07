@@ -17,7 +17,8 @@ def add_pileup_info(pileup_folder: Path, event_data: ak.Array) -> np.ndarray:
     pileup_map = {}
     for run_number in runs:
         lumi_sections = set(event_data['lumi'][event_data['run'] == run_number])
-        pileup_map = get_pileup_map(pileup_folder, run_number, lumi_sections)
+        # Merge, do not overwrite: a file can span several runs.
+        pileup_map |= get_pileup_map(pileup_folder, run_number, lumi_sections)
 
     lookup_func = np.frompyfunc(lookup_pileup, 3, 1)
     pileup = ak.Array(lookup_func(pileup_map, runs_array, lumi_array).astype(np.float32))

@@ -3,7 +3,6 @@ from contextlib import redirect_stdout
 from io import StringIO
 import pathlib
 from pathlib import Path
-import XRootD.client.glob_funcs as xglob
 
 import rich
 import rich.syntax
@@ -34,9 +33,18 @@ def check_xrootd_path(path: str) -> Path | str:
 
 def glob(folder: Path | str, string: str) -> list[str]:
     if isinstance(folder, pathlib.PurePath):
-        return list(self.input_folder.glob(string))
-    else:
-        return list(xglob.glob(folder + "/" + string))
+        return sorted(folder.glob(string))
+
+    # xrootd is an optional extra, so only require it for remote root:// paths.
+    try:
+        import XRootD.client.glob_funcs as xglob
+    except ModuleNotFoundError as err:
+        raise ModuleNotFoundError(
+            f"Globbing {folder} needs xrootd, which is an optional dependency. "
+            f"Install it with: pip install 'adl1t-datamaker[xrootd]'"
+        ) from err
+
+    return list(xglob.glob(folder.rstrip("/") + "/" + string))
 
 
 def print_config(cfg: DictConfig, resolve: bool = False, save: bool = False) -> None:

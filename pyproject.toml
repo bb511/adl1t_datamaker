@@ -25,6 +25,18 @@ dependencies = [
 [tool.poetry]
 packages = [{include = "adl1t_datamaker", from = "src"}]
 
+# Optional so that a bare `poetry install` (Dockerfile, README) does not pull pytest.
+# Install the tests with: poetry install --with dev
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["eos: needs CERN EOS access and the xrootd extra"]
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"

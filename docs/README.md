@@ -50,7 +50,7 @@ These features are not converted to the produced parquet since they do not perta
 > There are 12 jet objects in the parquet files.
 > The features of the jets and whether they are included in the parquet are detailed below.
 
-Additional to the features listed below, the L1TNtuples contain the following jet variables: `jetSeedEt`, `jetTowerIEta`, `jetTowerIPhi`, `jetPUEt`, `jetPUDonutEt0`, `jetPUDonutEt1`, `jetPUDonutEt2`, `jetPUDonutEt3`; as well as float versions of the `jetIEt`, `jetIEta`, `jetIPhi`, and `jetIRawEt` features, i.e., without `I` in the name.
+Additional to the features listed below, the L1TNtuples contain the following jet variables: `jetSeedEt`, `jetTowerIEta`, `jetTowerIPhi`, `jetPUEt`, `jetPUDonutEt0`, `jetPUDonutEt1`, `jetPUDonutEt2`, `jetPUDonutEt3`; as well as float versions of the `jetIEt`, `jetIEta` and `jetIPhi` features, i.e., without `I` in the name.
 These features are not converted to the produced parquet since they do not pertain to the global trigger, and hence not relevant for our algorithm.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
@@ -60,7 +60,7 @@ These features are not converted to the produced parquet since they do not perta
 | `jetIPhi` $\varphi$  |  2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the jet from the centre of the detector. | :heavy_check_mark: |
 | DISP |  -  | - | 1 | This bit is used to flag a jet as delayed/displaced based on HCAL timing and depth profiles that are indicative of a “long lived particle” decay. If this bit is set to 1, then the jet is tagged as an LLP. | :x: |
 | `jetHwQual` quality flags  |  -  | - | 1 | Based on ECAL/HCAL energy ratio. If this ratio is higher, that means the jet is more likely to not be hadronic, but faked by a high energy lepton or photon. Either tight (2), medium (1), or loose (0). In reality, most jets are 0, with a few having quality 1. | :heavy_check_mark: |
-| `jetIRawEt` |  -  | - | - | Not sure what "raw" means in this context. Quantity is present in the L1TNtuple and the converted h5s, but is not defined in the `scales` pdf. | :heavy_check_mark: |
+| `jetRawEt` |  -  | - | - | Not sure what "raw" means in this context. Quantity is present in the L1TNtuple and the converted parquet, but is not defined in the `scales` pdf. Note this branch has no `I` counterpart: the L1TNtuple only carries `jetRawEt`. | :heavy_check_mark: |
 
 ## Egamma Objects
 

@@ -128,6 +128,7 @@ class Root2Parquet(object):
         pileup_folder: str,
         output_path: str,
         ncores: int = 1,
+        allow_overwrite: bool = False,
     ):
         """Extract objects/features from folder of root files and convert to parquet.
 
@@ -141,6 +142,7 @@ class Root2Parquet(object):
             pileup_folder: Path to the folder containing files with pileup information.
             output_path: Path to directory where output should be stored.
             ncores: Number of files to be converted at the same time.
+            allow_overwrite: Permit replacing parquet already in the output folder.
         """
         self.input_folder = util.check_xrootd_path(folder)
         self.prescale_file = Path(prescale_file)
@@ -150,6 +152,8 @@ class Root2Parquet(object):
         files_to_convert = util.glob(self.input_folder, "*.root")
         if not files_to_convert:
             raise ValueError(tcols.FAIL + f"{self.input_folder} is empty!" + tcols.ENDC)
+
+        self._reject_overwrites(files_to_convert, allow_overwrite)
 
         print(tcols.HEADER + f"\nConverting {self.input_folder} to pq!" + tcols.ENDC)
 
@@ -161,6 +165,26 @@ class Root2Parquet(object):
 
         print(tcols.OKGREEN + f"Conversion of {self.input_folder} done!" + tcols.ENDC)
         print(tcols.OKGREEN + f"Files saved to {self.output_path}." + tcols.ENDC)
+
+    def _reject_overwrites(self, files_to_convert: list, allow_overwrite: bool):
+        """Refuse to clobber parquet produced from a different input file.
+
+        Output files are named after the input stem, and convert_run maps several
+        input folders onto a single output folder, so a stem repeated across those
+        folders would silently replace the earlier conversion.
+        """
+        already_there = self.output_path / "seeds"
+        if allow_overwrite or not already_there.is_dir():
+            return
+
+        stems = {Path(f).stem for f in files_to_convert}
+        clashes = sorted(stems & {p.stem for p in already_there.glob("*.parquet")})
+        if clashes:
+            raise FileExistsError(
+                tcols.FAIL + f"{len(clashes)} file(s) from {self.input_folder} would "
+                f"overwrite parquet already in {self.output_path}, e.g. {clashes[:3]}. "
+                "Pass allow_overwrite=True to reconvert on purpose." + tcols.ENDC
+            )
 
     def _conversion(self, input_file: str):
         """Convert a root l1ntuple file to a parquet file."""

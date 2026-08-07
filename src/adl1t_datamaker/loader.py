@@ -72,6 +72,10 @@ class ParquetLoader(object):
 
     def _feats_in_obj(self, feats: list, dataset: pyarrow.dataset.Dataset) -> bool:
         """Checks if the features selected by the user actually exits."""
+        if feats is None:
+            # None means "read every feature", so there is nothing to check.
+            return True
+
         selected_feats = set(feats)
         all_feats = set(dataset.schema.names)
 

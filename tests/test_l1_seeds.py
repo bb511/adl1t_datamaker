@@ -1,0 +1,80 @@
+"""Prescale menu parsing and seed construction. No ROOT file, no network."""
+
+import numpy as np
+import pytest
+
+from adl1t_datamaker.components import l1_seeds
+
+# Number of unprescaled algorithms in each checked-in menu, and the header of the
+# column that decides it. Pinning these makes any change to PRESCALE_COLUMN, or to a
+# menu file, a visible test failure rather than a silent shift in the seeds schema.
+MENUS = {
+    "L1Menu_Collisions2023_v1_1_0.csv": ("2p1E34", 168),
+    "L1Menu_Collisions2023_v1_2_0.csv": ("2p1E34", 175),
+    "L1Menu_Collisions2024_v1_1_0.csv": ("2p0E34", 161),
+    "L1Menu_Collisions2024_v1_2_1.csv": ("2p0E34", 170),
+    "L1Menu_Collisions2024_v1_3_0_last.csv": ("2p0E34+ZeroBias+HLTPhysics", 164),
+    "L1Menu_Collisions2025_v1_1_1.csv": ("1p95E34", 190),
+    "L1Menu_Collisions2025_v1_1_1_original.csv": ("1p95E34", 190),
+    "L1Menu_Collisions2025_v1_3_0.csv": ("1p95E34", 190),
+    "Prescale_2022_v0_1_1.csv": ("1.5E+34", 150),
+}
+
+
+@pytest.mark.parametrize("menu,expected", MENUS.items(), ids=list(MENUS))
+def test_prescale_column_header(menus, menu, expected):
+    header, _ = expected
+    assert l1_seeds.prescale_column_header(menus / menu) == header
+
+
+@pytest.mark.parametrize("menu,expected", MENUS.items(), ids=list(MENUS))
+def test_unprescaled_count(menus, menu, expected):
+    _, count = expected
+    # Every name maps to itself so filter_algo_map cannot drop anything on a KeyError.
+    algo_map = _all_names_map(menus / menu)
+    assert len(l1_seeds.filter_algo_map(menus / menu, algo_map)) == count
+
+
+def _all_names_map(path):
+    import csv
+
+    with open(path, newline="") as f:
+        rows = csv.reader(f)
+        next(rows)
+        return {r[l1_seeds.NAME_COLUMN]: i for i, r in enumerate(rows) if len(r) > 1}
+
+
+def test_header_row_is_never_selected(menus):
+    """The header must be discarded explicitly, not by luck of its column value."""
+    menu = menus / "L1Menu_Collisions2025_v1_3_0.csv"
+    assert "Name" not in l1_seeds.filter_algo_map(menu, _all_names_map(menu))
+
+
+def test_short_and_blank_lines_are_tolerated(tmp_path):
+    """A truncated or blank row must be skipped, not raise IndexError."""
+    menu = tmp_path / "menu.csv"
+    menu.write_text(
+        "Index,Name,Emergency,a,b,c,2p0E34,extra\n"
+        "0,L1_Good,,,,,1,x\n"
+        "\n"
+        "1,L1_Truncated\n"
+        "2,L1_Prescaled,,,,,63000,x\n"
+    )
+    assert l1_seeds.filter_algo_map(menu, {"L1_Good": 7}) == {"L1_Good": 7}
+
+
+def test_get_level1_seeds_adds_combined_l1bit():
+    algo_map = {"L1_A": 0, "L1_B": 1}
+    bits = np.array([[1, 0], [0, 0], [0, 1]])
+
+    seeds = l1_seeds.get_level1_seeds(algo_map, bits)
+
+    assert set(seeds) == {"L1_A", "L1_B", "L1bit"}
+    assert seeds["L1_A"].dtype == bool
+    np.testing.assert_array_equal(seeds["L1bit"], [True, False, True])
+
+
+def test_get_level1_seeds_rejects_empty_algo_map():
+    """np.logical_or.reduce over no algorithms cannot produce a decision."""
+    with pytest.raises(ValueError):
+        l1_seeds.get_level1_seeds({}, np.zeros((3, 2)))

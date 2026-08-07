@@ -35,7 +35,7 @@ select_feats = {
   'MHT': ['Et', 'phi'],
   'FET': ['Et', 'phi'],
   'FHT': ['Et', 'phi'],
-  'cicada': ['CICADAScore'],
+  'cica': ['CICADAScore'],
   'event_info': ['run', 'lumi', 'event', 'bx', 'orbit', 'time', 'nPV_True'],
   'seeds': 'none'
 }
