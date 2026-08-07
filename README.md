@@ -15,7 +15,7 @@ This repository requires `python >= 3.10`.
 ### Reader Only
 If you do not want to convert any data but just want to read parquet files produced by this package, just install it using pip:
 ```
-pip install "adl1t-datamaker @ git+https://github.com/cdfpzmvpvg/info_ad_data.git@master"
+pip install "adl1t-datamaker @ git+ssh://git@gitlab.cern.ch:7999/cms-l1-ad/data_converter.git@master"
 ```
 Then to use the reader follow the instructions at the end of this README.
 
@@ -39,16 +39,22 @@ poetry install --extras xrootd
 #### Manual Dependecy Installation
 You can also install the dependencies manually, as they are listed in `/pyproject.toml`.
 
+#### Docker
+A docker image of this project is also available [here](https://gitlab.cern.ch/cms-l1-ad/data_converter/) **(TBA)**, under the tag `latest`.
+
 ## Usage
 ---
 
+All the scripts are run from the root of this repository, since their default paths
+(`scripts/pileup_files/`, `scripts/L1Menus/`) are relative to it.
+
 ### Converter
 
-See the `/.gitlab-ci.yaml` or `/scripts/convert/run.snip` for usage examples.
+See `/scripts/run.snip` for usage examples.
 
 ### Reader
 
-To read the h5 files generated with this code, import the h5converter class
-`from adl1t_datamaker.convert.loader import Parquet2Awkward`
+To read the parquet files generated with this code, import the reader class
+`from adl1t_datamaker.loader import Parquet2Awkward`
 
-For an example of how the reading is done, check the `scripts/convert/plot` script.
+For an example of how the reading is done, check the `scripts/plot` script.
