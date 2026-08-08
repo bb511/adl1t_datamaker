@@ -1,42 +1,60 @@
 # L1TNtuple to parquet
 
-The scripts in this repo do not convert the data in the targeted L1TNtuples in its totality, but only a certain set of objects and corresponding features.
-The description of each feature that is available in the global trigger and whether it is included in the converted parquet files is available below.
-Whatever features are found in the root files and are not present in the following list do not pertain to what is available to our algorithm and hence are ignored.
+The conversion keeps what the global trigger (uGT) sees, together with the metadata that says which event it saw.
+An L1TNtuple carries a great deal more: float reconstructions of the same quantities, detector-level branches that never reach the trigger boards, and the objects of the two bunch crossings on either side of the one that fired.
+None of that reaches the parquet, the first two because no uGT algorithm can read them and the third by the choice described below.
+The tables here describe every feature that does reach it, and a tick in the `in` column means the conversion writes that feature.
 
-The information presented here is a synthesis of the information available in the [scales](./scales_inputs_2_ugt.pdf) and [firmware](./gt-mp7-firmware-specification.pdf) pdf files.
-Also, a lot of the descriptions are based on word of mouth and exchanges with the experts of each subsystem.
+The ranges, steps and bit widths come from the [scales](./scales_inputs_2_ugt.pdf) and [firmware](./gt-mp7-firmware-specification.pdf) specifications.
+Most of the explanatory text does not: it was assembled from exchanges with the experts of each subsystem and carries no citation, so read a description as a summary of expert opinion and the numbers as specification.
+Where a description says a quantity is not yet defined, that reports the state of the subsystem rather than a gap in this document.
+
+> [!IMPORTANT]
+> This file is parsed. `src/adl1t_datamaker/schema.py` reads the tables below into the feature specification that the summary reports, the validation checks and the dataset card all work from, and `tests/test_schema_matches_docs.py` fails when the converter and these tables disagree.
+> The prose can be edited freely. What the parser depends on is narrower, and every item of it fails silently rather than loudly, with the single exception noted last:
+>
+> - Each `##` heading keeps its exact title. A `##` heading the parser does not know ends the section, so nothing new may be inserted inside one, which is why the seeds section below is invisible to it. Under `## Energy Objects` only the first word of each `###` title is read, and it has to be the parquet folder name.
+> - A table row begins with `|` in the first column. One leading space and that feature is gone.
+> - The header row's first cell reads `Feature`, and its remaining cells are found by the exact names `Range`, `Step`, `Bits` and `Explanation`.
+> - A row counts as a feature only when its first cell *starts* with a backticked name, and it counts as converted only when its `in` cell contains the literal `:heavy_check_mark:`.
+> - A `Range` beginning `0..` marks the feature as unsigned, which is what turns on the check that no measured value exceeds the all-ones code of its `Bits`. The number after `0..` is never read.
+> - A capacity is matched as "There are N ... objects" with exactly one word where the ellipsis is. Reword it and the multiplicity check for that object stops running.
+>
+> The exception is the `in` column, whose header is looked up without a fallback, so renaming that one raises rather than passing quietly.
 
 # Objects
 
-Note, the `I` in the feature names is short for `Integer`, and specifies that the feature is obtained from hardware.
-The features that do not have a `root_file_name` are not found in the current vesion of the L1TNtuples generated from the raw data.
-Each object also has an associated `[object_name]Bx` feature in the L1TNtuple which specifies the bunch crossing that the object belongs to, since each event contains objects from ± 2 bunch crossings.
+An `I` in a feature name abbreviates `Integer` and marks a quantity taken straight from hardware, but its absence means nothing: `muonQual`, `muonChg`, `muonTfMuonIdx`, `jetHwQual`, `jetRawEt`, `egIso` and `tauIso` are hardware integers too.
+Every value keeps its hardware units through the conversion, so a reader that wants GeV or radians applies the `Step` column itself.
 
-The generated parquet files follow the structure outlined in the rest of the readme.
-For each converted data set, each object is stored in a separate folder.
-Each object folder has a list of parquet files, each parquet file corresponding to the L1Ntuple file it was generated from.
-A tick in the `in` column means that the feature is stored in the parquet files upon conversion.
+Each object also carries a `[object_name]Bx` feature in the L1TNtuple naming the bunch crossing it belongs to, since each event contains objects from ± 2 bunch crossings.
+The conversion keeps bunch crossing 0 alone and drops the other four, for the four particle collections through their own `Bx` branch and for the six energy sums through `sumBx`.
+No event is lost that way, only the objects belonging to the other crossings, and the `Bx` column itself is not written out, so the parquet cannot say which crossing an object came from.
+The CICADA score is the exception, being one number per event with no crossing to select.
+
+For each converted data set, each object is stored in a separate folder, and each folder holds one parquet file per L1Ntuple it was generated from.
+Row $i$ of every folder is the same event, which is what lets the folders be read separately and joined by position.
 
 ## Muon Objects
 
 > [!NOTE]
-> There are 8 muon objects in the parquet files.
+> There are 8 muon objects in the parquet files at most, which is the global trigger's capacity per event.
+> The column is jagged, holding one entry per in-time muon, so an event with fewer carries fewer: nothing is padded and nothing is truncated.
 > The features of the muons and whether they are included in the parquet files are detailed below.
 
-Additional to the features listed below, the L1TNtuples also contain the following muon variables: `nMuons`, `muonIEta`, `muonIDEta`, `muonIDPhi`, `nMuonShowers`, `muonShowerBx`, `muonShowerOneNominal`, `muonShowerOneTight`, `muonShowerTwoLoose`, `muonShowerTwoLooseDiffSectors`; as well as float versions of the `muonIEt`, `muonIEtUnconstrained`, `muonIEta`, `muonIPhi`, `muonIEtaAtVtx`, `muonIPhiAtVtx`, i.e., without `I` in the name.
-These features are not converted to the produced parquet since they do not pertain to the global trigger, and hence not relevant for our algorithm.
+Additional to the features listed below, the L1TNtuples also contain the following muon variables: `nMuons`, `muonIDEta`, `muonIDPhi`, `nMuonShowers`, `muonShowerBx`, `muonShowerOneNominal`, `muonShowerOneTight`, `muonShowerTwoLoose`, `muonShowerTwoLooseDiffSectors`; as well as float versions of the `muonIEt`, `muonIEtUnconstrained`, `muonIEta`, `muonIPhi`, `muonIEtaAtVtx`, `muonIPhiAtVtx`, i.e., without `I` in the name.
+None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| `muonIPhiAtVtx` $\varphi\mathrm{\,\,(extrapolated)}$  |  2 π  | 2π/576 ~ 0.011 | 10 | Muon azimuthal angle extrapolated to the centre of the detector. Layer 2 of the global trigger system is performing the extrapolation in a rudimentary way; if latency allows, a more sophisiticated extrapolation, e.g., using an ML method, is preferable. | :heavy_check_mark: |
+| `muonIPhiAtVtx` $\varphi\mathrm{\,\,(extrapolated)}$  |  2 π  | 2π/576 ~ 0.011 | 10 | Muon azimuthal angle extrapolated to the centre of the detector. Layer 2 of the global trigger system is performing the extrapolation in a rudimentary way; if latency allows, a more sophisticated extrapolation, e.g., using an ML method, is preferable. | :heavy_check_mark: |
 | `muonIEt` $p_t$  |  0..256 GeV  | 0.5 | 9 | The muon transverse momentum (a proxy for its transverse energy). | :heavy_check_mark: |
-| `muonQual` quality  |  -  | - | 4 | The muon quality is represented by 4 bits. A hit in each of the muon stations flips its corresponding bit to 1. Each of the four muon track finding systems, i.e., BMTF, OMTF, and EMTF assign quality differently. The BMTF records muons with $\eta < 0.8$, EMTF for $0.8 < \eta < 1.2$ and everything higher than that for the OMTF. Each of the systems requires a quality higher than 12, i.e., the first two bits are 1, but how this quality is determined is ultimately peculiar to each system. | :heavy_check_mark: |
+| `muonQual` quality  |  -  | - | 4 | The muon quality is represented by 4 bits. A hit in each of the muon stations flips its corresponding bit to 1. The three muon track finding systems assign quality differently: the BMTF covers the barrel, $\lvert\eta\rvert \lesssim 0.83$, the OMTF the overlap, $0.83 \lesssim \lvert\eta\rvert \lesssim 1.24$, and the EMTF the endcaps beyond that. Each requires a quality higher than 12, i.e., the first two bits are 1, but how that quality is arrived at is peculiar to each system. | :heavy_check_mark: |
 | `muonIEtaAtVtx` $\eta \mathrm{\,\,(extrapolated)}$  |  2π  | 0.0870/8=0.010875 | 8+1 | Muon polar angle extrapolated to the centre of the detector. The explanation is the same as for $\phi$. | :heavy_check_mark: |
-| `muonIso` iso  |  -  | - | 2 | Muon isolation. The isolation is stored in two bits, corresponding to two types of isolation. However, the meaning of this isolation is not defined yet in the uGMT system: the uGMT has the capability to create an isolation variable but the calorimeter links were never commisioned. | :x: |
+| `muonIso` iso  |  -  | - | 2 | Muon isolation. The isolation is stored in two bits, corresponding to two types of isolation. However, the meaning of this isolation is not defined yet in the uGMT system: the uGMT has the capability to create an isolation variable but the calorimeter links were never commissioned. | :x: |
 | `muonChg` charge sign  |  -  | - | 1 | Muon charge determined from the muon bending trajectory. `-1` is negative charge while `1` is positive charge. | :heavy_check_mark: |
 | charge valid  |  -  | - | 1 | This is set to `0` whenever one cannot determine the charge. This can happen when the track is too straight, e.g., in the case of very high momentum muons. | :x: |
-| `muonTfMuonIdx` index bits |  -  | - | 7 | There are 7 index bits, which can encode 107 muons. These index bits encode the order of the muons in the GT muon system, i.e., which subsystem they belong to. The first 18 muons come from the EMTF, the next 18 from the OMTF, the next 36 from BMTF, then again the next 18 from OMTF, and finally the last 18 again from the EMTF. | :heavy_check_mark: |
+| `muonTfMuonIdx` index bits |  -  | - | 7 | Seven index bits are enough to number the 108 muon slots the track finders deliver to the global trigger, and the position within that ordering says which subsystem a muon came from. The first 18 slots come from the EMTF, the next 18 from the OMTF, the next 36 from the BMTF, then a further 18 from the OMTF, and the last 18 again from the EMTF. | :heavy_check_mark: |
 | `muonIPhi` $\varphi$ (out)  |  2π  | 2π/576 ~ 0.011 | 10 | This is just the raw version of the extrapolated azimuthal angle mentioned above. One can use this to obtain more refined versions of the phi at vertex. | :heavy_check_mark: |
 | `muonIEta` $\eta$ (out)  |  2π  | 0.0870/8=0.010875 | 8+1 | This is just the raw version of the extrapolated polar angle mentioned above. One can use this to obtain more refined versions of the eta at vertex. | :heavy_check_mark: |
 | `muonIEtUnconstrained` unconstrained $p_t$  |  0..256 GeV  | 1 | 8 | The transverse momentum not constrained to the vertex. Lower resolution when compared with the momentum defined above, but useful in the case of offset muons, since it can be more precise than its constrained counterpart. | :heavy_check_mark: |
@@ -47,11 +65,12 @@ These features are not converted to the produced parquet since they do not perta
 ## Jet Objects
 
 > [!NOTE]
-> There are 12 jet objects in the parquet files.
+> There are 12 jet objects in the parquet files at most, which is the global trigger's capacity per event.
+> The column is jagged, holding one entry per in-time jet, so an event with fewer carries fewer: nothing is padded and nothing is truncated.
 > The features of the jets and whether they are included in the parquet are detailed below.
 
 Additional to the features listed below, the L1TNtuples contain the following jet variables: `jetSeedEt`, `jetTowerIEta`, `jetTowerIPhi`, `jetPUEt`, `jetPUDonutEt0`, `jetPUDonutEt1`, `jetPUDonutEt2`, `jetPUDonutEt3`; as well as float versions of the `jetIEt`, `jetIEta` and `jetIPhi` features, i.e., without `I` in the name.
-These features are not converted to the produced parquet since they do not pertain to the global trigger, and hence not relevant for our algorithm.
+None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -60,16 +79,17 @@ These features are not converted to the produced parquet since they do not perta
 | `jetIPhi` $\varphi$  |  2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the jet from the centre of the detector. | :heavy_check_mark: |
 | DISP |  -  | - | 1 | This bit is used to flag a jet as delayed/displaced based on HCAL timing and depth profiles that are indicative of a “long lived particle” decay. If this bit is set to 1, then the jet is tagged as an LLP. | :x: |
 | `jetHwQual` quality flags  |  -  | - | 1 | Based on ECAL/HCAL energy ratio. If this ratio is higher, that means the jet is more likely to not be hadronic, but faked by a high energy lepton or photon. Either tight (2), medium (1), or loose (0). In reality, most jets are 0, with a few having quality 1. | :heavy_check_mark: |
-| `jetRawEt` |  -  | - | - | Not sure what "raw" means in this context. Quantity is present in the L1TNtuple and the converted parquet, but is not defined in the `scales` pdf. Note this branch has no `I` counterpart: the L1TNtuple only carries `jetRawEt`. | :heavy_check_mark: |
+| `jetRawEt` |  -  | - | - | What "raw" means here is undetermined: the branch is present in the L1TNtuple and in the converted parquet, but the `scales` pdf does not define it, and it has no `I` counterpart, the L1TNtuple carrying `jetRawEt` alone. The data ntuples leave it unfilled, so it is identically zero in every converted zero-bias run and only simulation gives it values. | :heavy_check_mark: |
 
 ## Egamma Objects
 
 > [!NOTE]
-> There are 12 egamma objects in the parquet files.
+> There are 12 egamma objects in the parquet files at most, which is the global trigger's capacity per event.
+> The column is jagged, holding one entry per in-time egamma, so an event with fewer carries fewer: nothing is padded and nothing is truncated.
 > The features of the egammas and whether they are included in the parquet files are detailed below.
 
 Additional to the features listed below, the L1TNtuples contain the following egamma variables: `nEGs`, `egTowerIPhi`, `egTowerIEta`, `egRawEt`, `egIsoEt`, `egFootprintEt`, `egNTT`, `egShape`, `egTowerHoE`, `egHwQual`; as well as float versions of the `egIEt`, `egIEta`, `egIPhi`, and `egIRawEt` features, i.e., without `I` in the name.
-These features are not converted to the produced parquet since they do not pertain to the global trigger, and hence not relevant for our algorithm.
+None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -81,26 +101,30 @@ These features are not converted to the produced parquet since they do not perta
 ## Tau Objects
 
 > [!NOTE]
-> There are 12 tau objects in the parquet files.
+> There are 12 tau objects in the parquet files at most, which is the global trigger's capacity per event.
+> The column is jagged, holding one entry per in-time tau, so an event with fewer carries fewer: nothing is padded and nothing is truncated.
 > The features of the taus and whether they are included in the parquet files are detailed below.
 
 Additional to the features listed below, the L1TNtuples contain the following tau variables: `nTaus`, `tauTowerIPhi`, `tauTowerIEta`, `tauRawEt`, `tauRawIEt`, `tauIsoEt`, `tauNTT`, `tauHasEM`, `tauIsMerged`, `tauHwQual`; as well as float versions of the `tauIEt`, `tauIEta`, and `tauIPhi` features, i.e., without `I` in the name.
-These features are not included in the produced parquet files.
+None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| `tauIEt` $E_t$  |  0..256 GeV  | 0.5 | 9 | Transverse energy of the electron or photon. | :heavy_check_mark: |
-| `tauIEta` $\eta$ |  -5..5  | 0.0870/2=0.0435 | 7+1 = 8 | The polar angle of the electron or photon from the centre of the detector. | :heavy_check_mark: |
-| `tauIPhi` $\varphi$  |  2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the electron or photon from the centre of the detector. | :heavy_check_mark: |
+| `tauIEt` $E_t$  |  0..256 GeV  | 0.5 | 9 | Transverse energy of the tau candidate. | :heavy_check_mark: |
+| `tauIEta` $\eta$ |  -5..5  | 0.0870/2=0.0435 | 7+1 = 8 | The polar angle of the tau candidate from the centre of the detector. | :heavy_check_mark: |
+| `tauIPhi` $\varphi$  |  2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the tau candidate from the centre of the detector. | :heavy_check_mark: |
 | `tauIso` iso  |  -  | - | 2 | Little activity around the cluster of energy representing the tau means higher isolation: less likely to be a jet. The lowest bit is defined as `isolated` while the highest bit is named `undefined`. Three degrees of isolation are possible, but only one is used: at least one of the bits needs to be set. Thus, it's either this or `no isolation`, when the bits are all 0. Whatever quality is larger than 0 is treated as the same degree of isolation. Still unclear how these bits are set, i.e., based on what parameters exactly. | :heavy_check_mark: |
 
 
 ## Cicada Objects
 
-Anomaly detection algorithm that uses data from the calorimeter. The `modelIInput` is also available for this object.
+CICADA is a separate anomaly detection algorithm running on calorimeter tower data, and its score is the only thing of it the global trigger sees.
+The score lives in the calorimeter summary tree rather than in the level 1 tree, so a conversion given no such tree writes no `cica` folder at all.
+The unpacked 2025 zero-bias ntuples are of that kind, and carry no CICADA score.
 
 > [!NOTE]
-> There is one cicada object in the parquet files.
+> There is one cicada object in the parquet files, in a folder named `cica`.
+> It is the one column stored flat, one value per event with no list around it, because it is a single number per event rather than a collection.
 > The features of the cicada object and whether it is included in the parquet files is detailed below.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
@@ -109,12 +133,15 @@ Anomaly detection algorithm that uses data from the calorimeter. The `modelIInpu
 
 ## Energy Objects
 
-The energy objects do not have `root_file_name` due to how they are stored in the root files.
-For more details on how the energy objects are stored, see the `src/adl1t_datamaker/root2parquet.py`, namely the `_store_energies` method and the methods called therein.
+The level 1 tree gives the six sums no branch each. It gives them one collection, holding an entry per pair of sum type and bunch crossing, which the conversion reads through the four branches `sumType`, `sumBx`, `sumIEt` and `sumIPhi`.
+Each column below is therefore recovered by its `sumType` flag together with `sumBx == 0`, taking its value from `sumIPhi` when the column is a `phi` and from `sumIEt` otherwise, which is why `tower_count` is read from `sumIEt` despite not being an energy.
+The flags are 0 for `ET` and 16 for its ECAL part, 1 for `HT` and 21 for its tower count, 2 for `MET`, 3 for `MHT`, 8 for `FET` and 20 for `FHT`.
+`_store_energies` in `src/adl1t_datamaker/root2parquet.py` applies them and `tests/test_sum_types.py` pins them, which is worth having, because reading a sum with the wrong flag yields a plausible column rather than an error: an earlier version of the map read `ETTEM` with the `HT` flag, so every data set produced before the reconversion of 2026-08-08 carries a copy of `HT.Et` in `ET.ETTEM`.
 
 > [!NOTE]
-> There are 6 energy objects in the parquet files.
-> The features of the each energy object are detailed below.
+> There are 6 energy objects in the parquet files, one folder each.
+> These carry a list layer like the object collections, but should hold exactly one entry per event rather than a variable number. That is an invariant worth checking rather than a guarantee: a zero would mean the sum was absent from an event and a two that a neighbouring bunch crossing survived the mask, and the summary fails a data set where either happens.
+> The features of each energy object are detailed below.
 
 ### ET ($E_t$)
 The transverse energy object.
@@ -126,12 +153,12 @@ The transverse energy object.
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### HT
-The `HT` is the magnitude of the vectorial sum of transverse energy jets over ECAL and HCAL.
+The scalar sum of the jet transverse energies of the event, over ECAL and HCAL. The vectorial counterpart is `MHT`.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | Transverse energy of the whole event. | :heavy_check_mark: |
-| `tower_count` TOWERCOUNT | 0..8191 | 1 | 13 | Number of ``towers" (experimental signatures left by hadrons in the calorimeter) measured in the HCAL. | :heavy_check_mark: |
+| `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | Scalar sum of the jet transverse energies of the event. | :heavy_check_mark: |
+| `tower_count` TOWERCOUNT | 0..8191 | 1 | 13 | Number of "towers" (experimental signatures left by hadrons in the calorimeter) measured in the HCAL. | :heavy_check_mark: |
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### MET ($ET_\mathrm{miss}$)
@@ -178,14 +205,33 @@ The missing hadronic transverse energy object including data from the forward ha
 
 ## Event Information
 
-All the following features are integers. 
+All the following features are integers, apart from `nPV_True` in recorded data.
 
 | Feature       |  Explanation  |      in       |
 | ------------- | ------------- | ------------- |
 | `run` | The CMS run that the event corresponds to. | :heavy_check_mark: |
 | `lumi` | The luminosity section, i.e., a range of events that the event is included in. | :heavy_check_mark: |
 | `event` | The event number. | :heavy_check_mark: |
-| `bx` | The bunch crossing number. Bunches of protons are collided at the LHC. The highest energy event in the bunch crossing is recorded.  | :heavy_check_mark: |
-| `orbit` | The orbit includes all bunch crossings that happen in the time it takes for the 2500 bunches introduced into the LHC to complete one orbit. | :heavy_check_mark: |
+| `bx` | The bunch crossing number within the orbit, identifying which of the LHC's 3564 slots produced the event, so that over a run this column reflects the filling scheme. | :heavy_check_mark: |
+| `orbit` | The orbit number, one orbit being a full revolution of the beam and hence a complete pass through the 3564 bunch crossing slots. Together with `bx` it places the event at a crossing. Simulation has neither to record and writes the all-ones value into both this column and `bx`. | :heavy_check_mark: |
 | `time`  | The wall clock time of the event, packed as Unix seconds shifted left by 32 bits with the microseconds in the low word, i.e. `seconds = time >> 32` and `microseconds = time & 0xFFFFFFFF`. | :heavy_check_mark: |
-| `nPV_True` | The pileup of the events, i.e., the number of auxiliary proton collisions that happen in the same event. | :heavy_check_mark: |
+| `nPV_True` | The pileup of the events, i.e., the number of auxiliary proton collisions that happen in the same event. The stored type follows the source: `float32` in recorded data, where the value is a brilcalc measurement per lumi section, and `int32` in simulation, where it is the generated count. Concatenating the two therefore needs an explicit cast. | :heavy_check_mark: |
+
+## Level 1 Seeds
+
+The `seeds` folder holds one boolean column per trigger algorithm, giving the final decision the global trigger reached for that algorithm on that event.
+The columns are named after the algorithms, e.g. `L1_SingleMu22`, and each is a length-1 list per event like the other single-valued features.
+
+Only the unprescaled algorithms are kept.
+A prescaled algorithm records one accept in every `n`, so its column would measure the prescale rather than the physics, and `unprescaled_names` in `src/adl1t_datamaker/components/l1_seeds.py` reads the menu CSV to select the algorithms whose prescale is 1.
+Which algorithms survive therefore depends on the menu the run was taken with, and the menus differ between recorded data and simulation.
+Runs 396102 and 398183 were taken with `L1Menu_Collisions2025_v1_3_0`, which leaves 190 algorithms unprescaled, while the Winter25 simulation used `L1Menu_Collisions2024_v1_3_0_last` and its 164; only 150 names are common to the two.
+The columns are not in the same order either, so any code reading them must select by name rather than by position.
+The published release quotes 183, 161 and 147 for the same three numbers, because it drops the `L1_CICADA_*` columns, seven of them in the 2025 menu and three in the Winter25 one, as another anomaly trigger's output rather than detector input.
+
+Alongside the algorithms, the conversion writes one synthesised column, `L1bit`, holding the logical OR of every algorithm kept.
+It is not an algorithm and does not appear in any menu.
+Note that it is computed over the columns as they stand at conversion time, so a downstream step that drops columns leaves `L1bit` describing the wider set it was built from.
+
+The decision stored is the final one rather than the initial one.
+An algorithm that accepted an event can still read 0 here, because the trigger rules cap how often accepts may follow one another; `get_initial_decision` and `get_final_decision` in the same module expose both.

@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+# Build the HuggingFace mirror from a finished release tree.
+# Run this from the root of the repository, after ./scripts/publish has exported the
+# tree. The mirror is published once the accompanying paper is accepted, not before.
+import argparse
+from pathlib import Path
+
+from adl1t_datamaker.publish import huggingface
+
+parser = argparse.ArgumentParser(
+    description="Mirror the released tree as one row per event.",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+)
+parser.add_argument(
+    '--tree', type=Path, required=True, help="Exported release tree to mirror."
+)
+parser.add_argument(
+    '--out', type=Path, required=True, help="Folder the mirror is written into."
+)
+parser.add_argument(
+    '--metadata',
+    type=Path,
+    required=True,
+    help="Release metadata folder, read for the split summary that assigns the labels."
+)
+parser.add_argument(
+    '--only',
+    type=str,
+    nargs='+',
+    default=None,
+    help="Restrict the mirror to these data set names. Every data set by default."
+)
+args = parser.parse_args()
+
+args.out.mkdir(parents=True, exist_ok=True)
+labels = huggingface.read_labels(args.metadata)
+written = huggingface.build(args.tree, args.out, labels, args.only)
+huggingface.finish(args.tree, args.out, written)
+print(f"  mirror written to {args.out} with {len(written)} configs")

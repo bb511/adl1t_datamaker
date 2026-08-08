@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+
+# Build the published release from a converted data set and a frozen split map.
+# Run this from the root of the repository; scripts/publish/README.md has worked
+# examples and says where each input comes from.
+import argparse
+import json
+from pathlib import Path
+
+from adl1t_datamaker.publish import card
+from adl1t_datamaker.publish import export
+
+STAGES = ("export", "card", "pack")
+
+parser = argparse.ArgumentParser(
+    description="Partition converted parquet into the published train/valid/test tree.",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+)
+parser.add_argument(
+    '--out',
+    type=Path,
+    required=True,
+    help="Release folder. Holds the archives, the card, the checksums and the metadata."
+)
+parser.add_argument(
+    '--work',
+    type=Path,
+    default=None,
+    help="Scratch for the consolidated files and the exported tree. Defaults to a "
+         "sibling of --out named after it, so the release folder holds the upload alone."
+)
+parser.add_argument(
+    '--splitmap',
+    type=Path,
+    default=None,
+    help="Folder of frozen (split, order) maps and their index.json. Defaults to "
+         "_splitmap inside --out."
+)
+parser.add_argument(
+    '--version', type=str, default="adl1t-l1ad-v2", help="Name of the exported tree."
+)
+parser.add_argument(
+    '--only',
+    type=str,
+    nargs='+',
+    default=None,
+    help="Restrict the export to these data set names. Every mapped data set by default."
+)
+parser.add_argument(
+    '--stage',
+    type=str,
+    nargs='+',
+    default=list(STAGES),
+    choices=STAGES,
+    help="Stages to run. Packing alone reruns cheaply after a failed archive."
+)
+parser.add_argument(
+    '--ncores',
+    type=int,
+    default=1,
+    help="Objects consolidated at once. Consolidation is the slow half of an export."
+)
+args = parser.parse_args()
+
+splitmap = args.splitmap or args.out / "_splitmap"
+work = args.work or args.out.parent / f"{args.out.name}_work"
+tree = work / args.version
+metadata = args.out / "metadata"
+
+# Read only what the requested stages need, so packing again after a failed archive
+# does not demand the split map and the summary that produced the tree.
+read = lambda path: json.loads(path.read_text())
+
+if 'export' in args.stage:
+    index = read(splitmap / "index.json")
+    if args.only:
+        index = {name: entry for name, entry in index.items() if name in args.only}
+    counts = export.export_all(
+        index, read(metadata / "split_summary.json"), splitmap,
+        work / "consolidated", tree, args.ncores,
+    )
+    export.write_manifest(metadata / "release.json", args.version, counts, index)
+
+if 'card' in args.stage:
+    tree.mkdir(parents=True, exist_ok=True)
+    (tree / "README.md").write_text(card.render(read(metadata / "split_summary.json")))
+    (tree / "LICENSE").write_text(card.LICENCE)
+    print(f"  card and licence written into {tree}")
+
+if 'pack' in args.stage:
+    export.pack(tree, args.out)
+    print(f"  checksums written to {export.write_checksums(args.out)}")
