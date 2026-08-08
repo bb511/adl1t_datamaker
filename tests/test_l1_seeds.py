@@ -31,12 +31,39 @@ def test_prescale_column_header(menus, menu, expected):
 @pytest.mark.parametrize("menu,expected", MENUS.items(), ids=list(MENUS))
 def test_unprescaled_count(menus, menu, expected):
     _, count = expected
-    # Every name maps to itself so filter_algo_map cannot drop anything on a KeyError.
+    # A map covering every name in the menu, so what is counted is the prescale column
+    # alone and not the overlap with some trigger tree.
     algo_map = _all_names_map(menus / menu)
     assert len(l1_seeds.filter_algo_map(menus / menu, algo_map)) == count
 
 
+@pytest.mark.parametrize("menu,expected", MENUS.items(), ids=list(MENUS))
+def test_unprescaled_names_needs_no_root_file(menus, menu, expected):
+    """The seed set is derivable from the menu alone, with no root file involved.
+
+    That is what lets a summary report name the menu behind an already converted data
+    set, by matching its seed columns against every menu in scripts/L1Menus.
+    """
+    _, count = expected
+
+    assert len(set(l1_seeds.unprescaled_names(menus / menu))) == count
+
+
+def test_every_menu_has_a_distinct_unprescaled_set(menus):
+    """Menu identification from seed columns is only unambiguous if this holds."""
+    sets = [frozenset(l1_seeds.unprescaled_names(menu))
+            for menu in sorted(menus.glob("*.csv"))]
+
+    assert len(set(sets)) == len(sets), "two menus select the same seeds"
+
+
 def _all_names_map(path):
+    """Every seed a menu names, mapped to a stand-in for its decision bit number.
+
+    Production reads that map off the trigger tree; here the row index does instead, so
+    filter_algo_map cannot raise KeyError on a name the tree happens to lack. Rows of
+    one field or fewer are the blank lines, which name nothing.
+    """
     import csv
 
     with open(path, newline="") as f:
@@ -66,6 +93,7 @@ def test_short_and_blank_lines_are_tolerated(tmp_path):
 
 def test_get_level1_seeds_adds_combined_l1bit():
     algo_map = {"L1_A": 0, "L1_B": 1}
+    # (events, algorithms), the column index being the decision bit algo_map points at.
     bits = np.array([[1, 0], [0, 0], [0, 1]])
 
     seeds = l1_seeds.get_level1_seeds(algo_map, bits)

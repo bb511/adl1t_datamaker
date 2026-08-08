@@ -116,62 +116,62 @@ For more details on how the energy objects are stored, see the `src/adl1t_datama
 > There are 6 energy objects in the parquet files.
 > The features of the each energy object are detailed below.
 
-### $ET$
+### ET ($E_t$)
 The transverse energy object.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| $E_t$ [ET] |  0..2048 GeV  | 0.5 | 12 | Transverse energy of the whole event. | :heavy_check_mark: |
-| $E_t$ [ETTEM] | 0..2048 GeV  | 0.5 | 12 | Transverse energy in the ECAL of the whole event. | :heavy_check_mark: |
+| `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | Transverse energy of the whole event. | :heavy_check_mark: |
+| `ETTEM` $E_t$ (ECAL) | 0..2048 GeV  | 0.5 | 12 | Transverse energy in the ECAL of the whole event. | :heavy_check_mark: |
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
-### $HT$
+### HT
 The `HT` is the magnitude of the vectorial sum of transverse energy jets over ECAL and HCAL.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| $E_t$ |  0..2048 GeV  | 0.5 | 12 | Transverse energy of the whole event. | :heavy_check_mark: |
-| TOWERCOUNT | 0..8191 | 1 | 13 | Number of ``towers" (experimental signatures left by hadrons in the calorimeter) measured in the HCAL. | :heavy_check_mark: |
+| `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | Transverse energy of the whole event. | :heavy_check_mark: |
+| `tower_count` TOWERCOUNT | 0..8191 | 1 | 13 | Number of ``towers" (experimental signatures left by hadrons in the calorimeter) measured in the HCAL. | :heavy_check_mark: |
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
-### $ET_\mathrm{miss}$
+### MET ($ET_\mathrm{miss}$)
 The missing transverse energy object.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| $E_t$ |  0..2048 GeV  | 0.5 | 12 | The missing transverse energy magnitude. | :heavy_check_mark: |
-| $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the missing transverse energy vector. | :heavy_check_mark: |
+| `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | The missing transverse energy magnitude. | :heavy_check_mark: |
+| `phi` $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the missing transverse energy vector. | :heavy_check_mark: |
 | ASYMET | 0..255 | 1 | 8 | The asymmetry in the missing transverse energy vector. A measure of the energy imbalance in the Hadronic Calorimeter.  **Only used for heavy ion runs and thus ignored for the current parquet generation.** | :x: |
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
-### $HT_\mathrm{miss}$
+### MHT ($HT_\mathrm{miss}$)
 The missing transverse hadronic energy object.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| $E_t$ |  0..2048 GeV  | 0.5 | 12 | The hadronic missing transverse energy magnitude. | :heavy_check_mark: |
-| $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the hadronic missing transverse energy vector. | :heavy_check_mark: |
+| `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | The hadronic missing transverse energy magnitude. | :heavy_check_mark: |
+| `phi` $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the hadronic missing transverse energy vector. | :heavy_check_mark: |
 | ASYMHT | 0..255 | 1 | 8 | The asymmetry in the missing hadronic transverse energy vector.  A measure of the energy imbalance in the Hadronic Calorimeter. **Only used for heavy ion runs and thus ignored for the current parquet generation.** | :x: |
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
-### $ET^\mathrm{HF}_\mathrm{miss}$
+### FET ($ET^\mathrm{HF}_\mathrm{miss}$)
 The missing transverse energy object including data from the forward hadronic calorimeter object.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| $E_t$ |  0..2048 GeV  | 0.5 | 12 | The missing transverse energy magnitude including the missing transverse energy from the forward hadronic calorimeter. | :heavy_check_mark: |
-| $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the missing transverse energy vector including information from the forward hadronic calorimeter. | :heavy_check_mark: |
+| `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | The missing transverse energy magnitude including the missing transverse energy from the forward hadronic calorimeter. | :heavy_check_mark: |
+| `phi` $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the missing transverse energy vector including information from the forward hadronic calorimeter. | :heavy_check_mark: |
 | ASYMETHF | 0..255 | 1 | 8 | The asymmetry in the forward missing transverse energy object.  A measure of the energy imbalance in the Hadronic Forward Calorimeter. **Only used for heavy ion runs and thus ignored for the current parquet generation.** | :x: |
 | CENT[3:0] | - | - | 4 | The centrality of the missing transverse energy vector, defined by the first 4 bits. It specifies the degree of overlap between colliding ions. **Only used for heavy ion runs and thus ignored for the current parquet generation.**  | :x: |
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
-### $HT^\mathrm{HF}_\mathrm{miss}$
-The missing transverse energy object including data from the forward hadronic calorimeter object.
+### FHT ($HT^\mathrm{HF}_\mathrm{miss}$)
+The missing hadronic transverse energy object including data from the forward hadronic calorimeter object.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| $E_t$ |  0..2048 GeV  | 0.5 | 12 | The hadronic missing transverse energy magnitude including the missing transverse energy from the forward hadronic calorimeter. | :heavy_check_mark: |
-| $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the hadronic missing transverse energy vector including information from the forward hadronic calorimeter. | :heavy_check_mark: |
+| `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | The hadronic missing transverse energy magnitude including the missing transverse energy from the forward hadronic calorimeter. | :heavy_check_mark: |
+| `phi` $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the hadronic missing transverse energy vector including information from the forward hadronic calorimeter. | :heavy_check_mark: |
 | ASYMETHF | 0..255 | 1 | 8 | The asymmetry in the forward hadronic missing transverse energy object.  A measure of the energy imbalance in the Hadronic Forward Calorimeter. **Only used for heavy ion runs and thus ignored for the current parquet generation.** | :x: |
 | CENT[7:4] | - | - | 4 | The centrality of the missing transverse energy vector, defined by the last 4 bits. It specifies the degree of overlap between colliding ions. **Only used for heavy ion runs and thus ignored for the current parquet generation.**  | :x: |
 | minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
@@ -187,5 +187,5 @@ All the following features are integers.
 | `event` | The event number. | :heavy_check_mark: |
 | `bx` | The bunch crossing number. Bunches of protons are collided at the LHC. The highest energy event in the bunch crossing is recorded.  | :heavy_check_mark: |
 | `orbit` | The orbit includes all bunch crossings that happen in the time it takes for the 2500 bunches introduced into the LHC to complete one orbit. | :heavy_check_mark: |
-| `time`  | The time since the start of the run in seconds. | :heavy_check_mark: |
-| `nPV_true` | The pileup of the events, i.e., the number of auxiliary proton collisions that happen in the same event. | :heavy_check_mark: |
+| `time`  | The wall clock time of the event, packed as Unix seconds shifted left by 32 bits with the microseconds in the low word, i.e. `seconds = time >> 32` and `microseconds = time & 0xFFFFFFFF`. | :heavy_check_mark: |
+| `nPV_True` | The pileup of the events, i.e., the number of auxiliary proton collisions that happen in the same event. | :heavy_check_mark: |

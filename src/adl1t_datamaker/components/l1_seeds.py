@@ -8,10 +8,11 @@ import re
 from pathlib import Path
 
 
-# Column of the prescale menu holding the prescale at nominal luminosity. Its header
-# names the luminosity and differs per menu generation (2p1E34 in the 2023 menus,
-# 2p0E34 in 2024, 1p95E34 in 2025, 1.5E+34 in Prescale_2022), but the position is
-# the same in every menu shipped with this repo. A value of "1" means unprescaled.
+# Zero-based columns of the prescale menu CSV. The prescale one holds the prescale at
+# nominal luminosity, and its header names that luminosity, so it changes with the menu
+# generation (2p1E34 in the 2023 menus, a 2p0E34 variant in 2024, 1p95E34 in 2025,
+# 1.5E+34 in Prescale_2022), yet every menu shipped with this repo keeps it in the same
+# position. A value of "1" there means unprescaled.
 PRESCALE_COLUMN = 6
 NAME_COLUMN = 1
 
@@ -20,10 +21,11 @@ def get_initial_decision(global_trigger_tree: uproot.TTree) -> np.ndarray:
     """Extracts the initial decision bits from the global trigger tree in the root file.
 
     These initial decision bits are what each of the algorithms in the L1 trigger return
-    after processing the events: either accept (1) or reject (0).
+    after processing the events: either accept (1) or reject (0), before the global
+    trigger rules apply.
 
-    This method returns a numpy array with each row representing an event and each
-    column representing the decision of a specific algorithm in the trigger.
+    :returns: Shape (events, algorithms), the column index being the decision bit
+        number that get_algo_map reports for an algorithm.
     """
     initial_bits = global_trigger_tree.arrays(["m_algoDecisionInitial"], library="np")
     initial_bits = np.stack(initial_bits["m_algoDecisionInitial"], axis=0)
@@ -31,15 +33,13 @@ def get_initial_decision(global_trigger_tree: uproot.TTree) -> np.ndarray:
     return initial_bits
 
 def get_final_decision(global_trigger_tree: uproot.TTree) -> np.ndarray[bool]:
-    """Extracts the initial decision bits from the global trigger tree in the root file.
+    """Extracts the final decision bits from the global trigger tree in the root file.
 
-    These final decision bits are what each of the algorithms in the L1 trigger return
-    after the initial bits are processed according to the global trigger rules, for
-    example, if the last event passed selection, then wait 2-3 events before allowing
-    another event to pass selection, even if the initial decision bit is 1.
+    These final decision bits are the initial ones after the global trigger rules have
+    been applied, so an algorithm that accepted an event can still read 0 here: a
+    trigger rule caps how often accepts may follow one another.
 
-    This method returns a numpy array with each row representing an event and each
-    column representing the final decision for each algorithm given GT rules.
+    :returns: Shape (events, algorithms), columns indexed as in get_initial_decision.
     """
     final_bits = global_trigger_tree.arrays(["m_algoDecisionFinal"], library="np")
     final_bits = np.stack(final_bits["m_algoDecisionFinal"], axis=0)
@@ -49,11 +49,13 @@ def get_final_decision(global_trigger_tree: uproot.TTree) -> np.ndarray[bool]:
 def get_algo_map(global_trigger_tree: uproot.TTree) -> dict:
     """Get all the algorithms in the global trigger and their corresp decision bit nbs.
 
-    The branch that is accessed here is not exactly the same as the one in the method
-    @get_final_decision_bits. This method constructs a dictionary with the name of the
-    algorithm and the corresponding number of the decision bit, e.g.,
+    The bit number is parsed out of the ROOT aliases of the initial decision branch,
+    which spell out the array index behind each algorithm name, e.g.
 
     L1_SingleMuCosmics: 438
+
+    get_level1_seeds indexes the final decision array with these numbers, which assumes
+    the initial and final arrays order their columns the same way.
     """
     algo_map = {}
     for name, bit in global_trigger_tree["L1uGT/m_algoDecisionInitial"].aliases.items():
@@ -62,31 +64,46 @@ def get_algo_map(global_trigger_tree: uproot.TTree) -> dict:
 
     return algo_map
 
-def filter_algo_map(prescale_file_path: Path, algo_map: dict) -> dict:
-    """Filter the algorithm dictionary to only the ones that are not prescaled.
+def unprescaled_names(prescale_file_path: Path) -> list[str]:
+    """Names of the seeds a menu leaves unprescaled, in menu order.
 
-    Args:
-        prescale_file_path: Path object pointing to the file that contains the
-            prescaling information for each algorithm.
-        algo_map: Dictionary of algorithm names and corresponding bit that they flip.
+    The menu alone gives these names, with no root file involved, so the seed columns of
+    an already converted data set can be checked against the menu that supposedly
+    produced them. Duplicates survive: L1Menu_Collisions2025_v1_1_1 lists three tau
+    seeds twice, and collapsing them is the caller's business.
     """
     with open(prescale_file_path, newline="") as prescale_file:
         rows = csv.reader(prescale_file)
-        header = next(rows)  # See PRESCALE_COLUMN for what this column names.
-        unprescaled_keys = [
+        header = next(rows)  # Bound only to name the column in the error below.
+        names = [
             row[NAME_COLUMN]
             for row in rows
             if len(row) > PRESCALE_COLUMN and row[PRESCALE_COLUMN] == "1"
         ]
 
-    if not unprescaled_keys:
+    if not names:
         raise ValueError(
             f"No unprescaled algorithms found in {prescale_file_path}. Column "
             f"{PRESCALE_COLUMN} ({header[PRESCALE_COLUMN]!r}) never holds '1', so this "
             "menu probably does not have the column layout this code expects."
         )
 
-    return {key: algo_map[key] for key in unprescaled_keys}
+    return names
+
+
+def filter_algo_map(prescale_file_path: Path, algo_map: dict) -> dict:
+    """The unprescaled seeds of a menu, with the decision bit number of each.
+
+    Returning a dict collapses the seeds a menu happens to list twice.
+
+    :param prescale_file_path: Prescale menu (csv) whose column ``PRESCALE_COLUMN``
+        decides which seeds count as unprescaled.
+    :param algo_map: Decision bit index keyed by algorithm name, as
+        ``get_algo_map`` reads it from the trigger tree.
+    :raises KeyError: When the menu names a seed the trigger tree lacks, so that a
+        mismatched menu fails during conversion rather than dropping columns unnoticed.
+    """
+    return {key: algo_map[key] for key in unprescaled_names(prescale_file_path)}
 
 
 def prescale_column_header(prescale_file_path: Path) -> str:
@@ -94,18 +111,23 @@ def prescale_column_header(prescale_file_path: Path) -> str:
     with open(prescale_file_path, newline="") as prescale_file:
         return next(csv.reader(prescale_file))[PRESCALE_COLUMN]
 
+
 def get_level1_seeds(algo_map: dict, final_decision_bits: np.ndarray) -> dict:
     """Construct dictionary of level 1 algorithm seeds.
 
-    Construct dictionary where for each trigger algorithm name corresponds to a
-    boolean list of all events in the data file, with True if it passes the algorithm
-    and False if it does not. These are called 'seeds' in CMS.'
+    A seed is a trigger algorithm as CMS names it, and each one becomes a boolean array
+    over the events, True where the event passed that algorithm.
+
+    :param algo_map: Seed name to decision bit number, in practice the unprescaled
+        subset of a menu that filter_algo_map returns.
+    :param final_decision_bits: Shape (events, algorithms), as get_final_decision gives.
+    :returns: The seeds of algo_map, plus an "L1bit" holding their logical OR. L1bit is
+        thus the accept of the seeds passed in, not of the whole menu.
     """
     seeds = {}
     for algo_name, bit in algo_map.items():
         seeds.update({algo_name: final_decision_bits[:, bit].astype(bool)})
 
-    # Compute the final decision based on all algorithms for each event.
     seeds["L1bit"] = np.logical_or.reduce(
         [seeds[algo_name] for algo_name in algo_map.keys()]
     ).astype(bool)

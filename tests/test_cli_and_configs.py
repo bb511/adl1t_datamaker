@@ -10,9 +10,11 @@ from hydra import compose, initialize_config_dir
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = REPO_ROOT / "scripts" / "configs"
 
-# The hydra scripts take key=value overrides rather than flags, so --help does not
-# apply to them; they are covered by the config composition tests instead.
-ARGPARSE_SCRIPTS = ["convert", "convert_folder", "plot", "plot_comparison"]
+# convert_run and summary_run are left out: they take hydra key=value overrides rather
+# than flags, so there is no flag list to check them against. The config composition
+# tests below cover them instead.
+ARGPARSE_SCRIPTS = ["convert", "convert_folder", "summary", "summary_comparison"]
+BASE_CONFIGS = ["convert.yaml", "summary.yaml"]
 EXPERIMENTS = sorted(path.stem for path in (CONFIG_DIR / "experiment").glob("*.yaml"))
 
 
@@ -58,13 +60,30 @@ def test_run_snip_invokes_from_the_repo_root():
             assert line.startswith("./scripts/"), f"not runnable from repo root: {line}"
 
 
-@pytest.mark.parametrize("experiment", EXPERIMENTS)
-def test_experiment_config_composes(experiment):
+def composed(experiment: str, base: str = "convert.yaml"):
+    """One experiment composed against a base config, as the scripts do it.
+
+    output_root_path is a mandatory ``???`` in both bases, and reading it unset raises
+    MissingMandatoryValue, so the override below stands in for the real output root.
+
+    :param base: One of BASE_CONFIGS, the two entry points that take an experiment.
+    """
     with initialize_config_dir(config_dir=str(CONFIG_DIR), version_base=None):
-        cfg = compose(
-            config_name="convert.yaml",
+        return compose(
+            config_name=base,
             overrides=[f"+experiment={experiment}", "output_root_path=/tmp/adl1t-test"],
         )
+
+
+@pytest.mark.parametrize("base", BASE_CONFIGS)
+@pytest.mark.parametrize("experiment", EXPERIMENTS)
+def test_experiment_config_composes(experiment, base):
+    """Both entry points share the experiment configs, so both must compose them.
+
+    summary.yaml has to keep the converter group for the same reason convert.yaml does:
+    the 2025E and 2025G experiments override it to 'unpacked'.
+    """
+    cfg = composed(experiment, base)
 
     assert isinstance(cfg.converter.mc, bool), "mc must be resolved by the experiment"
     assert cfg.paths.input_root_path
@@ -75,24 +94,63 @@ def test_experiment_config_composes(experiment):
 @pytest.mark.parametrize("experiment", EXPERIMENTS)
 def test_experiment_prescale_menu_exists(experiment):
     """A config naming a menu that is not checked in would fail only at conversion."""
-    with initialize_config_dir(config_dir=str(CONFIG_DIR), version_base=None):
-        cfg = compose(
-            config_name="convert.yaml",
-            overrides=[f"+experiment={experiment}", "output_root_path=/tmp/adl1t-test"],
-        )
+    cfg = composed(experiment)
 
     menu = REPO_ROOT / cfg.paths.auxiliary_files.prescale_file
     assert menu.is_file(), f"{experiment} names a missing menu: {menu}"
 
 
+def load_script(name: str):
+    """Import a script under scripts/ as a module, to test its helpers directly.
+
+    The scripts carry a shebang and no .py suffix, so the import machinery has to be
+    pointed at the file rather than left to find it.
+    """
+    import importlib.util
+    from importlib.machinery import SourceFileLoader
+
+    path = REPO_ROOT / "scripts" / name
+    spec = importlib.util.spec_from_loader(name, SourceFileLoader(name, str(path)))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module
+
+
+def test_summary_run_walks_output_folders_in_a_stable_order():
+    """The old plot_run took a set(), so the campaign table order varied between runs."""
+    cfg = composed("L1TNtupleRun3-142XWinter25", "summary.yaml")
+    folders = load_script("summary_run").output_folders(cfg)
+
+    assert folders == sorted(folders), "campaign order must not depend on set iteration"
+    assert len(folders) == len(set(folders)), "one output folder must be visited once"
+
+
+def test_summary_run_records_every_input_that_fed_one_output_folder():
+    """Only the config knows which inputs fed one output folder.
+
+    Several input directories map onto one, and nobody could reconstruct that from the
+    parquet afterwards.
+    """
+    cfg = composed("L1TNtupleRun3-142XWinter25", "summary.yaml")
+    module = load_script("summary_run")
+    merged = next(
+        folder for folder in module.output_folders(cfg)
+        if folder.name.startswith("HHHto4B2Tau")
+    )
+    recorded = module.provenance(cfg, merged)
+
+    assert len(recorded["inputs"]) == 4, "the four shard directories were not recorded"
+    assert recorded["inputs"] == sorted(recorded["inputs"])
+    assert recorded["mc"] is True
+    assert recorded["prescale_file"].endswith(".csv")
+    assert "silent" not in recorded, "a converter flag is not provenance"
+
+
 @pytest.mark.parametrize("experiment", [e for e in EXPERIMENTS if e.startswith("EphZB")])
 def test_real_data_runs_have_pileup_files(experiment):
     """Real data needs a brilcalc file per run or the conversion raises ValueError."""
-    with initialize_config_dir(config_dir=str(CONFIG_DIR), version_base=None):
-        cfg = compose(
-            config_name="convert.yaml",
-            overrides=[f"+experiment={experiment}", "output_root_path=/tmp/adl1t-test"],
-        )
+    cfg = composed(experiment)
 
     assert cfg.converter.mc is False
     runs = [part for part in experiment.replace("-", "_").split("_") if part.isdigit()]

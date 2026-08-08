@@ -52,9 +52,25 @@ All the scripts are run from the root of this repository, since their default pa
 
 See `/scripts/run.snip` for usage examples.
 
+### Summaries
+
+`./scripts/summary --folder <converted folder>` writes a `SUMMARY` directory beside the
+data holding figures, a `REPORT.md` and a `summary.json`. The report covers provenance,
+the file inventory with row counts and checksums, every column against its specification
+in `docs/README.md`, object multiplicities, run and luminosity coverage, the full ranked
+trigger seed table, and a technical validation checklist. Every number is exact rather
+than sampled: the summary counts how often each value occurs in a single streaming pass
+and derives the statistics from those counts.
+
+`./scripts/summary_run +experiment=<name> output_root_path=<path>` does the same for a
+whole conversion campaign and adds an aggregate report, and because it composes the same
+config as `convert_run` it also records the input paths, tree names and prescale menu
+that the parquet files themselves cannot say. `./scripts/summary_comparison` overlays two
+data sets and writes the differences, which is how a reconversion gets validated.
+
 ### Reader
 
 To read the parquet files generated with this code, import the reader class
 `from adl1t_datamaker.loader import Parquet2Awkward`
 
-For an example of how the reading is done, check the `scripts/plot` script.
+For an example of how the reading is done, check the `scripts/summary` script.

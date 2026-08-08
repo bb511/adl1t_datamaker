@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+
+# Compare two converted data sets: overlaid spectra and a COMPARISON.md of the
+# differences, both written into --output_folder. Each folder's own summary.json is read
+# where it exists, so comparing two already summarised folders touches no parquet.
+import argparse
+from pathlib import Path
+
+from adl1t_datamaker import summary
+
+
+parser = argparse.ArgumentParser(
+    description="Compare two converted data sets.",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+)
+parser.add_argument('--folder1', type=str, required=True, help="Folder of data set one.")
+parser.add_argument('--folder2', type=str, required=True, help="Folder of data set two.")
+parser.add_argument(
+    '--output_folder', type=str, required=True, help="Where to write the comparison."
+)
+parser.add_argument('--label1', type=str, default=None, help="Name for data set one.")
+parser.add_argument('--label2', type=str, default=None, help="Name for data set two.")
+parser.add_argument(
+    '--counts',
+    action='store_true',
+    help="Overlay raw counts rather than fractions; fair only for equally sized sets."
+)
+parser.add_argument(
+    '--figure_format', type=str, default='png', choices=['png', 'pdf'],
+    help="Format for the figures."
+)
+parser.add_argument(
+    '--batch_size',
+    type=int,
+    default=200_000,
+    help="Events held in memory at once, for a folder that still has to be measured."
+)
+args = parser.parse_args()
+
+first = summary.load_or_measure(args.folder1, batch_size=args.batch_size)
+second = summary.load_or_measure(args.folder2, batch_size=args.batch_size)
+
+summary.summarise_comparison(
+    first,
+    second,
+    args.output_folder,
+    labels=(
+        args.label1 or Path(args.folder1).name,
+        args.label2 or Path(args.folder2).name,
+    ),
+    figure_format=args.figure_format,
+    fractions=not args.counts,
+)

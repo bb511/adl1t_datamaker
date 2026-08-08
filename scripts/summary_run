@@ -1,0 +1,105 @@
+#!/usr/bin/env python
+
+# Summarise every data set of one conversion campaign, then write the aggregate report.
+# Takes the same +experiment= as convert_run and reads the same paths from it, so the
+# summary follows a conversion without repeating its arguments. Unlike a bare summary,
+# this records what the config knows about each folder as provenance.
+# See scripts/configs for the configuration files.
+import json
+from pathlib import Path
+
+import hydra
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig, OmegaConf
+
+from adl1t_datamaker import summary
+from adl1t_datamaker import util
+from adl1t_datamaker.terminal_colors import tcols
+
+
+def output_folders(cfg: DictConfig) -> list[Path]:
+    """The folders this campaign was configured to produce, in a stable report order.
+
+    Several input folders can map onto one output folder, so the target names are
+    deduplicated before the paths are built. The paths come from the config alone, so a
+    folder that was never converted is returned like any other and the caller has to
+    check that it exists.
+    """
+    names = sorted(set(cfg["paths"]["input_output_folders"].values()))
+
+    return [Path(cfg["output_root_path"]) / name for name in names]
+
+
+def provenance(cfg: DictConfig, folder: Path) -> dict:
+    """What the config knows about a converted folder that its parquet cannot say.
+
+    The whole converter group is recorded except the silent flag, which governs console
+    output rather than the data.
+
+    :param folder: Only its name is used, matched against the target names in
+        ``paths.input_output_folders`` to recover the inputs it was converted from.
+    """
+    inputs = sorted(
+        cfg["paths"]["input_root_path"] + f"/{source}"
+        for source, target in cfg["paths"]["input_output_folders"].items()
+        if target == folder.name
+    )
+
+    return {
+        "inputs": inputs,
+        "prescale_file": cfg["paths"]["auxiliary_files"]["prescale_file"],
+        "pileup_folder": cfg["paths"]["auxiliary_files"]["pileup_folder"],
+        **{key: value for key, value in cfg["converter"].items() if key != "silent"},
+    }
+
+
+def reuse(folder: Path, cfg: DictConfig) -> dict | None:
+    """A folder's existing summary.json, or None when it has to be measured again.
+
+    Reuse needs skip_existing and a summary.json written after the newest parquet below
+    the folder, so a reconversion is never reported from a stale summary.
+    """
+    existing = folder / summary.SUMMARY_DIR / "summary.json"
+    if not cfg["skip_existing"] or not existing.is_file():
+        return None
+    newest = max(path.stat().st_mtime for path in folder.rglob("*.parquet"))
+
+    return json.loads(existing.read_text()) if existing.stat().st_mtime > newest else None
+
+
+@hydra.main(version_base=None, config_path="configs", config_name="summary.yaml")
+def main(cfg: DictConfig) -> None:
+    util.print_config(cfg, resolve=True)
+    # The chosen +experiment= is a hydra group choice, not a config field, so it comes
+    # from HydraConfig. It names the campaign report folder, and falls back to
+    # "campaign" when no experiment was chosen.
+    experiment = HydraConfig.get().runtime.choices.get("experiment", "campaign")
+
+    summaries = []
+    for folder in output_folders(cfg):
+        if not folder.is_dir():
+            print(tcols.WARNING + f"Skipping missing folder {folder}." + tcols.ENDC)
+            continue
+        summaries.append(reuse(folder, cfg) or summary.summarise_folder(
+            folder,
+            batch_size=cfg["batch_size"],
+            checksums=cfg["checksums"],
+            figure_format=cfg["figure_format"],
+            provenance=provenance(cfg, folder),
+            clean=cfg["clean"],
+        ))
+
+    if not summaries:
+        raise ValueError(tcols.FAIL + "No converted folder was found." + tcols.ENDC)
+
+    summary.summarise_campaign(
+        summaries,
+        Path(cfg["output_root_path"]) / summary.SUMMARY_DIR / experiment,
+        config=OmegaConf.to_yaml(cfg, resolve=True),
+        experiment=experiment,
+        figure_format=cfg["figure_format"],
+    )
+
+
+if __name__ == "__main__":
+    main()

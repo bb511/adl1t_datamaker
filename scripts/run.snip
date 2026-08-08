@@ -13,8 +13,14 @@
 # Example to convert a whole run.
 ./scripts/convert_run +experiment=EphZB_2025G_run398183 output_root_path=./parquet_files ncores=1
 
-# Example to plot a folder.
-./scripts/plot --folder ./parquet_files/EphZB_2025G_run398183
+# Example to summarise a folder: figures, REPORT.md and summary.json into its SUMMARY dir.
+./scripts/summary --folder ./parquet_files/EphZB_2025G_run398183
 
-# Example to plot a whole run.
-./scripts/plot_run +experiment=EphZB_2025G_run398183 output_root_path=./parquet_files
+# Example to aggregate folders that are already summarised, without measuring them again.
+./scripts/summary --folder ./parquet_files/EphZB_2025E_run396102 ./parquet_files/EphZB_2025G_run398183 --reuse --campaign_report ./parquet_files/SUMMARY/zerobias
+
+# Example to summarise a whole run, which also records the provenance from the config.
+./scripts/summary_run +experiment=EphZB_2025G_run398183 output_root_path=./parquet_files
+
+# Example to compare two data sets, e.g. a reconversion against the original.
+./scripts/summary_comparison --folder1 ./parquet_files/EphZB_2025E_run396102 --folder2 ./parquet_files/EphZB_2025G_run398183 --output_folder ./parquet_files/SUMMARY/2025E_vs_2025G

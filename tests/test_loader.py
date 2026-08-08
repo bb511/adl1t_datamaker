@@ -22,16 +22,16 @@ def dataset(tmp_path):
             array = ak.Array({feat: [[1, 2], [3]] for feat in feats})
             ak.to_parquet(array, folder / f"{part}.parquet", compression="snappy")
 
-    # A folder holding no parquet must be ignored, like the PLOTS dir the plot
+    # A folder holding no parquet must be ignored, like the SUMMARY dir the summary
     # scripts drop into the same root.
-    (tmp_path / "PLOTS").mkdir()
+    (tmp_path / "SUMMARY").mkdir()
     return tmp_path
 
 
 def test_object_names_come_from_folders_with_parquet(dataset):
     loader = ParquetLoader(str(dataset))
     assert sorted(loader.object_names) == sorted(OBJECTS)
-    assert "PLOTS" not in loader.object_names
+    assert "SUMMARY" not in loader.object_names
 
 
 def test_reads_everything_when_no_features_given(dataset):
@@ -71,7 +71,7 @@ def test_select_feats_dict_is_not_mutated(dataset):
 
 
 def test_two_loaders_can_share_one_dict(tmp_path, dataset):
-    """The scripts/plot_comparison case: one dict, two folders of different shape.
+    """The scripts/summary_comparison case: one dict, two folders of different shape.
 
     _get_select_feats used to stamp absent objects as 'none' in the caller's dict, so
     an object missing from the first folder was permanently disabled for the second.

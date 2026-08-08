@@ -1,0 +1,30 @@
+# Base configuration for summarising converted data.
+#
+# The converter group is kept so that the experiment configs, which override it to
+# 'unpacked' for the 2025 runs, compose against this base exactly as they do against
+# convert.yaml. Its tree names are recorded as provenance in the reports.
+defaults:
+  - converter: default
+  - paths: default
+  - _self_
+
+# Root directory holding the converted folders named by paths.input_output_folders.
+output_root_path: ???
+
+# Events held in memory at once. The seeds object is a few hundred columns wide and
+# awkward expands its bit-packed booleans to a byte each, so this bounds the batch.
+batch_size: 200000
+
+# Format for the figures.
+figure_format: png
+
+# Whether to checksum every parquet file. The slowest step, and worth keeping on for a
+# published data set.
+checksums: True
+
+# Reuse a data set's existing summary.json when it is newer than the newest parquet,
+# so that regenerating only the campaign report costs nothing.
+skip_existing: False
+
+# Delete figures left over from an earlier summary of the same folder.
+clean: False
