@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-# Run the conversion script from L1TNtuple to parquet.
+# Convert a single L1TNtuple root file to parquet, one folder per object.
+# The default pileup folder is a repository-relative path, so run this from the
+# repository root; scripts/run.snip has worked examples.
 import argparse
 
 from adl1t_datamaker import root2parquet
@@ -8,7 +10,6 @@ from adl1t_datamaker import root2parquet
 
 parser = argparse.ArgumentParser(description="Convert root file to parquet.")
 
-# File configuration.
 file_config = parser.add_argument_group(
     title="converter_config",
     description="Paths to the required files for conversion."
@@ -29,7 +30,9 @@ file_config.add_argument(
     '--output_path', type=str, help="Path to folder containing output."
 )
 
-# The defaults are for emulated data trees.
+# The defaults name the emulated trees. Unpacked ntuples hold the same content under
+# l1UpgradeTree/L1UpgradeTree and l1uGTTree/L1uGTTree, and carry no calorimeter summary
+# tree, which is why that one defaults to nothing: unset, it skips the cicada object.
 converter_config = parser.add_argument_group(
     title="converter_config", description="Trees to convert in the given file."
 )
@@ -58,7 +61,6 @@ converter_config.add_argument(
     help="The name of the calorimeter data summary tree that contains the cicada bits."
 )
 
-# Flags.
 converter_config.add_argument(
     '--mc', action='store_true', help="Whether file is MC simulation or not."
 )
@@ -68,7 +70,6 @@ converter_config.add_argument(
     help="Whether to do the conversion without printing to terminal all the steps."
 )
 
-# Setup.
 args = parser.parse_args()
 file_config = {
     "input_file": args.input_file,

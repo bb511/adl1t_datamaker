@@ -11,10 +11,10 @@ RUNS = [381148, 381149, 386554, 386593, 392642, 396102, 398183]
 
 @pytest.mark.parametrize("run", RUNS)
 def test_every_checked_in_run_is_readable(pileup_files, run):
-    """Each brilcalc file parses and yields pileup keyed by (run, lumi section).
+    """Each brilcalc file parses and yields pileup keyed by (run, luminosity section).
 
-    Values are only required to be non-negative: lumi sections recorded outside
-    stable beams (beamstatus ADJUST or SQUEEZE) genuinely have avgpu 0.
+    Values are only required to be non-negative, because the checked-in files record
+    avgpu 0 for some sections themselves, mostly ones taken outside stable beams.
     """
     sections = _first_lumi_sections(pileup_files, run)
     pileup_map = pileup.get_pileup_map(pileup_files, run, sections)
@@ -30,16 +30,22 @@ def test_stable_beam_sections_have_real_pileup(pileup_files, run):
     import pandas as pd
 
     path = next(pileup_files.glob(f"run{run}*"))
+    # brilcalc writes a tag line above the header and a three-line summary below the
+    # data, and pandas would otherwise read that summary as three luminosity sections.
     frame = pd.read_csv(path, skiprows=1)[:-3]
     assert (frame["avgpu"] > 0).any(), f"run {run} has no lumi section with pileup"
 
 
 def _first_lumi_sections(folder, run, n=5, only_with_pileup=False):
-    """Lumi sections that genuinely appear in the run's brilcalc file.
+    """Luminosity sections that genuinely appear in the run's brilcalc file.
 
-    With only_with_pileup, restrict to sections recorded during stable beams, whose
-    avgpu is non-zero; otherwise a zero reading is indistinguishable from the 0 that
-    lookup_pileup returns for a section it cannot find.
+    The ``ls`` column holds a pair such as ``12:12``, of which only the first field is
+    kept, as get_pileup_map does, so these numbers key the same map production builds.
+
+    :param n: How many of the run's first sections to return.
+    :param only_with_pileup: Keep only sections whose recorded avgpu is above zero.
+        Without it a genuine zero reading is indistinguishable from the 0 that
+        lookup_pileup returns for a section it cannot find.
     """
     import pandas as pd
 

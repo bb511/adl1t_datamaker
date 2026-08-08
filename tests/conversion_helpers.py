@@ -1,7 +1,8 @@
 """Shared machinery for the per-experiment conversion tests.
 
-Each experiment gets its own test module; they all drive the same three steps from
-here so that the individual tests stay down to the facts specific to their config.
+Each experiment gets its own test module, and they all drive the same conversion and
+the same checks from here, so a module stays down to what is specific to it: the input
+file, the menu, the tree names and whether the sample is simulated.
 """
 
 from pathlib import Path
@@ -16,14 +17,14 @@ BASE_OBJECTS = [
 ]
 CICADA_OBJECT = "cica"
 
-# scripts/configs/converter/default.yaml -- emulated trees, CICADA available.
+# scripts/configs/converter/default.yaml: emulated trees, so CICADA is available.
 EMULATED = {
     "l1_tree_name": "l1UpgradeEmuTree/L1UpgradeTree",
     "uGT_tree_name": "l1uGTEmuTree/L1uGTTree",
     "event_tree_name": "l1EventTree/L1EventTree",
     "calosumm_tree_name": "l1CaloSummaryEmuTree/L1CaloSummaryTree",
 }
-# scripts/configs/converter/unpacked.yaml -- raw trees, no calo summary, no CICADA.
+# scripts/configs/converter/unpacked.yaml: raw trees, no calo summary and so no CICADA.
 UNPACKED = {
     "l1_tree_name": "l1UpgradeTree/L1UpgradeTree",
     "uGT_tree_name": "l1uGTTree/L1uGTTree",
@@ -33,7 +34,18 @@ UNPACKED = {
 
 
 def convert(input_url, out_dir, repo_root, menu, *, mc, converter):
-    """Convert one ntuple and return the output folder."""
+    """Convert one ntuple and return the folder it was written to.
+
+    :param input_url: Local path or ``root://`` URL of a single L1TNtuple.
+    :param out_dir: Gains one subfolder per object, each holding a parquet named after
+        the stem of the input.
+    :param repo_root: Checkout root, under which the menus and the brilcalc files are
+        looked up.
+    :param menu: File name of a prescale menu inside ``scripts/L1Menus``.
+    :param mc: True for simulation, which leaves the brilcalc pileup lookup unused and
+        keeps ``nPV_True`` as the tree wrote it.
+    :param converter: Tree names to build the converter with, EMULATED or UNPACKED.
+    """
     conv = root2parquet.Root2Parquet(mc=mc, silent=True, **converter)
     conv.convert_file(
         input_file=input_url,
@@ -45,7 +57,13 @@ def convert(input_url, out_dir, repo_root, menu, *, mc, converter):
 
 
 def assert_layout(out_dir, input_url, *, expect_cicada):
-    """Every expected object folder holds exactly one parquet named for the input."""
+    """The expected object folders exist, each holding a parquet named for the input.
+
+    :param input_url: Only its stem is used, that being what the converter names its
+        output after.
+    :param expect_cicada: True only for a converter given a calo summary tree, which is
+        the only place the CICADA score lives.
+    """
     stem = Path(input_url).stem
     expected = BASE_OBJECTS + ([CICADA_OBJECT] if expect_cicada else [])
 
@@ -64,6 +82,8 @@ def assert_readable(out_dir, *, expect_cicada):
 
     Uses the no-argument form on purpose: select_feats=None is the documented
     read-everything mode and must keep working.
+
+    :returns: The loader, so the caller can go on inspecting the arrays.
     """
     data = Parquet2Awkward(str(out_dir))
     expected = BASE_OBJECTS + ([CICADA_OBJECT] if expect_cicada else [])
@@ -76,10 +96,11 @@ def assert_readable(out_dir, *, expect_cicada):
 
 
 def assert_seeds_and_events(data):
-    """Seeds carry the synthetic L1bit, and event_info carries the documented fields.
+    """Seeds carry the computed L1bit, and event_info carries the documented fields.
 
-    Awkward propagates .fields through the list layers that ak.singletons adds, so
-    this reads the record fields regardless of the singleton wrapping.
+    L1bit is the OR over the unprescaled seeds, so it exists in no tree and can only
+    come out of the conversion. Awkward propagates .fields through the list layer that
+    ak.singletons adds, so the record fields read the same either way.
     """
     assert "L1bit" in data["seeds"].fields, "seeds is missing the combined L1bit"
 

@@ -1,6 +1,6 @@
 """Shared fixtures and the EOS skip logic.
 
-Tests marked `eos` stream real L1Ntuples from CERN EOS. They are skipped unless both
+Tests marked `eos` stream real L1TNtuples from CERN EOS. They are skipped unless both
 the xrootd extra is installed and a Kerberos ticket is live, so the suite stays usable
 on a machine with a reader-only install.
 """
@@ -12,7 +12,8 @@ import pytest
 
 import eos
 
-# plots.py mutates global rcParams on import and no backend is set anywhere.
+# The figure tests need a non-interactive backend; figures.use_cms_style sets the
+# style but never a backend.
 matplotlib.use("Agg")
 
 

@@ -21,6 +21,11 @@ MENU = "L1Menu_Collisions2024_v1_3_0_last.csv"
 
 
 def digests(folder):
+    """sha256 of every parquet under a conversion, keyed by path relative to it.
+
+    The keys are relative so that two conversions written to different directories
+    compare directly.
+    """
     return {
         str(path.relative_to(folder)): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in sorted(folder.rglob("*.parquet"))

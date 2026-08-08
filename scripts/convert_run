@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-# Run the conversion script from L1TNtuple to parquet.
-# This uses hydra to set the config.
-# See scripts/configs for the available configuration files.
+# Convert a whole campaign: every folder named in paths.input_output_folders, in turn.
+# The +experiment= given on the command line picks the campaign, and several input
+# folders may share one output folder. See scripts/configs for the available configs.
 import hydra
 from omegaconf import DictConfig, OmegaConf
 

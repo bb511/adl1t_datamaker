@@ -1,5 +1,5 @@
-# Class of colors to be used for displaying colorful things in the terminal,
-# to improve the readability of the logs.
+# ANSI escape codes for colouring the logs. A coloured string has to be closed with
+# ENDC, otherwise the colour bleeds into everything the terminal prints afterwards.
 
 
 class tcols:

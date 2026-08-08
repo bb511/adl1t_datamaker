@@ -1,4 +1,4 @@
-# Utility methods for the h5 converter.
+# Utility methods for the parquet converter.
 from contextlib import redirect_stdout
 from io import StringIO
 import pathlib
@@ -33,6 +33,12 @@ def check_xrootd_path(path: Path | str) -> Path | str:
 
 
 def glob(folder: Path | str, string: str) -> list[str]:
+    """Glob a local folder or a remote xrootd one.
+
+    :raises ModuleNotFoundError: If the folder is remote and the xrootd extra is absent.
+    :returns: Sorted Paths for a local folder, unsorted root:// strings for a remote
+        one.
+    """
     if isinstance(folder, pathlib.PurePath):
         return sorted(folder.glob(string))
 
@@ -62,12 +68,10 @@ def print_config(cfg: DictConfig, resolve: bool = False, save: bool = False) -> 
 
     queue = []
 
-    # Add all fields in config to queue.
     for field in cfg:
         if field not in queue:
             queue.append(field)
 
-    # Generate config tree from queue.
     for field in queue:
         branch = tree.add(field, style=style, guide_style=style)
 
@@ -79,10 +83,8 @@ def print_config(cfg: DictConfig, resolve: bool = False, save: bool = False) -> 
 
         branch.add(rich.syntax.Syntax(branch_content, "yaml"))
 
-    # Print config tree.
     rich.print(tree)
 
-    # Save config tree to file.
     if save:
         with open(Path(cfg.paths.output_dir, "config_tree.log"), "w") as file:
             rich.print(tree, file=file)

@@ -8,15 +8,15 @@ import pyarrow.dataset
 
 
 class ParquetLoader(object):
-    """Abstract reader class that reads parquet file datasets created with Root2Parquet.
+    """Abstract reader class that reads parquet data sets created with Root2Parquet.
 
-    Args:
-        root_folder_path: Path to the root folder where subfolders with parquet files
-            are stored.
-        select_features: Dictionary of objects and their corresponding features to
-            select from the whole data. If None, then read everything.
-        bs: Int specifying the batch size of samples loaded in memory at one time.
-        threading: Bool whether to use threading in loading the parquet files.
+    :param root_folder_path: Folder holding one subfolder of parquet shards per object,
+        as written by Root2Parquet.
+    :param select_feats: Features to read, keyed by object name. ``None`` reads every
+        feature of every object, and an object absent from the dictionary is not read
+        at all.
+    :param bs: Rows (events) held in memory at one time.
+    :param threading: Whether pyarrow may read the shards on several threads.
     """
     def __init__(
         self,
@@ -33,11 +33,7 @@ class ParquetLoader(object):
         self.threading = threading
 
     def _get_object_names(self) -> list[str]:
-        """Get the names of the objects.
-
-        Infer the names of the objects constituting the data set from the names of the
-        folders that are found within the root folder instantiated with this class.
-        """
+        """Object names, taken from the root folder's subfolders holding parquet."""
         object_names = []
         for subdir in self.root_folder_path.iterdir():
             if subdir.is_dir() and any(subdir.glob('*.parquet')):
@@ -48,9 +44,11 @@ class ParquetLoader(object):
     def _get_select_feats(self, select_feats: dict) -> dict:
         """Build the select_feats dictionary.
 
-        If an object that is present in the data is missing from this dictionary, do not
-        load this object. The caller's dictionary is never modified, so the same one can
-        be reused across several loaders, as scripts/plot_comparison does.
+        An object present in the data but missing from the caller's dictionary is
+        marked ``'none'``, which _construct_dataset reads as "do not load this object".
+        The string sentinel is distinct from a ``None`` value, which means every feature
+        of that object. The caller's dictionary is never modified, so one dictionary can
+        drive several loaders.
         """
         if select_feats is None:
             return {obj_name: None for obj_name in self.object_names}
@@ -60,7 +58,11 @@ class ParquetLoader(object):
         return {**select_feats, **{obj: 'none' for obj in missing_obj_names}}
 
     def _read_ds(self, data_path: Path, feats: list = None) -> pyarrow.dataset.Dataset:
-        """Read a dataset, e.g., muons, to a pyarrow dataset that streams the data."""
+        """Open the shards of one object, e.g. muons, as a scanner that streams them.
+
+        :param feats: Columns to read. ``None`` reads every column.
+        :raises ValueError: If any requested feature is absent from the shards.
+        """
         data_files = sorted(list(data_path.glob('*.parquet')))
         dataset = pyarrow.dataset.dataset(data_files, format="parquet")
         if not self._feats_in_obj(feats, dataset):
@@ -70,7 +72,7 @@ class ParquetLoader(object):
         )
 
     def _feats_in_obj(self, feats: list, dataset: pyarrow.dataset.Dataset) -> bool:
-        """Checks if the features selected by the user actually exits."""
+        """Whether every selected feature exists, printing those that do not."""
         if feats is None:
             # None means "read every feature", so there is nothing to check.
             return True
@@ -90,23 +92,22 @@ class ParquetLoader(object):
 class Parquet2Awkward(ParquetLoader):
     """Reads a folder structure of parquet files to awkward arrays.
 
-    The expected structure if the data folder is data/object1/*.parquet,
+    The expected structure of the data folder is data/object1/*.parquet,
     data/object2/*.parquet etc.
 
-    When you instantiate this object, e.g., data = Parquet2Awkward(folder), use
-        data['muons'] to load the full muon data
-        data('muons') to generate an interator that iterates through the muon data
-
-    The default batch size for the iterator is 1_000_000 events.
+    Given data = Parquet2Awkward(folder), ``data['muons']`` reads the whole muon data
+    into memory, while ``data('muons')`` yields it batch by batch. Keyword arguments go
+    to ParquetLoader, so the batches hold 1_000_000 events unless bs says otherwise.
     """
     def __init__(self, root_folder_path: str, **kwargs):
         super().__init__(root_folder_path, **kwargs)
         self.data = self._construct_dataset()
 
     def _construct_dataset(self) -> dict:
-        """Construct the full dataset out of pyarrow object-related datasets.
+        """Construct the full data set out of the per-object pyarrow datasets.
 
-        Skip loading objects for which no features are loaded.
+        Objects that select_feats marks ``'none'`` are skipped, and self.object_names is
+        narrowed to those loaded.
         """
         data = {}
         for obj_name in self.object_names:
@@ -116,7 +117,6 @@ class Parquet2Awkward(ParquetLoader):
             object_stream = self._read_ds(dataset_path, self.select_feats[obj_name])
             data[obj_name] = object_stream
 
-        # Rewrite object_names list to contain only objects that are loaded.
         self.object_names = list(data.keys())
 
         return data

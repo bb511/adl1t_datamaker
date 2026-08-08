@@ -18,6 +18,11 @@ def converter():
 
 
 def make_leaf(tmp_path, name, stems):
+    """One CRAB leaf directory of empty root files, named after the given stems.
+
+    The stems are all the guard reads, and every test here either stops before the
+    conversion or patches it out, so nothing ever opens these files.
+    """
     leaf = tmp_path / name
     leaf.mkdir()
     for stem in stems:
@@ -26,7 +31,11 @@ def make_leaf(tmp_path, name, stems):
 
 
 def already_converted(out_dir, stems):
-    """Stand in for a previous convert_folder call over a different leaf."""
+    """Stand in for a previous convert_folder call over a different leaf.
+
+    Only the seeds folder is filled, since that is the one the guard looks in: every
+    conversion writes it, whatever the tree configuration.
+    """
     seeds = out_dir / "seeds"
     seeds.mkdir(parents=True)
     for stem in stems:

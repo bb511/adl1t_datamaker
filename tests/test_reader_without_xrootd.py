@@ -25,6 +25,7 @@ sys.meta_path.insert(0, Blocker())
 
 
 def run_isolated(body: str) -> subprocess.CompletedProcess:
+    """Run a source snippet in a fresh interpreter where XRootD cannot be imported."""
     return subprocess.run(
         [sys.executable, "-c", BLOCK_XROOTD + body],
         capture_output=True, text=True, timeout=120,
