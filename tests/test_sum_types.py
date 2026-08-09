@@ -2,9 +2,7 @@
 
 The energies all live in one leaf of the L1TNtuple and are separated only by a sumType
 flag, so a wrong number is silently wrong: it yields a full, plausible column of somebody
-else's quantity. That is what happened to ETTEM, which was set to 1 (HT) instead of 16
-and so duplicated HT.Et in every data set produced before the reconversion of
-2026-08-08.
+else's quantity.
 
 The values here are the ones the original HDF5 converter used (h5convert/root2h5.py at
 commit 70d7e1d, `_store_energies`), confirmed against a 2025 zero-bias ntuple.

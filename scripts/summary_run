@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Summarise every data set of one conversion campaign, then write the aggregate report.
+# Summarise every data set of one conversion campaign.
 # Takes the same +experiment= as convert_run and reads the same paths from it, so the
 # summary follows a conversion without repeating its arguments. Unlike a bare summary,
 # this records what the config knows about each folder as provenance.
@@ -9,8 +9,7 @@ import json
 from pathlib import Path
 
 import hydra
-from hydra.core.hydra_config import HydraConfig
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 
 from adl1t_datamaker import summary
 from adl1t_datamaker import util
@@ -70,10 +69,6 @@ def reuse(folder: Path, cfg: DictConfig) -> dict | None:
 @hydra.main(version_base=None, config_path="configs", config_name="summary.yaml")
 def main(cfg: DictConfig) -> None:
     util.print_config(cfg, resolve=True)
-    # The chosen +experiment= is a hydra group choice, not a config field, so it comes
-    # from HydraConfig. It names the campaign report folder, and falls back to
-    # "campaign" when no experiment was chosen.
-    experiment = HydraConfig.get().runtime.choices.get("experiment", "campaign")
 
     summaries = []
     for folder in output_folders(cfg):
@@ -91,14 +86,6 @@ def main(cfg: DictConfig) -> None:
 
     if not summaries:
         raise ValueError(tcols.FAIL + "No converted folder was found." + tcols.ENDC)
-
-    summary.summarise_campaign(
-        summaries,
-        Path(cfg["output_root_path"]) / summary.SUMMARY_DIR / experiment,
-        config=OmegaConf.to_yaml(cfg, resolve=True),
-        experiment=experiment,
-        figure_format=cfg["figure_format"],
-    )
 
 
 if __name__ == "__main__":

@@ -1,35 +1,23 @@
-# Every figure in a summary, drawn from the accumulated counts rather than from the data.
+# Every figure in a summary, drawn from the accumulated counts.
 #
 # Because stats.py counts exactly, a spectrum is a weighted histogram over the counted
-# values: no second pass, no sampling, and one bin per hardware code where that fits.
+# values.
 # Guessed bin widths ('doane' and its relatives) suit bounded integers badly: fractional
 # edges across a flag such as `egIso`, whose two bits hold four codes, give bars that no
 # longer stand for the codes.
 
 from pathlib import Path
 
-import awkward as ak
 import matplotlib
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 
-from adl1t_datamaker import measure
-
 MAX_BINS = 256
 TOP_SEEDS = 40
 DPI = 150
 
-# The transverse energies, which the overview and campaign figures overlay on one axis.
-ET_OVERLAY = (
-    ("muons", "muonIEt"), ("jets", "jetIEt"), ("egammas", "egIEt"),
-    ("taus", "tauIEt"), ("ET", "Et"), ("HT", "Et"), ("MET", "Et"),
-)
-
-
 # Whether the data set was recorded or simulated, which is all the CMS label needs.
-# matplotlib already holds style as process-wide state, so a flag beside it costs less
-# clarity than an argument threaded through every drawing function.
 STYLE = {"data": False}
 
 
@@ -58,22 +46,10 @@ def draw_all(summary: dict, outdir: Path, fmt: str = "png", clean: bool = False)
     outdir.mkdir(parents=True, exist_ok=True)
     drawn = _object_figures(summary, outdir, fmt)
     drawn += _event_figures(summary, outdir, fmt)
-    drawn += _overview_figures(summary, outdir, fmt)
     if clean:
         _prune(outdir, {figure["path"] for figure in drawn})
 
     return _relative(drawn, outdir.parent)
-
-
-def draw_campaign(campaign: dict, outdir: Path, fmt: str = "png") -> list:
-    """Cross-sample overlays, built from the per-data-set counts already in hand."""
-    use_cms_style()
-    outdir.mkdir(parents=True, exist_ok=True)
-    drawn = [_campaign_accept_rates(campaign, outdir, fmt)]
-    for obj, feature in ET_OVERLAY:
-        drawn.append(_campaign_overlay(campaign, obj, feature, outdir, fmt))
-
-    return _relative([figure for figure in drawn if figure], outdir.parent)
 
 
 def draw_comparison(
@@ -101,26 +77,32 @@ def _overlay_object(name, obj, other, labels, outdir, fmt, fractions) -> list:
         if feature not in other or name == "seeds":
             continue
         path = outdir / f"{feature}.{fmt}"
-        _overlay(entry["counts"], other[feature]["counts"], labels,
-                 f"{name} {feature}", path, fractions)
-        drawn.append(_record(path, f"`{name}.{feature}` in both data sets."))
+        if _overlay(entry["counts"], other[feature]["counts"], labels,
+                    f"{name} {feature}", path, fractions):
+            drawn.append(_record(path, f"`{name}.{feature}` in both data sets."))
 
     return drawn
 
 
-def _overlay(left: dict, right: dict, labels: list, label: str, path: Path, fractions: bool):
-    """Two spectra on edges spanning both, so their shapes compare bin for bin."""
+def _overlay(left: dict, right: dict, labels: list, label: str, path: Path, fractions: bool) -> bool:
+    """Two spectra on edges spanning both, so their shapes compare bin for bin.
+
+    A column carrying no counts on either side, such as the event and time counters,
+    draws nothing and returns False, so no report links a figure that does not exist.
+    """
     pairs = [_arrays(left), _arrays(right)]
-    combined = np.concatenate([values for values, _ in pairs if values.size])
-    if combined.size == 0:
-        return
-    edges = bin_edges(combined)
+    populated = [values for values, _ in pairs if values.size]
+    if not populated:
+        return False
+    edges = bin_edges(np.concatenate(populated))
     fig, axes = plt.subplots()
     for index, (values, weights) in enumerate(pairs):
         _filled(axes, values, weights, edges, labels[index], f"C{index}", fractions)
     axes.legend(fontsize=9)
     _label(axes, f"{label} [hardware units]", "Fraction of entries" if fractions else "Entries")
     _save(fig, path)
+
+    return True
 
 
 def _filled(axes, values, weights, edges, label: str, colour: str, fractions: bool) -> None:
@@ -133,25 +115,6 @@ def _filled(axes, values, weights, edges, label: str, colour: str, fractions: bo
 
     hep.histplot(heights, bins=edges, ax=axes, label=label,
                  histtype="fill", alpha=0.45, color=colour)
-
-
-def plot_feature_from_array(values, name: str, outdir: Path) -> None:
-    """Plot a raw array by counting it first, for exploratory work in a notebook.
-
-    The one entry point that takes an array. Everything else here draws from counts the
-    measuring pass already produced.
-
-    :param values: Any awkward array, jagged or not: it is flattened at every depth
-        before counting.
-    """
-    from adl1t_datamaker import stats  # local: only this entry point counts anything
-
-    use_cms_style()
-    counts = stats.count_values(np.asarray(ak.to_numpy(ak.flatten(values, axis=None))))
-    outdir = Path(outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
-
-    spectrum(*stats.as_arrays(counts), name, outdir / f"{name}.png")
 
 
 def spectrum(values, weights, label: str, path: Path, scale=None) -> None:
@@ -309,151 +272,6 @@ def _lumi_profile(profile: list, path: Path) -> None:
         axes.plot(*zip(*points), label=f"run {run}", color=f"C{index % 10}", linewidth=1)
     axes.legend(fontsize=9)
     _label(axes, "Luminosity section", "Events")
-    _save(fig, path)
-
-
-def _overview_figures(summary: dict, outdir: Path, fmt: str) -> list:
-    (outdir / "overview").mkdir(parents=True, exist_ok=True)
-    drawn = [_et_overlay(summary, outdir / "overview" / f"et_spectra.{fmt}")]
-    drawn.append(_multiplicity_overlay(summary, outdir / "overview" / f"multiplicities.{fmt}"))
-    if summary.get("pileup_towers"):
-        drawn.append(_pileup_towers(summary, outdir / "overview" / f"pileup_vs_towers.{fmt}"))
-
-    return [figure for figure in drawn if figure]
-
-
-def _overlaid(draw, path: Path, xlabel: str, ylabel: str, fontsize: int = 9) -> bool:
-    """Several series on one pair of axes, logarithmic in the vertical.
-
-    Nothing is written when the callback drew no series, so a data set missing every
-    object of an overlay leaves no empty figure behind.
-    """
-    fig, axes = plt.subplots()
-    if not draw(axes):
-        plt.close(fig)
-        return False
-    axes.legend(fontsize=fontsize)
-    axes.set_yscale("log")
-    _label(axes, xlabel, ylabel)
-    _save(fig, path)
-
-    return True
-
-
-def _et_overlay(summary: dict, path: Path) -> dict | None:
-    """Every transverse energy on one pair of axes, in GeV rather than hardware codes."""
-    def draw(axes) -> int:
-        drawn = 0
-        for obj, feature in ET_OVERLAY:
-            entry = summary["objects"].get(obj, {}).get("features", {}).get(feature)
-            if entry:
-                drawn += _step_in_gev(axes, entry, f"{obj}.{feature}", f"C{drawn % 10}")
-        return drawn
-
-    if not _overlaid(draw, path, "$E_T$ [GeV]", "Entries"):
-        return None
-
-    return _record(path, "Transverse energy spectra of every object, in GeV.")
-
-
-def _step_in_gev(axes, entry: dict, label: str, colour: str) -> int:
-    values, weights = _arrays(entry["counts"])
-    if values.size == 0:
-        return 0
-    factor = (entry.get("scale") or [1.0])[0]
-    # Bin the hardware codes and scale the edges afterwards, so a bin stays one code wide.
-    edges = bin_edges(values) * factor
-    counts, _ = np.histogram(values * factor, bins=edges, weights=weights)
-    hep.histplot(counts, bins=edges, ax=axes, label=label, color=colour)
-
-    return 1
-
-
-def _multiplicity_overlay(summary: dict, path: Path) -> dict | None:
-    def draw(axes) -> int:
-        drawn = 0
-        for name in ("muons", "jets", "egammas", "taus"):
-            obj = summary["objects"].get(name)
-            if obj:
-                drawn += _step_fraction(axes, obj["multiplicity"]["counts"], name, f"C{drawn}")
-        return drawn
-
-    if not _overlaid(draw, path, "Entries per event", "Fraction of events", 10):
-        return None
-
-    return _record(path, "Object multiplicity per event, as a fraction of all events.")
-
-
-def _step_fraction(axes, counts: dict, label: str, colour: str) -> int:
-    values, weights = _arrays(counts)
-    if values.size == 0:
-        return 0
-    edges = bin_edges(values)
-    heights, _ = np.histogram(values, bins=edges, weights=weights / weights.sum())
-    hep.histplot(heights, bins=edges, ax=axes, label=label, color=colour)
-
-    return 1
-
-
-def _pileup_towers(summary: dict, path: Path) -> dict:
-    """Pileup is counted in tenths, so the horizontal extent is scaled back down.
-
-    Cells with no events are masked rather than drawn: the colour scale is logarithmic,
-    and _grid leaves every unobserved (pileup, tower) pair at zero.
-    """
-    grid, extent = _grid(summary["pileup_towers"])
-    extent[:2] = [edge / measure.PILEUP_SCALE for edge in extent[:2]]
-    fig, axes = plt.subplots()
-    image = axes.imshow(
-        np.ma.masked_equal(grid.T, 0), origin="lower", aspect="auto", extent=extent,
-        cmap="inferno", norm="log", interpolation="nearest",
-    )
-    fig.colorbar(image, ax=axes, label="Events")
-    _label(axes, "Pileup", "HCAL tower count")
-    _save(fig, path)
-
-    return _record(path, "Pileup against the number of HCAL towers, per event.")
-
-
-def _campaign_overlay(campaign: dict, obj: str, feature: str, outdir: Path, fmt: str):
-    """One feature across every sample of a campaign, normalised so the shapes compare."""
-    def draw(axes) -> int:
-        drawn = 0
-        for entry in campaign["datasets"]:
-            counts = entry["objects"].get(obj, {}).get("features", {}).get(feature, {})
-            if counts:
-                drawn += _step_fraction(axes, counts["counts"], entry["dataset"][:28], f"C{drawn % 10}")
-        return drawn
-
-    path = outdir / f"{obj}_{feature}.{fmt}"
-    label = f"{obj} {feature} [hardware units]"
-    if not _overlaid(draw, path, label, "Fraction of entries", 6):
-        return None
-
-    return _record(path, f"`{obj}.{feature}` across every sample in the campaign.")
-
-
-def _campaign_accept_rates(campaign: dict, outdir: Path, fmt: str) -> dict | None:
-    rates = [
-        (entry["dataset"], entry["trigger"]["l1bit_accepted"] / entry["totals"]["events"])
-        for entry in campaign["datasets"]
-        if entry["trigger"].get("l1bit_accepted") is not None and entry["totals"]["events"]
-    ]
-    if not rates:
-        return None
-    path = outdir / f"l1bit_accept.{fmt}"
-    _accept_chart(rates, path)
-
-    return _record(path, "Fraction of events accepted by the level 1 trigger, per sample.")
-
-
-def _accept_chart(rates: list, path: Path) -> None:
-    fig, axes = plt.subplots(figsize=(10, max(4.0, 0.3 * len(rates) + 2)))
-    positions = np.arange(len(rates))
-    axes.barh(positions, [rate for _, rate in rates], color="C0")
-    axes.set_yticks(positions, [name[:44] for name, _ in rates], fontsize=7)
-    axes.invert_yaxis()
-    _label(axes, "L1 accept fraction", "")
     _save(fig, path)
 
 

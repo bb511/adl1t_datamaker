@@ -23,7 +23,7 @@ figure_format: png
 checksums: True
 
 # Reuse a data set's existing summary.json when it is newer than the newest parquet,
-# so that regenerating only the campaign report costs nothing.
+# so a rerun over a partly summarised campaign measures only what changed.
 skip_existing: False
 
 # Delete figures left over from an earlier summary of the same folder.

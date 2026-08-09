@@ -18,14 +18,6 @@ def render_report(summary: dict) -> str:
     ).rstrip() + "\n"
 
 
-def render_campaign(campaign: dict) -> str:
-    """The aggregate report for one conversion campaign."""
-    return "\n\n".join(
-        [f"# Conversion campaign: {campaign['experiment']}"]
-        + [section(campaign) for section in CAMPAIGN_SECTIONS]
-    ).rstrip() + "\n"
-
-
 def render_comparison(comparison: dict) -> str:
     """COMPARISON.md for two data sets, which is how a reproduction gets validated."""
     first, second = comparison["labels"]
@@ -293,84 +285,9 @@ def section_usage(summary: dict) -> str:
     ])
 
 
-def campaign_overview(campaign: dict) -> str:
-    """One row per data set: the table a Data Records section prints."""
-    rows = [_campaign_row(entry) for entry in campaign["datasets"]]
-    rows.append([
-        "**total**", f"**{sum(e['totals']['events'] for e in campaign['datasets']):,}**",
-        f"**{sum(e['totals']['shards'] for e in campaign['datasets']):,}**",
-        f"**{_human_size(sum(e['totals']['bytes'] for e in campaign['datasets']))}**",
-        *[""] * 6,
-    ])
-    header = ["Sample", "Events", "Shards", "Size", "<muons>", "<jets>", "<egammas>",
-              "<taus>", "L1 accept", "CICADA"]
-
-    return "## Data sets\n\n" + markdown_table(header, rows)
-
-
-def campaign_consistency(campaign: dict) -> str:
-    """Whether the samples agree on objects, seed columns and prescale menu.
-
-    Disagreement between samples of one campaign usually means a conversion went wrong,
-    and nothing else in the report would show it.
-    """
-    consistency = campaign["consistency"]
-    rows = [
-        ["Object sets identical", _verdict(consistency["object_sets"])],
-        ["Seed columns identical", _verdict(consistency["seed_sets"])],
-        ["Prescale menus used", ", ".join(consistency["menus"]) or "-"],
-    ]
-
-    return "## Cross-sample consistency\n\n" + markdown_table(["Check", "Result"], rows)
-
-
-def campaign_inputs(campaign: dict) -> str:
-    """Which input directories were merged into each output folder.
-
-    Several campaign entries map different input directories of one sample onto a single
-    output folder, and the parquet files keep no record of that merge.
-    """
-    rows = [
-        [f"`{entry['dataset']}`", len(inputs), "<br>".join(f"`{path}`" for path in inputs)]
-        for entry in campaign["datasets"]
-        for inputs in [entry.get("provenance", {}).get("inputs", [])]
-        if inputs
-    ]
-
-    return "## Input folders\n\n" + markdown_table(
-        ["Output folder", "Inputs merged", "Input paths"], rows
-    )
-
-
-def campaign_config(campaign: dict) -> str:
-    """The resolved config, which names every input path and auxiliary file."""
-    if not campaign.get("config"):
-        return "## Configuration\n\n_Not recorded._"
-
-    return "## Configuration\n\n```yaml\n" + campaign["config"].rstrip() + "\n```"
-
-
-def campaign_reports(campaign: dict) -> str:
-    # The links are relative: the campaign report sits two levels below the output root
-    # that holds each data set and its SUMMARY folder.
-    rows = [
-        [f"`{entry['dataset']}`",
-         f"[REPORT.md](../../{entry['dataset']}/SUMMARY/REPORT.md)", _worst(entry)]
-        for entry in campaign["datasets"]
-    ]
-
-    return "## Per data set reports\n\n" + markdown_table(
-        ["Sample", "Report", "Worst check"], rows
-    )
-
-
-def campaign_figures(campaign: dict) -> str:
-    return section_figures(campaign)
-
-
-def campaign_reproducibility(campaign: dict) -> str:
-    """Which commit and interpreter produced this report; the comparison uses it too."""
-    generated = campaign.get("generated", {})
+def comparison_reproducibility(comparison: dict) -> str:
+    """Which commit and interpreter produced this comparison."""
+    generated = comparison.get("generated", {})
 
     return "\n".join([
         "## Reproducibility",
@@ -399,17 +316,7 @@ COMPARISON_SECTIONS = (
     comparison_features,
     comparison_seeds,
     section_figures,
-    campaign_reproducibility,
-)
-
-CAMPAIGN_SECTIONS = (
-    campaign_overview,
-    campaign_consistency,
-    campaign_inputs,
-    campaign_config,
-    campaign_reports,
-    campaign_figures,
-    campaign_reproducibility,
+    comparison_reproducibility,
 )
 
 
@@ -550,44 +457,10 @@ def _saturating(summary: dict) -> list[list]:
     )
 
 
-def _campaign_row(entry: dict) -> list:
-    events = entry["totals"]["events"]
-    accepted = entry["trigger"].get("l1bit_accepted")
-
-    return [
-        f"`{entry['dataset']}`", f"{events:,}", f"{entry['totals']['shards']:,}",
-        _human_size(entry["totals"]["bytes"]),
-        *[_mean_multiplicity(entry, name) for name in ("muons", "jets", "egammas", "taus")],
-        _percent(accepted / events if accepted is not None and events else None),
-        "yes" if entry["totals"]["cicada"] else "no",
-    ]
-
-
-def _mean_multiplicity(entry: dict, name: str) -> str:
-    obj = entry.get("objects", {}).get(name)
-
-    return fmt(obj["multiplicity"]["stats"]["mean"], 3) if obj else "-"
-
-
 def _of_accepts(fired: int, trigger: dict) -> float | None:
     accepted = trigger.get("l1bit_accepted")
 
     return fired / accepted if accepted else None
-
-
-def _worst(entry: dict) -> str:
-    """The worst check status a data set produced, for the campaign index.
-
-    SKIP outranks PASS, so a check that could not run is not hidden by the ones that did.
-    """
-    order = ("FAIL", "WARN", "SKIP", "PASS")
-    found = {check["status"] for check in entry.get("validation", [])}
-
-    return next((status for status in order if status in found), "-")
-
-
-def _verdict(differences: dict) -> str:
-    return "identical" if not differences else f"differ: {differences}"
 
 
 def _wall_clock(clock: dict | None) -> str:

@@ -2,7 +2,7 @@
 #
 # The converter writes parquet and nothing else, so a data descriptor has to recover
 # everything about a produced folder from the files themselves. This module drives that
-# recovery: measure.py counts, validation.py judges, figures.py draws and report.py
+# recovery: measure.py counts, validate.py judges, figures.py draws and report.py
 # renders. What lands beside the data is a REPORT.md for a reader and a summary.json,
 # raw value counts included, for a program.
 
@@ -12,17 +12,17 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-from adl1t_datamaker import figures
-from adl1t_datamaker import measure
-from adl1t_datamaker import report
 from adl1t_datamaker import schema
-from adl1t_datamaker import stats
-from adl1t_datamaker import validation
 from adl1t_datamaker.components import l1_seeds
+from adl1t_datamaker.summary import figures
+from adl1t_datamaker.summary import measure
+from adl1t_datamaker.summary import report
+from adl1t_datamaker.summary import stats
+from adl1t_datamaker.summary import validate
 from adl1t_datamaker.terminal_colors import tcols
 
 SUMMARY_DIR = "SUMMARY"
-MENU_FOLDER = Path(__file__).resolve().parents[2] / "scripts" / "L1Menus"
+MENU_FOLDER = Path(__file__).resolve().parents[3] / "scripts" / "L1Menus"
 
 # Unix seconds at 2000-01-01 and 2100-01-01, the open window a decoded event time must
 # fall in to count as a wall clock.
@@ -45,9 +45,7 @@ def summarise_folder(
 
     :param outdir: Where the report, the figures and the JSON land. Without it they go
         into a SUMMARY directory inside the data folder itself.
-    :param batch_size: Events held in memory at once, which buys memory alone for every
-        column narrow enough to be counted exactly. A wider batch can span more than
-        stats.MAX_DENSE_SPAN and demote a column a narrower one still counts.
+    :param batch_size: Events held in memory at once, which buys memory alone.
     :param checksums: Whether to sha256 every shard, which reads each file in full and
         is the slowest step of a summary.
     :param objects: Object folders to stream, or ``None`` for all of them. The file
@@ -119,43 +117,6 @@ def write_json(payload: dict, path: Path) -> None:
     path.write_text(json.dumps(payload, sort_keys=True, indent=2, default=float) + "\n")
 
 
-def summarise_campaign(
-    summaries: list[dict],
-    outdir: str | Path,
-    *,
-    config: str = "",
-    experiment: str = "campaign",
-    figure_format: str = "png",
-    generated_at: str | None = None,
-) -> dict:
-    """Aggregate several per-folder summaries, reading no parquet at all.
-
-    :param config: The resolved campaign config, quoted verbatim in the report.
-    :param experiment: Name of the campaign, which titles the report.
-    :param figure_format: Suffix the figures are saved with, which is what picks the
-        matplotlib writer. The scripts offer ``png`` and ``pdf``.
-    :param generated_at: ISO timestamp replacing the current time, so a rerun on the
-        same summaries reproduces the report byte for byte.
-    :returns: The whole aggregate, value counts and shard lists included, where
-        campaign_summary.json keeps only what no per-data-set summary already holds.
-    """
-    outdir = Path(outdir)
-    campaign = {
-        "experiment": experiment,
-        "config": config,
-        "generated": generated_block(generated_at),
-        "datasets": sorted(summaries, key=lambda entry: entry["dataset"]),
-    }
-    campaign["consistency"] = _campaign_consistency(campaign["datasets"])
-    outdir.mkdir(parents=True, exist_ok=True)
-    campaign["figures"] = figures.draw_campaign(campaign, outdir / "figures", figure_format)
-    (outdir / "REPORT.md").write_text(report.render_campaign(campaign))
-    write_json(_slim_campaign(campaign), outdir / "campaign_summary.json")
-    print(tcols.OKGREEN + "Campaign report written: " + tcols.ENDC + str(outdir))
-
-    return campaign
-
-
 def load_or_measure(folder: str | Path, **kwargs) -> dict:
     """A folder's existing summary.json, or a fresh measurement when there is none.
 
@@ -169,52 +130,6 @@ def load_or_measure(folder: str | Path, **kwargs) -> dict:
     print(tcols.WARNING + f"No summary.json in {folder}, measuring it." + tcols.ENDC)
 
     return measure_folder(folder, **kwargs)
-
-
-def summarise_comparison(
-    first: dict,
-    second: dict,
-    outdir: str | Path,
-    *,
-    labels: tuple[str, str] | None = None,
-    figure_format: str = "png",
-    fractions: bool = True,
-    generated_at: str | None = None,
-) -> dict:
-    """Compare two measured data sets and write COMPARISON.md beside the overlays.
-
-    :param labels: Names the report gives the two data sets, defaulting to their folder
-        names.
-    :param figure_format: Suffix the figures are saved with, which is what picks the
-        matplotlib writer. The scripts offer ``png`` and ``pdf``.
-    :param fractions: Whether each overlay is drawn as a fraction of its own entries,
-        so two samples of unequal size compare by shape rather than by height.
-    :param generated_at: ISO timestamp replacing the current time, so a rerun on the
-        same summaries reproduces the report byte for byte.
-    """
-    outdir = Path(outdir)
-    comparison = compare(first, second, labels or (first["dataset"], second["dataset"]))
-    comparison["generated"] = generated_block(generated_at)
-    outdir.mkdir(parents=True, exist_ok=True)
-    comparison["figures"] = figures.draw_comparison(
-        first, second, comparison["labels"], outdir / "figures", figure_format, fractions
-    )
-    (outdir / "COMPARISON.md").write_text(report.render_comparison(comparison))
-    write_json(comparison, outdir / "comparison.json")
-    print(tcols.OKGREEN + "Comparison written: " + tcols.ENDC + str(outdir))
-
-    return comparison
-
-
-def compare(first: dict, second: dict, labels: tuple[str, str]) -> dict:
-    """What differs between two data sets, computed from their summaries alone."""
-    return {
-        "labels": list(labels),
-        "totals": [first["totals"], second["totals"]],
-        "schema": _schema_difference(first, second),
-        "features": _feature_deltas(first, second),
-        "seeds": _seed_deltas(first, second),
-    }
 
 
 def generated_block(generated_at: str | None = None) -> dict:
@@ -274,8 +189,7 @@ def _assemble(folder: Path, measured: dict, inventory: dict, provenance: dict) -
     }
     summary["event_coverage"] = _event_coverage(measured.get("event_info"))
     summary["trigger"] = _trigger(measured.get("seeds"))
-    summary["pileup_towers"] = _pileup_towers(folder, summary)
-    summary["validation"] = validation.run_checks(summary)
+    summary["validation"] = validate.run_checks(summary)
 
     return summary
 
@@ -337,7 +251,7 @@ def _event_coverage(counts: measure.ObjectCounts | None) -> dict:
     return coverage | _pileup(features.get("nPV_True"), counts.rows)
 
 
-def _wall_clock(store: stats.ValueCounts | None) -> dict | None:
+def _wall_clock(store) -> dict | None:
     """When the data was taken, decoded from the packed time field.
 
     docs/README.md gives the packing: Unix seconds shifted left by 32 bits, with the
@@ -386,7 +300,7 @@ def _run_sections(sections: dict) -> dict:
     }
 
 
-def _pileup(store: stats.ValueCounts | None, rows: int) -> dict:
+def _pileup(store, rows: int) -> dict:
     if store is None:
         return {"pileup": None, "zero_pileup_fraction": None}
     summary = stats.summarise(store)
@@ -397,7 +311,7 @@ def _pileup(store: stats.ValueCounts | None, rows: int) -> dict:
     }
 
 
-def _extent(store: stats.ValueCounts | None) -> dict | None:
+def _extent(store) -> dict | None:
     if store is None:
         return None
 
@@ -440,138 +354,8 @@ def _ranked_seeds(fired: dict, rows: int) -> list[dict]:
     ]
 
 
-def _pileup_towers(folder: Path, summary: dict) -> list:
-    """Joint pileup and tower counts, left empty where the map would say nothing.
-
-    measure.pileup_against_towers reads the parquet a second time, so it runs only where
-    some event carries non-zero pileup and an HT folder is there to read tower_count
-    from. An all-zero pileup column is what an unmatched brilcalc lookup leaves behind.
-    """
-    zero = summary["event_coverage"].get("zero_pileup_fraction")
-    if zero is None or zero == 1.0 or "HT" not in summary["inventory"]:
-        return []
-
-    return _pairs_to_json(measure.pileup_against_towers(folder))
-
-
 def _pairs_to_json(pairs: dict) -> list:
     return [[first, second, count] for (first, second), count in sorted(pairs.items())]
-
-
-def _campaign_consistency(datasets: list[dict]) -> dict:
-    """What differs between the data sets of one campaign, which should be nothing."""
-    objects = {entry["dataset"]: set(entry["totals"]["objects"]) for entry in datasets}
-    seeds = {
-        entry["dataset"]: {seed["name"] for seed in entry["trigger"].get("seeds", [])}
-        for entry in datasets
-    }
-
-    return {
-        "object_sets": _odd_ones_out(objects),
-        "seed_sets": _odd_ones_out(seeds),
-        "menus": sorted({entry["trigger"].get("menu") for entry in datasets} - {None}),
-    }
-
-
-def _odd_ones_out(per_dataset: dict) -> dict:
-    """Data sets whose set differs from the largest one, and by how many names."""
-    if not per_dataset:
-        return {}
-    common = max(per_dataset.values(), key=len)
-
-    return {name: len(common ^ items) for name, items in per_dataset.items() if items != common}
-
-
-PER_DATASET_ONLY = ("objects", "inventory")
-
-
-def _slim_campaign(campaign: dict) -> dict:
-    """The campaign JSON without what each data set's own summary.json already holds.
-
-    The value counts and the per-shard file lists are most of a summary's bulk, so
-    repeating them once per data set would dominate the campaign file for no gain.
-    """
-    return campaign | {
-        "datasets": [
-            {key: value for key, value in entry.items() if key not in PER_DATASET_ONLY}
-            for entry in campaign["datasets"]
-        ]
-    }
-
-
-def _schema_difference(first: dict, second: dict) -> dict:
-    """Columns held by one data set and not the other, named 'object.feature'."""
-    columns = (_column_names(first), _column_names(second))
-
-    return {
-        "only_in_first": sorted(columns[0] - columns[1]),
-        "only_in_second": sorted(columns[1] - columns[0]),
-    }
-
-
-def _column_names(summary: dict) -> set:
-    return {
-        f"{name}.{feature}"
-        for name, obj in summary["objects"].items()
-        for feature in obj["features"]
-    }
-
-
-def _feature_deltas(first: dict, second: dict) -> list[dict]:
-    """Every shared feature, by how much its mean moved, largest relative shift first."""
-    shared = sorted(_column_names(first) & _column_names(second))
-    deltas = [_delta(first, second, column) for column in shared]
-
-    return sorted(deltas, key=lambda row: -abs(row["relative"] or 0))
-
-
-def _delta(first: dict, second: dict, column: str) -> dict:
-    name, feature = column.split(".", 1)
-    left = first["objects"][name]["features"][feature]["stats"]
-    right = second["objects"][name]["features"][feature]["stats"]
-    change = _difference(left.get("mean"), right.get("mean"))
-
-    return {
-        "column": column,
-        "first": _quoted_stats(left),
-        "second": _quoted_stats(right),
-        "difference": change,
-        "relative": change / left["mean"] if change is not None and left.get("mean") else None,
-    }
-
-
-def _quoted_stats(entry: dict) -> dict:
-    """The three numbers the comparison table quotes for one column.
-
-    The quantile keys are the str() of the levels in stats.QUANTILES, so the median is
-    "0.5" and not "0.50", and a key that misses gives None rather than an error. A column
-    too widely spread to count exactly carries no quantiles at all.
-    """
-    quantiles = entry.get("quantiles", {})
-
-    return {
-        "mean": entry.get("mean"),
-        "median": quantiles.get("0.5"),
-        "p99": quantiles.get("0.99"),
-    }
-
-
-def _seed_deltas(first: dict, second: dict) -> list[dict]:
-    """Seeds by how much their firing fraction moved between the two data sets."""
-    rates = [{seed["name"]: seed["fraction"] for seed in entry["trigger"].get("seeds", [])}
-             for entry in (first, second)]
-    shared = sorted(set(rates[0]) & set(rates[1]))
-    deltas = [
-        {"name": name, "first": rates[0][name], "second": rates[1][name],
-         "difference": rates[1][name] - rates[0][name]}
-        for name in shared
-    ]
-
-    return sorted(deltas, key=lambda row: -abs(row["difference"]))
-
-
-def _difference(left, right):
-    return None if left is None or right is None else right - left
 
 
 def _guard_output(outdir: Path) -> None:

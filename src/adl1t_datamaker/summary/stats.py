@@ -6,37 +6,30 @@
 # map: mean, standard deviation, any quantile, distinct values, zero and saturation
 # fractions, and the histograms the figures draw.
 #
-# Features too widely spread to enumerate, the event and orbit counters among them, fall
-# back to count, minimum, maximum and mean. Their distributions say little; what a data
-# record needs from those columns is coverage.
+# The event, orbit and time identifiers barely repeat, so counting them would hold one
+# entry per event; measure.py accumulates those through Extremes instead, which keeps
+# count, extremes and a running total alone.
 
 import numpy as np
 
-# MAX_DENSE_SPAN caps what one batch may allocate: a bincount over 2**20 bins is 8 MB of
-# int64. MAX_DISTINCT caps instead what leaves the pass, since every counted value is
-# written out to the summary JSON.
+# Caps what one batch may allocate: a bincount over 2**20 bins is 8 MB of int64. A wider
+# batch falls back to np.unique, and count_pairs skips it.
 MAX_DENSE_SPAN = 1 << 20
-MAX_DISTINCT = 100_000
 
 QUANTILES = (0.01, 0.05, 0.25, 0.50, 0.75, 0.95, 0.99)
 
 
 class ValueCounts:
-    """How often each value occurs in one feature, accumulated batch by batch.
+    """How often each value occurs in one feature, accumulated batch by batch."""
 
-    Counting stays exact as long as the values remain enumerable. Past that the store
-    demotes itself to running extremes and a running total, and records the demotion in
-    `exact`, so no approximation reaches a report unmarked.
-    """
+    exact = True
 
     def __init__(self):
         self.counts: dict = {}
-        self.exact = True
         self.n = 0
         self.nonfinite = 0
         self.low = None
         self.high = None
-        self._total = 0.0
 
     def update(self, values: np.ndarray) -> None:
         """Fold one batch of one feature in, whatever its shape: only the contents count.
@@ -61,48 +54,59 @@ class ValueCounts:
             return
         self.n += size
         self._widen(min(counts), max(counts))
-        merge_counts(self.counts, counts) if self.exact else self._add_total(counts)
+        merge_counts(self.counts, counts)
 
     def _widen(self, low, high) -> None:
         self.low = low if self.low is None else min(self.low, low)
         self.high = high if self.high is None else max(self.high, high)
 
     def _accumulate(self, values: np.ndarray, low, high) -> None:
-        """Count exactly as long as that is affordable, otherwise keep a total."""
         self.n += values.size
         self._widen(low, high)
-        if self.exact and _is_countable(values, low, high):
-            merge_counts(self.counts, count_values(values, low))
-            if len(self.counts) > MAX_DISTINCT:
-                self._demote()
-            return
-
-        if self.exact:
-            self._demote()
-        self._total += float(values.sum())
-
-    def _add_total(self, counts: dict) -> None:
-        self._total += sum(value * weight for value, weight in counts.items())
-
-    def _demote(self) -> None:
-        """Give up the exact map, folding what it holds into the running total."""
-        self._total += sum(value * weight for value, weight in self.counts.items())
-        self.counts = {}
-        self.exact = False
+        merge_counts(self.counts, count_values(values, low))
 
     @property
     def total(self) -> float:
         """The sum of every entry seen.
 
-        An exact store re-adds its map on each call rather than carrying a running sum:
-        integer keys times integer weights stay exact in Python ints, so the mean of an
-        integer feature carries no accumulated rounding. A float-keyed map rounds as any
-        float sum does. A demoted store has no map left and must fall back to the float
-        total.
+        Re-added from the map on each call rather than carried as a running sum: integer
+        keys times integer weights stay exact in Python ints, so the mean of an integer
+        feature carries no accumulated rounding.
         """
-        if self.exact:
-            return sum(value * weight for value, weight in self.counts.items())
+        return sum(value * weight for value, weight in self.counts.items())
 
+
+class Extremes:
+    """Count, extremes and a running total for a feature never counted exactly.
+
+    The empty `counts` and `exact = False` give it the shape every consumer of a store
+    expects: statistics an exact map would afford are simply absent from its summary.
+    """
+
+    exact = False
+
+    def __init__(self):
+        self.counts: dict = {}
+        self.n = 0
+        self.nonfinite = 0
+        self.low = None
+        self.high = None
+        self._total = 0.0
+
+    def update(self, values: np.ndarray) -> None:
+        values, dropped = _finite(values)
+        self.nonfinite += dropped
+        if not values.size:
+            return
+        self.n += values.size
+        # Summed in float64: a uint64 sum of packed time values wraps within one batch.
+        self._total += float(values.sum(dtype=np.float64))
+        low, high = values.min().item(), values.max().item()
+        self.low = low if self.low is None else min(self.low, low)
+        self.high = high if self.high is None else max(self.high, high)
+
+    @property
+    def total(self) -> float:
         return self._total
 
 
@@ -209,14 +213,14 @@ def fraction_equal(counts: dict, value, total: int) -> float:
     return counts.get(value, 0) / total if total else 0.0
 
 
-def summarise(store: ValueCounts, saturation: int | None = None) -> dict:
+def summarise(store: ValueCounts | Extremes, saturation: int | None = None) -> dict:
     """Everything a report says about one feature.
 
     :param saturation: The all-ones hardware code for this feature, which signed and
         angular features lack. None leaves the saturated fraction out.
     :returns: The entry count, non-finite tally, extremes and mean always, and the
-        standard deviation, distinct values, zero fraction and quantiles only while the
-        store is still counting exactly.
+        standard deviation, distinct values, zero fraction and quantiles only for a
+        store counting exactly.
     """
     summary = {
         "entries": store.n,
@@ -234,15 +238,11 @@ def counts_to_json(counts: dict) -> dict:
     """Serialise a count map as parallel sorted lists.
 
     A JSON object would have its keys re-ordered lexicographically by the sort_keys dump
-    in summary.py, putting "10" before "2", so the values travel as a list instead.
+    in core.py, putting "10" before "2", so the values travel as a list instead.
     """
     values = sorted(counts)
 
     return {"values": values, "counts": [counts[value] for value in values]}
-
-
-def counts_from_json(payload: dict) -> dict:
-    return dict(zip(payload["values"], payload["counts"]))
 
 
 def _exact_summary(store: ValueCounts, saturation: int | None) -> dict:
@@ -263,9 +263,16 @@ def _exact_summary(store: ValueCounts, saturation: int | None) -> dict:
 
 
 def _count_integers(values: np.ndarray, low=None) -> dict:
-    """Bincount over values shifted down to zero, so negatives count correctly."""
+    """Bincount over values shifted down to zero, so negatives count correctly.
+
+    A batch spanning MAX_DENSE_SPAN or more falls back to np.unique: exact either way,
+    just without the dense allocation.
+    """
     flat = values.ravel()
     low = int(flat.min()) if low is None else int(low)
+    if int(flat.max()) - low >= MAX_DENSE_SPAN:
+        uniques, counts = np.unique(flat, return_counts=True)
+        return dict(zip(uniques.tolist(), counts.tolist()))
     dense = np.bincount(_shifted(flat, low))
     seen = np.nonzero(dense)[0]
     # Offsets and weights leave numpy as Python ints, so undoing the shift below cannot
@@ -289,14 +296,6 @@ def _shifted(flat: np.ndarray, low: int) -> np.ndarray:
         return flat - flat.dtype.type(low)
 
     return flat.astype(np.int64) - low
-
-
-def _is_countable(values: np.ndarray, low, high) -> bool:
-    """Whether a batch can be counted without a dense array wider than MAX_DENSE_SPAN."""
-    if values.dtype.kind not in "iu":
-        return True  # floats go through np.unique, which allocates nothing dense
-
-    return int(high) - int(low) < MAX_DENSE_SPAN
 
 
 def _finite(values: np.ndarray) -> tuple[np.ndarray, int]:

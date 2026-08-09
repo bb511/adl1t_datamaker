@@ -1,4 +1,4 @@
-"""Brilcalc pileup lookup. No ROOT file, no network."""
+"""Brilcalc pileup lookup for every data file."""
 
 import awkward as ak
 import pytest

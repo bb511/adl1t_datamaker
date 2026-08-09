@@ -1,48 +1,45 @@
 # L1TNtuple to parquet
 
 The conversion keeps what the global trigger (uGT) sees, together with the metadata that says which event it saw.
-An L1TNtuple carries a great deal more: float reconstructions of the same quantities, detector-level branches that never reach the trigger boards, and the objects of the two bunch crossings on either side of the one that fired.
-None of that reaches the parquet, the first two because no uGT algorithm can read them and the third by the choice described below.
-The tables here describe every feature that does reach it, and a tick in the `in` column means the conversion writes that feature.
+The rest of the L1TNtuple is dropped: float reconstructions, detector-level branches that never reach the trigger boards, and the objects of neighbouring bunch crossings.
+The tables below describe every feature that reaches the parquet; a tick in the `in` column marks it as written.
 
-The ranges, steps and bit widths come from the [scales](./scales_inputs_2_ugt.pdf) and [firmware](./gt-mp7-firmware-specification.pdf) specifications.
-Most of the explanatory text does not: it was assembled from exchanges with the experts of each subsystem and carries no citation, so read a description as a summary of expert opinion and the numbers as specification.
-Where a description says a quantity is not yet defined, that reports the state of the subsystem rather than a gap in this document.
+The ranges, steps, and bit widths come from the [scales](./scales_inputs_2_ugt.pdf) and [firmware](./gt-mp7-firmware-specification.pdf) specifications.
+The explanatory text was assembled from exchanges with subsystem experts and carries no citation: read the numbers as specification and the descriptions as expert opinion.
+Where a description says a quantity is not yet defined, that reports the state of the subsystem, not a gap in this document.
 
 > [!IMPORTANT]
-> This file is parsed. `src/adl1t_datamaker/schema.py` reads the tables below into the feature specification that the summary reports, the validation checks and the dataset card all work from, and `tests/test_schema_matches_docs.py` fails when the converter and these tables disagree.
-> The prose can be edited freely. What the parser depends on is narrower, and every item of it fails silently rather than loudly, with the single exception noted last:
+> This file is parsed. `src/adl1t_datamaker/schema.py` reads the tables below into the feature specification behind the summary reports, the validation checks, and the dataset card, and `tests/test_schema_matches_docs.py` fails when the converter and these tables disagree.
+> The prose can be edited freely. The parser depends on the items below, each failing silently rather than loudly, except the last:
 >
-> - Each `##` heading keeps its exact title. A `##` heading the parser does not know ends the section, so nothing new may be inserted inside one, which is why the seeds section below is invisible to it. Under `## Energy Objects` only the first word of each `###` title is read, and it has to be the parquet folder name.
+> - Each `##` heading keeps its exact title. An unknown `##` heading ends the section, so nothing new may be inserted inside one; that is why the seeds section below is invisible to the parser. Under `## Energy Objects` only the first word of each `###` title is read, and it must be the parquet folder name.
 > - A table row begins with `|` in the first column. One leading space and that feature is gone.
-> - The header row's first cell reads `Feature`, and its remaining cells are found by the exact names `Range`, `Step`, `Bits` and `Explanation`.
-> - A row counts as a feature only when its first cell *starts* with a backticked name, and it counts as converted only when its `in` cell contains the literal `:heavy_check_mark:`.
-> - A `Range` beginning `0..` marks the feature as unsigned, which is what turns on the check that no measured value exceeds the all-ones code of its `Bits`. The number after `0..` is never read.
+> - The header row's first cell reads `Feature`, and its remaining cells are found by the exact names `Range`, `Step`, `Bits`, and `Explanation`.
+> - A row counts as a feature only when its first cell *starts* with a backticked name, and as converted only when its `in` cell contains the literal `:heavy_check_mark:`.
+> - A `Range` beginning `0..` marks the feature as unsigned, which turns on the check that no measured value exceeds the all-ones code of its `Bits`. The number after `0..` is never read.
 > - A capacity is matched as "There are N ... objects" with exactly one word where the ellipsis is. Reword it and the multiplicity check for that object stops running.
 >
-> The exception is the `in` column, whose header is looked up without a fallback, so renaming that one raises rather than passing quietly.
+> The exception is the `in` column, whose header is looked up without a fallback, so renaming it raises rather than passing quietly.
 
 # Objects
 
-An `I` in a feature name abbreviates `Integer` and marks a quantity taken straight from hardware, but its absence means nothing: `muonQual`, `muonChg`, `muonTfMuonIdx`, `jetHwQual`, `jetRawEt`, `egIso` and `tauIso` are hardware integers too.
-Every value keeps its hardware units through the conversion, so a reader that wants GeV or radians applies the `Step` column itself.
+An `I` in a feature name abbreviates `Integer` and marks a quantity taken straight from hardware, but its absence means nothing: `muonQual`, `muonChg`, `muonTfMuonIdx`, `jetHwQual`, `jetRawEt`, `egIso`, and `tauIso` are hardware integers too.
+Every value keeps its hardware units, so a reader that wants GeV or radians applies the `Step` column itself.
 
-Each object also carries a `[object_name]Bx` feature in the L1TNtuple naming the bunch crossing it belongs to, since each event contains objects from ± 2 bunch crossings.
-The conversion keeps bunch crossing 0 alone and drops the other four, for the four particle collections through their own `Bx` branch and for the six energy sums through `sumBx`.
-No event is lost that way, only the objects belonging to the other crossings, and the `Bx` column itself is not written out, so the parquet cannot say which crossing an object came from.
-The CICADA score is the exception, being one number per event with no crossing to select.
+Each event carries objects from five bunch crossings, ±2 around the one that fired.
+The conversion keeps crossing 0 alone, selected through each particle collection's `Bx` branch and through `sumBx` for the energy sums, and drops the `Bx` column itself, so the parquet cannot say which crossing an object came from.
+No event is lost, only the objects of the other crossings; the CICADA score, one number per event, has no crossing to select.
 
-For each converted data set, each object is stored in a separate folder, and each folder holds one parquet file per L1Ntuple it was generated from.
-Row $i$ of every folder is the same event, which is what lets the folders be read separately and joined by position.
+Each object is stored in its own folder, holding one parquet file per input L1Ntuple.
+Row $i$ of every folder is the same event, so the folders can be read separately and joined by position.
+The four particle collections are jagged, one entry per in-time object: nothing is padded and nothing is truncated.
 
 ## Muon Objects
 
 > [!NOTE]
-> There are 8 muon objects in the parquet files at most, which is the global trigger's capacity per event.
-> The column is jagged, holding one entry per in-time muon, so an event with fewer carries fewer: nothing is padded and nothing is truncated.
-> The features of the muons and whether they are included in the parquet files are detailed below.
+> There are 8 muon objects at most, the global trigger's capacity per event.
 
-Additional to the features listed below, the L1TNtuples also contain the following muon variables: `nMuons`, `muonIDEta`, `muonIDPhi`, `nMuonShowers`, `muonShowerBx`, `muonShowerOneNominal`, `muonShowerOneTight`, `muonShowerTwoLoose`, `muonShowerTwoLooseDiffSectors`; as well as float versions of the `muonIEt`, `muonIEtUnconstrained`, `muonIEta`, `muonIPhi`, `muonIEtaAtVtx`, `muonIPhiAtVtx`, i.e., without `I` in the name.
+The L1TNtuple also carries `nMuons`, `muonIDEta`, `muonIDPhi`, `nMuonShowers`, `muonShowerBx`, `muonShowerOneNominal`, `muonShowerOneTight`, `muonShowerTwoLoose`, `muonShowerTwoLooseDiffSectors`, and float versions of `muonIEt`, `muonIEtUnconstrained`, `muonIEta`, `muonIPhi`, `muonIEtaAtVtx`, and `muonIPhiAtVtx` (the same names without `I`).
 None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
@@ -65,11 +62,9 @@ None of these reaches the global trigger, so none is converted.
 ## Jet Objects
 
 > [!NOTE]
-> There are 12 jet objects in the parquet files at most, which is the global trigger's capacity per event.
-> The column is jagged, holding one entry per in-time jet, so an event with fewer carries fewer: nothing is padded and nothing is truncated.
-> The features of the jets and whether they are included in the parquet are detailed below.
+> There are 12 jet objects at most, the global trigger's capacity per event.
 
-Additional to the features listed below, the L1TNtuples contain the following jet variables: `jetSeedEt`, `jetTowerIEta`, `jetTowerIPhi`, `jetPUEt`, `jetPUDonutEt0`, `jetPUDonutEt1`, `jetPUDonutEt2`, `jetPUDonutEt3`; as well as float versions of the `jetIEt`, `jetIEta` and `jetIPhi` features, i.e., without `I` in the name.
+The L1TNtuple also carries `jetSeedEt`, `jetTowerIEta`, `jetTowerIPhi`, `jetPUEt`, `jetPUDonutEt0`, `jetPUDonutEt1`, `jetPUDonutEt2`, `jetPUDonutEt3`, and float versions of `jetIEt`, `jetIEta`, and `jetIPhi` (the same names without `I`).
 None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
@@ -84,11 +79,9 @@ None of these reaches the global trigger, so none is converted.
 ## Egamma Objects
 
 > [!NOTE]
-> There are 12 egamma objects in the parquet files at most, which is the global trigger's capacity per event.
-> The column is jagged, holding one entry per in-time egamma, so an event with fewer carries fewer: nothing is padded and nothing is truncated.
-> The features of the egammas and whether they are included in the parquet files are detailed below.
+> There are 12 egamma objects at most, the global trigger's capacity per event.
 
-Additional to the features listed below, the L1TNtuples contain the following egamma variables: `nEGs`, `egTowerIPhi`, `egTowerIEta`, `egRawEt`, `egIsoEt`, `egFootprintEt`, `egNTT`, `egShape`, `egTowerHoE`, `egHwQual`; as well as float versions of the `egIEt`, `egIEta`, `egIPhi`, and `egIRawEt` features, i.e., without `I` in the name.
+The L1TNtuple also carries `nEGs`, `egTowerIPhi`, `egTowerIEta`, `egRawEt`, `egIsoEt`, `egFootprintEt`, `egNTT`, `egShape`, `egTowerHoE`, `egHwQual`, and float versions of `egIEt`, `egIEta`, `egIPhi`, and `egIRawEt` (the same names without `I`).
 None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
@@ -101,11 +94,9 @@ None of these reaches the global trigger, so none is converted.
 ## Tau Objects
 
 > [!NOTE]
-> There are 12 tau objects in the parquet files at most, which is the global trigger's capacity per event.
-> The column is jagged, holding one entry per in-time tau, so an event with fewer carries fewer: nothing is padded and nothing is truncated.
-> The features of the taus and whether they are included in the parquet files are detailed below.
+> There are 12 tau objects at most, the global trigger's capacity per event.
 
-Additional to the features listed below, the L1TNtuples contain the following tau variables: `nTaus`, `tauTowerIPhi`, `tauTowerIEta`, `tauRawEt`, `tauRawIEt`, `tauIsoEt`, `tauNTT`, `tauHasEM`, `tauIsMerged`, `tauHwQual`; as well as float versions of the `tauIEt`, `tauIEta`, and `tauIPhi` features, i.e., without `I` in the name.
+The L1TNtuple also carries `nTaus`, `tauTowerIPhi`, `tauTowerIEta`, `tauRawEt`, `tauRawIEt`, `tauIsoEt`, `tauNTT`, `tauHasEM`, `tauIsMerged`, `tauHwQual`, and float versions of `tauIEt`, `tauIEta`, and `tauIPhi` (the same names without `I`).
 None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
@@ -118,14 +109,11 @@ None of these reaches the global trigger, so none is converted.
 
 ## Cicada Objects
 
-CICADA is a separate anomaly detection algorithm running on calorimeter tower data, and its score is the only thing of it the global trigger sees.
-The score lives in the calorimeter summary tree rather than in the level 1 tree, so a conversion given no such tree writes no `cica` folder at all.
-The unpacked 2025 zero-bias ntuples are of that kind, and carry no CICADA score.
+CICADA is a separate anomaly detection algorithm running on calorimeter tower data, and its score is the only part of it the global trigger sees.
+The score lives in the calorimeter summary tree, so a conversion given no such tree writes no `cica` folder; the unpacked 2025 zero-bias ntuples are of that kind.
 
 > [!NOTE]
-> There is one cicada object in the parquet files, in a folder named `cica`.
-> It is the one column stored flat, one value per event with no list around it, because it is a single number per event rather than a collection.
-> The features of the cicada object and whether it is included in the parquet files is detailed below.
+> There is one cicada object, in a folder named `cica`, and it is the one column stored flat: one value per event, with no list around it.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -133,15 +121,14 @@ The unpacked 2025 zero-bias ntuples are of that kind, and carry no CICADA score.
 
 ## Energy Objects
 
-The level 1 tree gives the six sums no branch each. It gives them one collection, holding an entry per pair of sum type and bunch crossing, which the conversion reads through the four branches `sumType`, `sumBx`, `sumIEt` and `sumIPhi`.
-Each column below is therefore recovered by its `sumType` flag together with `sumBx == 0`, taking its value from `sumIPhi` when the column is a `phi` and from `sumIEt` otherwise, which is why `tower_count` is read from `sumIEt` despite not being an energy.
-The flags are 0 for `ET` and 16 for its ECAL part, 1 for `HT` and 21 for its tower count, 2 for `MET`, 3 for `MHT`, 8 for `FET` and 20 for `FHT`.
-`_store_energies` in `src/adl1t_datamaker/root2parquet.py` applies them and `tests/test_sum_types.py` pins them, which is worth having, because reading a sum with the wrong flag yields a plausible column rather than an error: an earlier version of the map read `ETTEM` with the `HT` flag, so every data set produced before the reconversion of 2026-08-08 carries a copy of `HT.Et` in `ET.ETTEM`.
+The level 1 tree gives the six sums one collection rather than a branch each, holding an entry per pair of sum type and bunch crossing, read through the branches `sumType`, `sumBx`, `sumIEt`, and `sumIPhi`.
+Each column below is recovered by its `sumType` flag together with `sumBx == 0`, taking its value from `sumIPhi` when the column is a `phi` and from `sumIEt` otherwise, which is why `tower_count` is read from `sumIEt` despite not being an energy.
+The flags are 0 for `ET` and 16 for its ECAL part, 1 for `HT` and 21 for its tower count, 2 for `MET`, 3 for `MHT`, 8 for `FET`, and 20 for `FHT`.
+`_store_energies` in `src/adl1t_datamaker/root2parquet.py` applies them and `tests/test_sum_types.py` pins them, because a wrong flag yields a plausible column rather than an error: an earlier map read `ETTEM` with the `HT` flag, so every data set produced before the reconversion of 2026-08-08 carries a copy of `HT.Et` in `ET.ETTEM`.
 
 > [!NOTE]
-> There are 6 energy objects in the parquet files, one folder each.
-> These carry a list layer like the object collections, but should hold exactly one entry per event rather than a variable number. That is an invariant worth checking rather than a guarantee: a zero would mean the sum was absent from an event and a two that a neighbouring bunch crossing survived the mask, and the summary fails a data set where either happens.
-> The features of each energy object are detailed below.
+> There are 6 energy objects, one folder each.
+> They carry a list layer like the particle collections but should hold exactly one entry per event: a zero would mean the sum was absent and a two that a neighbouring crossing survived the mask, and the summary fails a data set where either happens.
 
 ### ET ($E_t$)
 The transverse energy object.
@@ -219,19 +206,17 @@ All the following features are integers, apart from `nPV_True` in recorded data.
 
 ## Level 1 Seeds
 
-The `seeds` folder holds one boolean column per trigger algorithm, giving the final decision the global trigger reached for that algorithm on that event.
-The columns are named after the algorithms, e.g. `L1_SingleMu22`, and each is a length-1 list per event like the other single-valued features.
+The `seeds` folder holds one boolean column per trigger algorithm: the final decision the global trigger reached for that algorithm on that event.
+The columns are named after the algorithms, e.g. `L1_SingleMu22`, and each is a length-1 list per event.
 
 Only the unprescaled algorithms are kept.
-A prescaled algorithm records one accept in every `n`, so its column would measure the prescale rather than the physics, and `unprescaled_names` in `src/adl1t_datamaker/components/l1_seeds.py` reads the menu CSV to select the algorithms whose prescale is 1.
-Which algorithms survive therefore depends on the menu the run was taken with, and the menus differ between recorded data and simulation.
-Runs 396102 and 398183 were taken with `L1Menu_Collisions2025_v1_3_0`, which leaves 190 algorithms unprescaled, while the Winter25 simulation used `L1Menu_Collisions2024_v1_3_0_last` and its 164; only 150 names are common to the two.
-The columns are not in the same order either, so any code reading them must select by name rather than by position.
-The published release quotes 183, 161 and 147 for the same three numbers, because it drops the `L1_CICADA_*` columns, seven of them in the 2025 menu and three in the Winter25 one, as another anomaly trigger's output rather than detector input.
+A prescaled algorithm records one accept in every `n`, so its column would measure the prescale rather than the physics; `unprescaled_names` in `src/adl1t_datamaker/components/l1_seeds.py` reads the menu CSV and keeps the algorithms whose prescale is 1.
+Which algorithms survive therefore depends on the menu: runs 396102 and 398183 (`L1Menu_Collisions2025_v1_3_0`) leave 190 unprescaled, the Winter25 simulation (`L1Menu_Collisions2024_v1_3_0_last`) 164, and only 150 names are common to the two.
+The columns are not in the same order either, so select by name, never by position.
+The published release quotes 183, 161, and 147 for the same three numbers, because it drops the `L1_CICADA_*` columns as another anomaly trigger's output rather than detector input.
 
-Alongside the algorithms, the conversion writes one synthesised column, `L1bit`, holding the logical OR of every algorithm kept.
-It is not an algorithm and does not appear in any menu.
-Note that it is computed over the columns as they stand at conversion time, so a downstream step that drops columns leaves `L1bit` describing the wider set it was built from.
+The conversion also writes one synthesised column, `L1bit`, the logical OR of every algorithm kept.
+It appears in no menu, and it is computed at conversion time, so a downstream step that drops columns leaves `L1bit` describing the wider set it was built from.
 
-The decision stored is the final one rather than the initial one.
-An algorithm that accepted an event can still read 0 here, because the trigger rules cap how often accepts may follow one another; `get_initial_decision` and `get_final_decision` in the same module expose both.
+The decision stored is the final one rather than the initial one: an algorithm that accepted an event can still read 0, because the trigger rules cap how often accepts may follow one another.
+`get_initial_decision` and `get_final_decision` in the same module expose both.

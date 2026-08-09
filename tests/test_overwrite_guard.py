@@ -3,7 +3,7 @@
 Output parquet is named after the input stem, and convert_run maps several input
 folders onto one output folder. Today's CRAB output numbers files continuously across
 those leaf folders, so the stems happen to be unique and no data is lost, but nothing
-in the code enforces that. These tests pin the guard rather than the luck.
+in the code enforces that.
 """
 
 import pytest

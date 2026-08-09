@@ -3,7 +3,6 @@
 # Summarise converted parquet folders: figures, a REPORT.md and a summary.json land in
 # a SUMMARY directory inside each folder unless --outdir sends them elsewhere.
 import argparse
-from pathlib import Path
 
 from adl1t_datamaker import summary
 
@@ -24,12 +23,6 @@ parser.add_argument(
     type=str,
     default=None,
     help="Where to write the summary. Without it, each data set gets its own SUMMARY."
-)
-parser.add_argument(
-    '--campaign_report',
-    type=str,
-    default=None,
-    help="Also aggregate the given folders into a campaign report written here."
 )
 parser.add_argument(
     '--objects',
@@ -58,39 +51,18 @@ parser.add_argument(
     action='store_true',
     help="Delete figures left over from an earlier summary of the same folder."
 )
-parser.add_argument(
-    '--reuse',
-    action='store_true',
-    help="Read each folder's existing summary.json, measuring only folders without one. "
-         "Use with --campaign_report to aggregate folders already summarised."
-)
 args = parser.parse_args()
 
 if args.outdir and len(args.folder) > 1:
     parser.error("--outdir takes one folder; drop it to write a SUMMARY into each one.")
 
-if args.reuse:
-    # This branch writes no per-folder summary: it only gathers what --campaign_report
-    # aggregates, measuring in memory any folder that has no summary.json yet.
-    summaries = [summary.load_or_measure(folder) for folder in sorted(args.folder)]
-else:
-    summaries = [
-        summary.summarise_folder(
-            folder,
-            args.outdir,
-            batch_size=args.batch_size,
-            checksums=not args.no_checksums,
-            objects=args.objects,
-            figure_format=args.figure_format,
-            clean=args.clean,
-        )
-        for folder in sorted(args.folder)
-    ]
-
-if args.campaign_report:
-    summary.summarise_campaign(
-        summaries,
-        args.campaign_report,
-        experiment=Path(args.campaign_report).name,
+for folder in sorted(args.folder):
+    summary.summarise_folder(
+        folder,
+        args.outdir,
+        batch_size=args.batch_size,
+        checksums=not args.no_checksums,
+        objects=args.objects,
         figure_format=args.figure_format,
+        clean=args.clean,
     )

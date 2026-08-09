@@ -1,4 +1,4 @@
-"""ParquetLoader / Parquet2Awkward against a synthetic parquet tree. No ROOT, no EOS."""
+"""ParquetLoader / Parquet2Awkward against a synthetic parquet tree."""
 
 import awkward as ak
 import pytest

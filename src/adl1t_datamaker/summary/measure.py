@@ -1,6 +1,6 @@
 # Measuring a converted data set: the file inventory and the one streaming pass.
 #
-# This module produces numbers and nothing else: summary.py assembles them, report.py
+# This module produces numbers and nothing else: core.py assembles them, report.py
 # renders them and figures.py plots them.
 #
 # Every folder holds one row per event, but not at the same depth: the particle folders
@@ -18,17 +18,17 @@ import numpy as np
 import pyarrow.parquet as pq
 
 from adl1t_datamaker import schema
-from adl1t_datamaker import stats
 from adl1t_datamaker.loader import Parquet2Awkward
+from adl1t_datamaker.summary import stats
 
 # The overall level 1 accept, synthesised by l1_seeds as the OR of every other seed, so
 # counting it as a seed would add one to the fired count of every accepted event.
 L1BIT = "L1bit"
 
-# Joint counts key on integers, and brilcalc reports pileup as a per-luminosity-section
-# average (its avgpu column). A run spans a narrow band of pileup, so whole units would
-# leave a few bins; tenths keep the resolution. figures.py divides the axis back out.
-PILEUP_SCALE = 10
+# The event_info columns that identify an event rather than measure it. Their values
+# barely repeat, so an exact count map would hold one entry per event; extremes and a
+# running total are all any report reads of them.
+COUNTER_COLUMNS = ("event", "orbit", "time")
 
 
 class ObjectCounts:
@@ -40,7 +40,7 @@ class ObjectCounts:
     def __init__(self, name: str, documented: dict):
         self.name = name
         self.documented = documented
-        self.features: dict[str, stats.ValueCounts] = {}
+        self.features: dict[str, stats.ValueCounts | stats.Extremes] = {}
         self.multiplicity = stats.ValueCounts()
         self.seed_multiplicity = stats.ValueCounts()
         self.occupancy: dict = {}
@@ -59,10 +59,16 @@ class ObjectCounts:
         self.rows += len(batch)
         columns = {name: flat(batch[name]) for name in sorted(batch.fields)}
         for name, values in columns.items():
-            self.features.setdefault(name, stats.ValueCounts()).update(values)
+            self.features.setdefault(name, self._store(name)).update(values)
         self._update_multiplicity(batch, columns)
         self._update_occupancy(columns)
         self._update_run_lumi(columns)
+
+    def _store(self, name: str):
+        if self.name == "event_info" and name in COUNTER_COLUMNS:
+            return stats.Extremes()
+
+        return stats.ValueCounts()
 
     def _update_multiplicity(self, batch: ak.Array, columns: dict) -> None:
         self.multiplicity.update(counts_per_event(batch))
@@ -167,25 +173,6 @@ def inventory(folder: Path, checksums: bool = True) -> dict:
     }
 
 
-def pileup_against_towers(folder: Path) -> dict:
-    """Joint counts of event pileup and HCAL tower count, paired shard by shard.
-
-    Pairing goes shard by shard rather than by zipping two streams: pyarrow takes batch
-    boundaries from each data set's own row groups, so batches from the two folders need
-    not line up event for event. An event_info shard with no HT shard of the same name is
-    left out.
-
-    :returns: Counts keyed by (pileup in tenths, tower count), over events carrying both.
-    """
-    joint: dict = {}
-    for shard in sorted((folder / "event_info").glob("*.parquet")):
-        towers = folder / "HT" / shard.name
-        if towers.is_file():
-            _add_pileup_towers(joint, shard, towers)
-
-    return joint
-
-
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with open(path, "rb") as handle:
@@ -240,18 +227,6 @@ def _compression(shard: Path) -> list[str]:
     return sorted({group.column(i).compression for i in range(group.num_columns)})
 
 
-def _add_pileup_towers(joint: dict, event_shard: Path, towers_shard: Path) -> None:
-    """Pair one shard's pileup with its tower count, over events that carry both."""
-    pileup, has_pileup = _first_entries(event_shard, "nPV_True")
-    towers, has_towers = _first_entries(towers_shard, "tower_count")
-    if len(has_pileup) != len(has_towers):
-        return  # misaligned shards are a validation finding, not something to plot
-    both = has_pileup & has_towers
-    binned = np.rint(pileup[both] * PILEUP_SCALE).astype(np.int64)
-
-    stats.count_pairs(joint, binned, towers[both])
-
-
 # (run, lumi, event) packed into one key: run in bits 44..62, lumi in 32..43, event in
 # 0..31. The budget is 19 + 12 + 32 = 63 bits, leaving the sign bit of the int64 clear.
 RUN_SHIFT, LUMI_SHIFT = 44, 32
@@ -271,17 +246,3 @@ def _pack_event_key(run: np.ndarray, lumi: np.ndarray, event: np.ndarray):
     packed = (run.astype(np.int64) << RUN_SHIFT) | (lumi.astype(np.int64) << LUMI_SHIFT)
 
     return packed | event.astype(np.int64)
-
-
-def _first_entries(shard: Path, name: str) -> tuple[np.ndarray, np.ndarray]:
-    """First entry of each event, zero-filled, and a mask of events that had one.
-
-    The energy sums can hold no entry at all for an event, and the mask is what keeps such
-    an event out of the joint counts instead of entering it there as a genuine zero.
-    """
-    values = ak.from_arrow(pq.read_table(shard, columns=[name]))[name]
-    if values.ndim < 2:
-        return ak.to_numpy(values), np.ones(len(values), dtype=bool)
-    present = ak.to_numpy(ak.num(values, axis=1)) > 0
-
-    return ak.to_numpy(ak.fill_none(ak.firsts(values), 0)), present

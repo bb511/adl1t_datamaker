@@ -1,4 +1,4 @@
-"""Prescale menu parsing and seed construction. No ROOT file, no network."""
+"""Prescale menu parsing and seed construction."""
 
 import numpy as np
 import pytest

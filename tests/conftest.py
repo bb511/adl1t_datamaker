@@ -1,30 +1,8 @@
-"""Shared fixtures and the EOS skip logic.
-
-Tests marked `eos` stream real L1TNtuples from CERN EOS. They are skipped unless both
-the xrootd extra is installed and a Kerberos ticket is live, so the suite stays usable
-on a machine with a reader-only install.
-"""
+"""Shared fixtures. The whole suite runs offline, from the checkout alone."""
 
 from pathlib import Path
 
-import matplotlib
 import pytest
-
-import eos
-
-# The figure tests need a non-interactive backend; figures.use_cms_style sets the
-# style but never a backend.
-matplotlib.use("Agg")
-
-
-def pytest_collection_modifyitems(config, items):
-    reason = eos.blocker()
-    if reason is None:
-        return
-    skip = pytest.mark.skip(reason=f"EOS unavailable: {reason}")
-    for item in items:
-        if "eos" in item.keywords:
-            item.add_marker(skip)
 
 
 @pytest.fixture(scope="session")
