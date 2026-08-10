@@ -34,7 +34,9 @@ def use_cms_style(data: bool = False) -> None:
     STYLE["data"] = data
 
 
-def draw_all(summary: dict, outdir: Path, fmt: str = "png", clean: bool = False) -> list:
+def draw_all(
+    summary: dict, outdir: Path, fmt: str = "png", clean: bool = False
+) -> list:
     """Every figure for one data set.
 
     :param clean: Delete every file under ``outdir`` this run did not draw, so no figure
@@ -66,7 +68,9 @@ def draw_comparison(
     drawn = []
     for name, obj in sorted(first["objects"].items()):
         other = second["objects"].get(name, {}).get("features", {})
-        drawn += _overlay_object(name, obj, other, labels, outdir / name, fmt, fractions)
+        drawn += _overlay_object(
+            name, obj, other, labels, outdir / name, fmt, fractions
+        )
 
     return _relative(drawn, outdir.parent)
 
@@ -77,14 +81,22 @@ def _overlay_object(name, obj, other, labels, outdir, fmt, fractions) -> list:
         if feature not in other or name == "seeds":
             continue
         path = outdir / f"{feature}.{fmt}"
-        if _overlay(entry["counts"], other[feature]["counts"], labels,
-                    f"{name} {feature}", path, fractions):
+        if _overlay(
+            entry["counts"],
+            other[feature]["counts"],
+            labels,
+            f"{name} {feature}",
+            path,
+            fractions,
+        ):
             drawn.append(_record(path, f"`{name}.{feature}` in both data sets."))
 
     return drawn
 
 
-def _overlay(left: dict, right: dict, labels: list, label: str, path: Path, fractions: bool) -> bool:
+def _overlay(
+    left: dict, right: dict, labels: list, label: str, path: Path, fractions: bool
+) -> bool:
     """Two spectra on edges spanning both, so their shapes compare bin for bin.
 
     A column carrying no counts on either side, such as the event and time counters,
@@ -99,13 +111,19 @@ def _overlay(left: dict, right: dict, labels: list, label: str, path: Path, frac
     for index, (values, weights) in enumerate(pairs):
         _filled(axes, values, weights, edges, labels[index], f"C{index}", fractions)
     axes.legend(fontsize=9)
-    _label(axes, f"{label} [hardware units]", "Fraction of entries" if fractions else "Entries")
+    _label(
+        axes,
+        f"{label} [hardware units]",
+        "Fraction of entries" if fractions else "Entries",
+    )
     _save(fig, path)
 
     return True
 
 
-def _filled(axes, values, weights, edges, label: str, colour: str, fractions: bool) -> None:
+def _filled(
+    axes, values, weights, edges, label: str, colour: str, fractions: bool
+) -> None:
     """One filled series, scaled to fractions on request.
 
     A series with no entries keeps a scale of 1 rather than dividing by zero.
@@ -113,8 +131,15 @@ def _filled(axes, values, weights, edges, label: str, colour: str, fractions: bo
     scale = weights.sum() if fractions and weights.sum() else 1.0
     heights, _ = np.histogram(values, bins=edges, weights=weights / scale)
 
-    hep.histplot(heights, bins=edges, ax=axes, label=label,
-                 histtype="fill", alpha=0.45, color=colour)
+    hep.histplot(
+        heights,
+        bins=edges,
+        ax=axes,
+        label=label,
+        histtype="fill",
+        alpha=0.45,
+        color=colour,
+    )
 
 
 def spectrum(values, weights, label: str, path: Path, scale=None) -> None:
@@ -216,8 +241,12 @@ def _occupancy_figure(name: str, obj: dict, outdir: Path, fmt: str) -> dict | No
     grid, extent = _grid(obj["occupancy"])
     fig, axes = plt.subplots()
     image = axes.imshow(
-        grid.T, origin="lower", aspect="auto", extent=extent,
-        cmap="inferno", interpolation="nearest",
+        grid.T,
+        origin="lower",
+        aspect="auto",
+        extent=extent,
+        cmap="inferno",
+        interpolation="nearest",
     )
     fig.colorbar(image, ax=axes, label="Entries")
     _label(axes, f"{name} eta (hardware)", "phi (hardware)")
@@ -269,7 +298,9 @@ def _lumi_profile(profile: list, path: Path) -> None:
     fig, axes = plt.subplots()
     for index, run in enumerate(sorted({entry[0] for entry in profile})):
         points = sorted((entry[1], entry[2]) for entry in profile if entry[0] == run)
-        axes.plot(*zip(*points), label=f"run {run}", color=f"C{index % 10}", linewidth=1)
+        axes.plot(
+            *zip(*points), label=f"run {run}", color=f"C{index % 10}", linewidth=1
+        )
     axes.legend(fontsize=9)
     _label(axes, "Luminosity section", "Events")
     _save(fig, path)
@@ -346,7 +377,8 @@ def _record(path: Path, caption: str) -> dict:
 def _relative(drawn: list, root: Path) -> list:
     """Paths relative to the report written beside them, so the Markdown links resolve."""
     relative = [
-        figure | {"path": str(Path(figure["path"]).relative_to(root))} for figure in drawn
+        figure | {"path": str(Path(figure["path"]).relative_to(root))}
+        for figure in drawn
     ]
 
     return sorted(relative, key=lambda figure: figure["path"])

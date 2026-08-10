@@ -1,16 +1,16 @@
 # Scripts, configuration, and auxiliary files
 
-Every script here runs from the root of the repository, not from this folder. Two paths
-resolve against the working directory: the default pileup folder,
-`scripts/pileup_files/`, and the prescale menu named by each experiment config,
-`scripts/L1Menus/<menu>.csv`. A campaign started elsewhere therefore fails when it
-opens the menu. Only the hydra entry points are affected; `convert` and
-`convert_folder` take both paths on the command line. `run.snip` holds a worked example
-of every conversion and summary command; the publish example lives in
-[`publish/README.md`](publish/README.md).
+> [!IMPORTANT]
+> Run every script in this folder from the root of the repository!!!
 
-The scripts are thin: each parses arguments and calls into `src/adl1t_datamaker`, so
-the behaviour each documents is the library's.
+There are two paths that resolve based on you being in root: the default pileup folder,
+`scripts/pileup_files/`, and the prescale menu named by each experiment config,
+`scripts/L1Menus/<menu>.csv`.
+
+The `run.snip` file has a worked example of every conversion and summary command.
+For more details on the `publish` part of this repo, which handles the publishing of the
+produced data to `Zenodo` and `HuggingFace` is available in [publish/README.dm](publish/README.md).
+
 
 ## The scripts
 
@@ -25,28 +25,30 @@ the behaviour each documents is the library's.
 | `publish/publish` | a converted data set partitioned, carded, and packed into a release |
 | `publish/export_hf` | the HuggingFace mirror of a finished release |
 
-`convert` and `convert_folder` differ only in their input argument, `--input_file`
-against `--folder`, and in `--ncores`, which only the second has. Both take
-`--prescale_file`, `--output_path`, an optional `--pileup_folder`, and the four tree
-names. The defaults name the emulated trees, `l1UpgradeEmuTree/L1UpgradeTree` and
-`l1uGTEmuTree/L1uGTTree`; the unpacked ntuples hold the same trees without the `Emu`
-and carry no calorimeter summary tree, so `--calosumm_tree_name` defaults to nothing
-and, left unset, skips the CICADA object. `--mc` marks simulation: it skips the
-brilcalc pileup join and leaves `nPV_True` as the ntuple wrote it.
+The `convert` and `convert_folder` scripts differ only by one input argument:
+`--input_file` vs `--folder`, respectively.
+The latter also takes `--ncores`.
 
-Two behaviours are easy to trip over. `convert_folder` refuses to write a parquet whose
-stem already exists in the output folder, because several input folders can map onto
-one output folder; `convert` has no such guard and replaces silently. And `--silent`
-defaults to off here while both converter config groups set it on, so a campaign run is
-quieter than a hand-run conversion.
+The scripts expect the emulated trees by default, `l1UpgradeEmuTree/L1UpgradeTree` and
+`l1uGTEmuTree/L1uGTTree`.
+The unpacked trees do not have `Emu` and have no calo summary.
+Therefore, `--calosumm_tree_name` defaults to nothing skips the CICADA object.
+The `--mc` flag is used when wanting to convert Monte Carlo simulation data: it skips the
+brilcalc pileup join and leaves `nPV_True` as it was originally wrote it.
+This is because brilcalc adds pileup information to real data, while for simulated data
+this information is readily available.
 
-`summary` takes one or more `--folder` arguments and writes a `SUMMARY` directory into
+**The `convert_folder` script refuses to write a parquet whose stem already exists.**
+The `convert` script does not have this guard and overwrites silently.
+The `--silent` flag defaults to off here while both converter config groups set it on,
+so a campaign run is quieter than a hand-run conversion.
+
+The `summary` script takes one or more `--folder` arguments and writes a `SUMMARY` directory into
 each; `--outdir` redirects the writes and then accepts only one folder.
 
 ## Configuration
 
-`convert_run` and `summary_run` are hydra applications reading `configs/`. Both compose
-the same two groups, so a campaign is described once and both commands understand it.
+The `convert_run` and `summary_run` scripts are hydra applications reading `configs/`.
 
 ```
 configs/
@@ -59,11 +61,8 @@ configs/
   experiment/*.yaml       one campaign each
 ```
 
-An experiment config is applied with `+experiment=<name>`; the `+` is needed because
-the group is not in either base's defaults list. Each is marked `# @package _global_`
-and supplies the input root on EOS, the mapping from input folders to output folders,
-the prescale menu, and the `mc` flag. Two override the converter group to `unpacked`,
-so those conversions carry no CICADA score.
+An experiment config is applied with `+experiment=<name>`.
+**Again, for conversion, you need access to CERN EOS and a CERN CMS membership.**
 
 | Experiment | Simulation | Trees | Menu | Input folders to output folders |
 | --- | --- | --- | --- | --- |
@@ -74,22 +73,18 @@ so those conversions carry no CICADA score.
 | `L1TNtupleRun3-133XWinter24` | yes | emulated | 2023 v1.2.0 | 38 to 38 |
 | `L1TNtupleRun3-142XWinter25` | yes | emulated | 2024 v1.3.0 | 32 to 21 |
 
-The Winter25 campaign is the one that merges: six of its samples were produced by CRAB
-across several shard directories, and the config maps each sample's shards onto one
-output folder. Two shards of the same sample can hold files of the same name, which is
-why the overwrite guard exists and `allow_overwrite` defaults to `False`.
-
 `output_root_path` is mandatory and given on the command line.
 
 ## Prescale menus
 
-The menus in `L1Menus/` decide which trigger algorithms reach the parquet. A menu is a
-csv with one row per algorithm; column 6, counting from zero, holds the prescale at
-nominal luminosity, and `1` there means unprescaled. Everything else is dropped, mostly
-algorithms disabled at this luminosity and marked `0`, the rest genuinely prescaled.
-The header of column 6 names the luminosity and changes with the menu generation, so
-the code identifies the column by position and reports the header it found. A menu
-whose column 6 never holds `1` raises rather than producing an empty seed list.
+The menus in `L1Menus/` pertain to configurations of each trigger run: they describe
+which algorithms were active during that run and how their output is scaled.
+A menu is a csv with one row per algorithm; column 6, counting from zero, has the prescale at
+nominal luminosity, and `1` there means unprescaled.
+Everything else is dropped, mostly algorithms disabled at this luminosity and marked `0`,
+the rest genuinely prescaled.
+The header of column 6 is the luminosity and changes with the menu generation.
+The code identifies the column by position and reports the header it found.
 
 | Menu | Nominal luminosity column | Unprescaled algorithms | Used by |
 | --- | --- | --- | --- |
@@ -105,27 +100,24 @@ whose column 6 never holds `1` raises rather than producing an empty seed list.
 
 The two 2025 v1.1.1 files differ in three rows: the edited one renames three
 `L1_DoubleTau_Iso*` seeds and thereby names three algorithms twice, so it selects 190
-rows but only 187 distinct algorithms. Duplicates are collapsed when the names are
-matched against the trigger tree.
-
-The nine unprescaled sets are pairwise distinct, so a summary can name the menu a data
-set was made with from its seed columns alone, with no root file and no config.
+rows but only 187 distinct algorithms.
+Duplicates are collapsed when the names are matched against the trigger tree.
 
 ## Pileup files
 
-`pileup_files/` holds brilcalc output, one file per run. For recorded data, the
-conversion overwrites `nPV_True` per run and luminosity section with the `avgpu` that
-brilcalc reports; simulation keeps whatever the ntuple carried.
+The `pileup_files/` folder has `brilcalc` output, which is a CERN tool for retrieving the
+pileup conditions for each of the events.
+Pileup is the number of concomitant collisions within one bunch crossing.
+There is one such `brilcalc` file per run.
+For recorded data, the conversion overwrites `nPV_True` per run and luminosity section
+with the `avgpu` that brilcalc reports; simulation keeps whatever the original tree carried.
 
 To process a new run, drop its brilcalc file here, named `run<number>*`: the code globs
-for the prefix alone. The conversion aborts when a run has no file, because silently
-unpopulated pileup is worse than a failure. A luminosity section missing from a present
-file yields zero, indistinguishable from a genuine zero outside stable beams, so the
-summary reports the zero fraction and warns when it exceeds one per cent.
+for the prefix alone.
+A luminosity section missing from a present file yields zero, indistinguishable from
+a genuine zero outside stable beams, so the summary reports the zero fraction and warns when it exceeds one per cent.
 
 ## Publish
 
-`publish/` turns a converted data set into a release: the split archives, the dataset
-card, the licence, and the checksums. [`publish/README.md`](publish/README.md)
-documents it, together with the two inputs that come from elsewhere, the frozen split
-map and the split summary that travels with it.
+The `publish/` contains all the scripts pertaining to publishing the data into a release.
+More details are available at [`publish/README.md`](publish/README.md).

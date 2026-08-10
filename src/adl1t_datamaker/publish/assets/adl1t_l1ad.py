@@ -1,8 +1,7 @@
-"""Turn the published L1 anomaly-detection data into model input.
+"""Turn the L1 anomaly-detection parquet data into model input for published results.
 
-The files ship raw: original L1Ntuple field names, every recorded event, every in-time
-object. This module applies the same steps the paper's pipeline did, each of them
-optional, and produces the (N, 39, 3) float32 array its models consume.
+This module applies the same steps the associated paper and produces the (N, 39, 3) float32
+array its models consume.
 
     import adl1t_l1ad as l1
 
@@ -117,7 +116,9 @@ def rename_fields(objects: dict) -> dict:
     return out
 
 
-def apply_saturation_cuts(objects: dict, event_cut: bool = True, object_cut: bool = True) -> dict:
+def apply_saturation_cuts(
+    objects: dict, event_cut: bool = True, object_cut: bool = True
+) -> dict:
     """Drop ET-saturated events and mask out saturated objects.
 
     Expects short field names, i.e. call after :func:`rename_fields`. The event cut
@@ -149,7 +150,11 @@ def normalise(objects: dict, norm_params: dict) -> dict:
             continue
         out[name] = ak.Array(
             {
-                f: (array[f] - params[f]["shift"]) / params[f]["scale"] if f in params else array[f]
+                f: (
+                    (array[f] - params[f]["shift"]) / params[f]["scale"]
+                    if f in params
+                    else array[f]
+                )
                 for f in array.fields
             }
         )
@@ -179,7 +184,10 @@ def _pad_object(array: ak.Array, nconst: int) -> tuple:
 
 
 def to_model_tensor(
-    objects: dict, norm_params: dict, apply_cuts: bool = True, nconst: dict | None = None
+    objects: dict,
+    norm_params: dict,
+    apply_cuts: bool = True,
+    nconst: dict | None = None,
 ) -> tuple:
     """Build the (N, 39, 3) float32 input and its padding mask.
 

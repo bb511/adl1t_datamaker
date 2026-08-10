@@ -105,7 +105,9 @@ def write_summary(summary: dict, outdir: Path, figure_format: str, clean: bool) 
     """
     _guard_output(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    summary["figures"] = figures.draw_all(summary, outdir / "figures", figure_format, clean)
+    summary["figures"] = figures.draw_all(
+        summary, outdir / "figures", figure_format, clean
+    )
     (outdir / "REPORT.md").write_text(report.render_report(summary))
     write_json(summary, outdir / "summary.json")
 
@@ -151,7 +153,9 @@ def git_commit() -> str:
     try:
         head = subprocess.run(
             ["git", "-C", str(Path(__file__).resolve().parent), "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return "unknown"
@@ -196,9 +200,7 @@ def _assemble(folder: Path, measured: dict, inventory: dict, provenance: dict) -
 
 def _object(counts: measure.ObjectCounts) -> dict:
     return {
-        "features": {
-            name: _feature(counts, name) for name in sorted(counts.features)
-        },
+        "features": {name: _feature(counts, name) for name in sorted(counts.features)},
         "multiplicity": _store(counts.multiplicity),
         "capacity": schema.documented_capacities().get(counts.name),
         "occupancy": _pairs_to_json(counts.occupancy),
@@ -218,7 +220,10 @@ def _feature(counts: measure.ObjectCounts, name: str) -> dict:
 
 
 def _store(store: stats.ValueCounts) -> dict:
-    return {"stats": stats.summarise(store), "counts": stats.counts_to_json(store.counts)}
+    return {
+        "stats": stats.summarise(store),
+        "counts": stats.counts_to_json(store.counts),
+    }
 
 
 def _totals(inventory: dict) -> dict:
@@ -280,7 +285,9 @@ def _lumi_sections(pairs: dict) -> dict:
     for (run, lumi), events in sorted(pairs.items()):
         per_run.setdefault(run, {})[lumi] = events
 
-    return {str(run): _run_sections(sections) for run, sections in sorted(per_run.items())}
+    return {
+        str(run): _run_sections(sections) for run, sections in sorted(per_run.items())
+    }
 
 
 def _run_sections(sections: dict) -> dict:
@@ -338,7 +345,9 @@ def _trigger(counts: measure.ObjectCounts | None) -> dict:
         "events": counts.rows,
         "l1bit_accepted": accepted.counts.get(1, 0) if accepted else None,
         "never_fired": sorted(name for name, count in fired.items() if count == 0),
-        "always_fired": sorted(name for name, count in fired.items() if count == counts.rows),
+        "always_fired": sorted(
+            name for name, count in fired.items() if count == counts.rows
+        ),
         "multiplicity": _store(counts.seed_multiplicity),
         "seeds": _ranked_seeds(fired, counts.rows),
     }
@@ -366,7 +375,11 @@ def _guard_output(outdir: Path) -> None:
     measured again from the parquet beside it, so summaries are rewritten in place. An
     existing summary.json is the only evidence that the directory came from here.
     """
-    if outdir.is_dir() and any(outdir.iterdir()) and not (outdir / "summary.json").is_file():
+    if (
+        outdir.is_dir()
+        and any(outdir.iterdir())
+        and not (outdir / "summary.json").is_file()
+    ):
         raise FileExistsError(
             tcols.FAIL + f"{outdir} is not empty and holds no summary.json, so it was "
             "not written by this tool. Move it aside or pass a different output "

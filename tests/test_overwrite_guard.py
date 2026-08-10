@@ -49,8 +49,10 @@ def test_clashing_stem_raises(tmp_path, converter):
 
     with pytest.raises(FileExistsError, match="L1Ntuple_2"):
         converter.convert_folder(
-            folder=leaf, prescale_file=tmp_path / "menu.csv",
-            pileup_folder=tmp_path, output_path=out,
+            folder=leaf,
+            prescale_file=tmp_path / "menu.csv",
+            pileup_folder=tmp_path,
+            output_path=out,
         )
 
 
@@ -63,8 +65,10 @@ def test_distinct_stems_are_fine(tmp_path, converter, monkeypatch):
     converted = []
     monkeypatch.setattr(converter, "_conversion", converted.append)
     converter.convert_folder(
-        folder=leaf, prescale_file=tmp_path / "menu.csv",
-        pileup_folder=tmp_path, output_path=out,
+        folder=leaf,
+        prescale_file=tmp_path / "menu.csv",
+        pileup_folder=tmp_path,
+        output_path=out,
     )
 
     assert len(converted) == 2
@@ -77,8 +81,11 @@ def test_allow_overwrite_opts_back_in(tmp_path, converter, monkeypatch):
 
     monkeypatch.setattr(converter, "_conversion", lambda _: None)
     converter.convert_folder(
-        folder=leaf, prescale_file=tmp_path / "menu.csv",
-        pileup_folder=tmp_path, output_path=out, allow_overwrite=True,
+        folder=leaf,
+        prescale_file=tmp_path / "menu.csv",
+        pileup_folder=tmp_path,
+        output_path=out,
+        allow_overwrite=True,
     )
 
 
@@ -87,5 +94,6 @@ def test_empty_folder_still_raises(tmp_path, converter):
         converter.convert_folder(
             folder=make_leaf(tmp_path, "0000", []),
             prescale_file=tmp_path / "menu.csv",
-            pileup_folder=tmp_path, output_path=tmp_path / "out",
+            pileup_folder=tmp_path,
+            output_path=tmp_path / "out",
         )

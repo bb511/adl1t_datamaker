@@ -17,7 +17,19 @@ from conversion_helpers import EMULATED
 # Objects compared column for column against the docs tables. seeds is absent because
 # its columns come from the prescale menu rather than from docs/README.md, and
 # event_info is left to test_code_requests_documented_event_information below.
-OBJECTS = ("muons", "jets", "egammas", "taus", "cica", "ET", "HT", "MET", "MHT", "FET", "FHT")
+OBJECTS = (
+    "muons",
+    "jets",
+    "egammas",
+    "taus",
+    "cica",
+    "ET",
+    "HT",
+    "MET",
+    "MHT",
+    "FET",
+    "FHT",
+)
 
 DOCUMENTED = schema.included_features()
 

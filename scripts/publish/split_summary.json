@@ -1,0 +1,546 @@
+{
+  "config_sha256": "25e67f3dbdfa6d8165fc4b6e095ec1366a23fcf2b1b4ee7b8b283a1c5c9e796d",
+  "dataset_version": "adl1t-l1ad-v1",
+  "datasets": {
+    "GluGluHTo2B_Par-MH-125": {
+      "category": "signal",
+      "counts": {
+        "test": 195736,
+        "valid": 293231
+      },
+      "events_passing_filter": 439006,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 488967
+    },
+    "GluGluHto2G_Par-MH-125": {
+      "category": "signal",
+      "counts": {
+        "test": 399132,
+        "valid": 598666
+      },
+      "events_passing_filter": 970566,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 997798
+    },
+    "GluGluHto2G_Par-MH-90": {
+      "category": "signal",
+      "counts": {
+        "test": 295444,
+        "valid": 443336
+      },
+      "events_passing_filter": 726841,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 738780
+    },
+    "GluGluHto2Tau_Par-MH-125": {
+      "category": "signal",
+      "counts": {
+        "test": 23805,
+        "valid": 35706
+      },
+      "events_passing_filter": 59234,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 59511
+    },
+    "GluGlutoHHto2B2WtoLNu2Q_Par-c2-0-kl-1-kt-1": {
+      "category": "signal",
+      "counts": {
+        "test": 119714,
+        "valid": 179378
+      },
+      "events_passing_filter": 291713,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 299092
+    },
+    "HHHto4B2Tau_Par-c3-0-d4-0": {
+      "category": "signal",
+      "counts": {
+        "test": 800123,
+        "valid": 1200063
+      },
+      "events_passing_filter": 1843872,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 2000186
+    },
+    "HHHto6B_Par-c3-0-d4-0": {
+      "category": "signal",
+      "counts": {
+        "test": 255858,
+        "valid": 383502
+      },
+      "events_passing_filter": 588786,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 639360
+    },
+    "SUSYGluGluToBBHTo2B_Par-M-1200": {
+      "category": "signal",
+      "counts": {
+        "test": 19676,
+        "valid": 29588
+      },
+      "events_passing_filter": 41866,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 49264
+    },
+    "SUSYGluGluToBBHToBB_Par-M-120": {
+      "category": "signal",
+      "counts": {
+        "test": 200004,
+        "valid": 299996
+      },
+      "events_passing_filter": 499890,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 500000
+    },
+    "SUSYGluGluToBBHToBB_Par-M-350": {
+      "category": "signal",
+      "counts": {
+        "test": 80029,
+        "valid": 119971
+      },
+      "events_passing_filter": 199000,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 200000
+    },
+    "SUSYGluGluToBBHToBB_Par-M-600": {
+      "category": "signal",
+      "counts": {
+        "test": 20000,
+        "valid": 30000
+      },
+      "events_passing_filter": 46346,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 50000
+    },
+    "SingleNeutrino_E-10-gun": {
+      "category": "background",
+      "counts": {
+        "test": 799998,
+        "valid": 1200002
+      },
+      "events_passing_filter": 1999969,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 2000000
+    },
+    "TTHTo2C_Par-MH-125": {
+      "category": "signal",
+      "counts": {
+        "test": 800464,
+        "valid": 1199636
+      },
+      "events_passing_filter": 1862236,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 2000100
+    },
+    "TTHto2B_Par-MH-125": {
+      "category": "signal",
+      "counts": {
+        "test": 800225,
+        "valid": 1200165
+      },
+      "events_passing_filter": 1868243,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 2000390
+    },
+    "VBFHTo2C_Par-MH-125": {
+      "category": "signal",
+      "counts": {
+        "test": 199720,
+        "valid": 299566
+      },
+      "events_passing_filter": 493394,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 499286
+    },
+    "VBFHto2B_Par-MH-125": {
+      "category": "signal",
+      "counts": {
+        "test": 199733,
+        "valid": 299564
+      },
+      "events_passing_filter": 494013,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 499297
+    },
+    "VBFHto2Tau_Par-MH-125": {
+      "category": "signal",
+      "counts": {
+        "test": 636965,
+        "valid": 955535
+      },
+      "events_passing_filter": 1564196,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 1592500
+    },
+    "WtoTauto3Mu": {
+      "category": "signal",
+      "counts": {
+        "test": 39998,
+        "valid": 60002
+      },
+      "events_passing_filter": 99980,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 100000
+    },
+    "ZB_run396102": {
+      "category": "zerobias",
+      "counts": {
+        "test": 2072007,
+        "train": 6220470,
+        "valid": 2071292
+      },
+      "events_passing_filter": 10363545,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 10363769
+    },
+    "ZB_run398183": {
+      "category": "zerobias",
+      "counts": {
+        "test": 2105523,
+        "train": 6312116,
+        "valid": 2106228
+      },
+      "events_passing_filter": 10523634,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 10523867
+    },
+    "ggH-suep-decay": {
+      "category": "signal",
+      "counts": {
+        "test": 39760,
+        "valid": 59640
+      },
+      "events_passing_filter": 99398,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 99400
+    },
+    "haa-4b-ma15": {
+      "category": "signal",
+      "counts": {
+        "test": 39958,
+        "valid": 59942
+      },
+      "events_passing_filter": 99730,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 99900
+    },
+    "smj-case-A": {
+      "category": "signal",
+      "counts": {
+        "test": 39642,
+        "valid": 59458
+      },
+      "events_passing_filter": 98993,
+      "objects": [
+        "ET",
+        "FET",
+        "FHT",
+        "HT",
+        "MET",
+        "MHT",
+        "egammas",
+        "event_info",
+        "jets",
+        "muons",
+        "seeds",
+        "taus"
+      ],
+      "raw_events": 99100
+    }
+  },
+  "dropped_row_rule": "assigned the split of the nearest preceding kept event",
+  "event_filter": "ET.Et < 4095 (rows failing it carry order = -1)",
+  "split_aux": 0.6,
+  "split_fractions": {
+    "test": "remainder",
+    "train": 0.6,
+    "valid": 0.2
+  },
+  "split_seed": 42
+}

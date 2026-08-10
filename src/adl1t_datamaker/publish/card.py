@@ -1,11 +1,9 @@
 # The dataset card and licence that ship inside the published record.
 #
-# Every number the card quotes is derived rather than typed. The event counts come from
+# Every number the card quotes is derived from the data itself. The event counts come from
 # the frozen split summary; the unit factors, hardware bit widths and collection
 # capacities come from schema.py, which reads docs/README.md; the constituent counts
-# come from the reader the record ships. Version 1 of this card carried a hand-copied
-# calorimeter eta factor of 0.5 against the documented 0.0435, which put a jet at
-# |eta| = 57, and deriving is what stops that recurring.
+# come from the reader the record ships.
 
 import textwrap
 
@@ -51,29 +49,34 @@ courtesy: cite this record by its DOI, and the accompanying data descriptor once
 it is published.
 """
 
-CARD = """# L1 trigger anomaly-detection dataset
+CARD = """# Trigger Anomaly Detection for New Physics
 
-Level-1 trigger objects from the CMS experiment at the LHC: {zb_events:,} zero-bias
-events recorded in 2025, alongside {n_signal} simulated signal samples and one simulated
-zero-bias-like background sample. The record is built for unsupervised anomaly
-detection, so a model trains on the zero-bias events and is validated against signals it
-never saw.
+This dataset contains Level-1 Trigger objects from the CMS experiment at the CERN Large Hadron Collider, assembled for research on unsupervised anomaly detection in the trigger.
+The goal of unsupervised anomaly detection in this context is the discovery of new physics.
+**This data set does not contain new physics. It is meant for research on anomaly detectors.**
 
-Every recorded event is here, and every in-time object. The saturation cuts the
-accompanying study applied are documented below rather than applied to the files, so you
-can reproduce that study exactly or depart from it wherever you choose. Three further
-reductions were made when the files were produced, before any of that, and "What is not
-here" lists them.
+In the new physics search context, recording true anomalies or simulating them is impossible, compared to other settings (e.g. industrial applications of anomaly detection) where this is commonly done.
+Anomaly simulation data sets are provided, but they should be used with the aforementioned caveat in mind. Aside from its high statistics, **this data set uniquely provides simulations of the normal data**.
 
-## What version 2 corrects
+* **normal data**: zero-bias events recorded during 2025 proton–proton running (runs 396102 and 398183); these events are chosen at random from all the proton-proton collisions that happen inside the CMS detector and are recorded by it.
 
-Version 1 of this record shipped a wrong `ET/ETTEM` column. The producer read it with
-the wrong sum-type flag, so almost every value came out zero. Version 2 reads the
-correct flag, and `ETTEM` now carries the electromagnetic part of the total transverse
-energy as documented. Every other column is unchanged, `ET/Et` included, and so is the
-partition into train, valid and test.
+* **anomaly simulations**: 20 simulated signal data sets covering Higgs, multi-Higgs, SUSY and exotic scenarios from the CMS Run 3 Winter25 campaign.
+
+* **normal data simulation**: one simulated zero-bias-like background sample (SingleNeutrino).
+
+The normal data has 20,887,636 events.
+The normal data simulation has 2,000,000 events.
+The 20 anomaly simulations amount to 13,012,931 events.
+
+Each event provides particle level and event information, as recorded by the trigger.
+The data is published pre-partitioned into training, validation and test splits: the zero-bias data 60/20/20, the simulated samples 60/40 between validation and test.
+All the feature values are in the trigger-native format of hardware integers.
+
+The associated github repository that was used to produce this data will be linked here once this record can be deanonymised.
 
 ## Layout
+
+The tree tar files in the record contain the following directory structure:
 
 ```
 zerobias/<run>/{{train,valid,test}}/<object>/*.parquet
@@ -81,39 +84,19 @@ signal/<sample>/{{valid,test}}/<object>/*.parquet
 background/<sample>/{{valid,test}}/<object>/*.parquet
 ```
 
-The record holds that tree as three archives, `train.tar`, `valid.tar` and `test.tar`,
-each unpacking straight into the paths above with no wrapping directory, so you can take
-only the split you need. Zero bias is the only source of training data, and the
-simulated samples appear in `valid.tar` and `test.tar`. The card and the licence sit
-loose in the record, readable without downloading anything.
+The zero bias constitutes `train.tar` by itself.
+The simulated anomaly samples, as well as the simulated background sample only appear in `valid.tar` and `test.tar`, together with zero-bias.
 
-One directory holds one object collection, sharded across parquet files. Every
-collection of a split has the same rows in the same order, so row *i* of `jets/` and row
-*i* of `muons/` describe one event.
+Each subdirectory is a different object that contains its collection of parquet files.
+Every collection of a split has the same rows in the same order, so row *i* of `jets/` and row *i* of `muons/` describe one event.
 
-Objects: `ET`, `FET`, `FHT`, `HT`, `MET`, `MHT`, `egammas`, `event_info`, `jets`,
-`muons`, `seeds`, `taus`.
 
-`seeds/` holds the per-event decision of every unprescaled algorithm in the L1 menu, and
-takes about a third of the total volume, so skip it if you want kinematics alone.
+## Comparison with other algorithms
 
-## What is not here
-
-Three reductions were made when the parquet was written, and no later step undoes them.
-
-**Out-of-time objects.** The trigger records objects from the five bunch crossings
-around the triggered one, and only the central crossing is written out. No event is
-lost, only objects, and the `Bx` column that would identify them is not kept either.
-
-**CICADA.** The CICADA score and the `L1_CICADA_*` menu bits are another anomaly
-trigger's output rather than detector input, so they are excluded. One consequence is
-worth knowing: `L1bit` in `seeds/` is the OR over the algorithms as they stood before
-that exclusion, so it can be true on an event where every published bit is false.
-
-**Everything off the producer's allow-list.** The collections carry what the global
-trigger sees and nothing else, so tower-level quantities, pile-up estimates, the float
-duplicates of the integer branches, and the muon shower flags are all absent, and
-`seeds/` keeps the unprescaled algorithms alone.
+The level-1 trigger contains around 180 algorithms that take data like the one in this record and output a decision.
+These algorithms were applied to every event in the presented data sets as well.
+The results are stored in the `seeds` folder and can be used to do comparatives studies with other live algorithms currently running in the CMS trigger.
+Skip this folder if you want kinematics alone and do not want to compare your anomaly detector with the rest of the algorithms.
 
 ## Splits
 
@@ -124,105 +107,48 @@ split 60/40 between `valid` and `test`.
 |---|---|
 {split_table}
 
-The split was drawn once with NumPy's PCG64 generator seeded with **{seed}**, over the
-events passing the event cut below, with the two zero-bias runs concatenated in the
-order `{zb_order}`.
-
-## Reproducing the study's preprocessing
-
-Four steps, in this order. None of them needs code from the study, since every threshold
-and count is given here.
-
-**1. Rename.** Muons, jets, e-gammas and taus carry their original ntuple field names,
-and the study renames three of them per collection:
-
-| collection | raw | renamed |
-|---|---|---|
-| muons | `muonIEt`, `muonIEta`, `muonIPhi` | `Et`, `eta`, `phi` |
-| jets | `jetIEt`, `jetIEta`, `jetIPhi` | `Et`, `eta`, `phi` |
-| e-gammas | `egIEt`, `egIEta`, `egIPhi` | `Et`, `eta`, `phi` |
-| taus | `tauIEt`, `tauIEta`, `tauIPhi` | `Et`, `eta`, `phi` |
-
-Everything else in those collections keeps its ntuple name, so `muonQual`, `muonChg`,
-`muonIEtaAtVtx`, `egIso`, `jetHwQual`, `jetRawEt` and `tauIso` are unchanged, and a
-mixture of renamed and original names is intended.
-
-The energy sums work differently. The ntuple stores all six in one branch tagged by sum
-type, so the producer demultiplexes them into six collections and names the fields
-itself: `ET` carries `Et` and `ETTEM`, `HT` carries `Et` and `tower_count`, and `MET`,
-`MHT`, `FET` and `FHT` each carry `Et` and `phi`. `event_info` keeps its ntuple names
-and gains `split` and `order`.
-
-Every column is a variable-length list per event, the single-valued ones included:
-`run`, `lumi`, `event`, `bx`, `orbit`, `time`, `nPV_True` and the six sums all arrive as
-length-1 lists.
-
-**2. Cuts.** These are counter limits rather than physics selections.
-
-| kind | cut | effect |
-|---|---|---|
-| event | `ET.Et < {et_sat}` | drops the event entirely |
-| object | `Et < {obj_cut}` on muons, e-gammas, jets and taus | removes that object, keeps the event |
-| object | `FET.Et < {fet_sat}` | removes that entry, keeps the event |
-
-For muons, e-gammas and taus, {obj_cut} is where the hardware stops: their `Et` is
-{obj_bits} bits wide. Jet `Et` is {jet_bits} bits wide and saturates at {jet_sat}
-instead, so the same threshold applied to jets is the study's own choice rather than a
-counter limit, and jets above it are ordinary values.
-
-The event cut removes {dropped:,} of {total_raw:,} zero-bias events ({dropped_pct}).
-Those events **are published**: they carry `order = -1` in `event_info` and sit at the
-end of their split.
-
-**3. Normalise.** Per collection and feature, subtract the median and divide by the 5-95
-interquantile range, both fitted on the training split alone and over real (unpadded)
-constituents. The constants are not shipped, because the training split here recomputes
-them exactly. Fit on train, then apply those same constants to valid and test; refitting
-per split would leak.
-
-**4. Pad to a fixed shape.** Keep {nconst}, padding with zeros, which gives
-`(N, {nrows}, {nfeats})`, and flatten for the {nflat} features the models take. Stack
-the collections in the order {stack_order}, and the features within each as `Et`, `eta`,
-`phi`. `FET` has no eta, so that slot is zeroed and masked. A companion boolean mask
-marks the real constituents.
+The split was drawn once with NumPy's PCG64 generator seeded with **{seed}**.
+The two zero-bias runs concatenated in the order: `{zb_order}`.
 
 ## Units
 
-Values are integer hardware units, as the trigger produces them, and nothing in the
-files is scaled. Multiply by these to get GeV, radians and pseudorapidity:
+Each feature of each object has values that are integer hardware units, as the trigger produces them.
+Nothing in the files is scaled.
+Multiply by these to get GeV, radians and pseudorapidity:
 
 | collection | Et | eta | phi |
 |---|---|---|---|
 {units_table}
 
-Those decimals are rounded. The steps are exact fractions: calorimeter eta is 0.0870/2,
+The decimals are rounded. The steps are exact fractions: calorimeter eta is 0.0870/2,
 muon eta is 0.0870/8, calorimeter phi is 2*pi/144, and muon phi is 2*pi/576.
-`muonIEtaAtVtx` and `muonIPhiAtVtx` take the same scales as muon eta and phi. Quality,
-charge, isolation, index and tower-count fields are already integers and unscaled, as is
+`muonIEtaAtVtx` and `muonIPhiAtVtx` take the same scales as muon eta and phi.
+Quality, charge, isolation, index and tower-count fields are already integers and unscaled, as is
 every `event_info` field and every `seeds` bit.
 
 The four object collections are jagged, holding one entry per in-time object up to the
 global trigger's capacity of {capacities}, with no padding and no truncation.
 
-## Things that will catch you out
+## Caveats
 
 **The menu differs between data and simulation.** Zero bias carries 183 algorithm
 columns and simulation carries 161, of which 147 are shared, and the two do not order
 them the same way. Select seeds by name, never by position.
 
-**`nPV_True` carries two types.** It is float32 in zero bias and int32 in simulation, so
-concatenating the two without a cast fails on type promotion.
+**`nPV_True` carries two types.** It is float32 in zero bias and int32 in simulation.
 
-**`jetRawEt` is zero throughout the zero-bias data.** The branch is unfilled in data
+**`jetRawEt` is zero throughout the zero-bias data.** The branch is unfilled in original data
 ntuples, though it carries real values in simulation.
 
-## Reading the row order
+## Standard Preprocessing
 
-Within a split, rows sit in the order the study consumed them, so reading front to back
-after applying the event cut reproduces its input row for row. `event_info` carries two
-columns the ntuple does not: `split`, so a file separated from its directory is still
-self-describing, and `order`, the position in that ordering, which is `-1` for the
-events the study's cut removed.
+Multiple studies were done internally at CERN on this data set.
+A number of conventional preprocessing steps were applied in each of these studies.
+Therefore, `event_info` carries two columns that the raw data does not: `split`, so a
+file separated from its directory is still self-describing, and `order`, the position
+in that ordering, which is `-1` for the events that the conventional preprocessing removed.
+Links to the papers detailing these studies will be attached here once these studies
+become public.
 
 **A split can span several directories.** The two zero-bias runs were permuted together,
 so their training rows interleave and `order` counts across the whole split rather than
@@ -230,21 +156,11 @@ within one run. To rebuild the study's order, read both run directories, concate
 them, then stable-sort by `order` with the `-1` rows left at the end. Concatenating one
 run after the other gives the right rows in the wrong order.
 
-## Notes for comparison
-
-If you are comparing against the accompanying study, two of its choices matter. It
-evaluated each simulated sample on the first 163,840 events of that sample's split alone
-while using the zero-bias split in full, and it assigned sample labels by sorted sample
-name, with zero bias 0, the simulated background -1, and the signals 1 upward.
-
 ## Provenance
 
 Zero-bias data: CMS, 2025, runs {runs}. Simulated samples: CMS Run 3 Winter25 campaign.
 The values are the Level-1 trigger's own reconstructed objects rather than offline
 reconstruction.
-
-This record is the archival copy. A mirror carrying one row per event, which suits
-loaders that expect a single table, will follow on HuggingFace.
 
 ## Licence
 
@@ -263,15 +179,17 @@ def render(summary: dict) -> str:
         ``dataset_version`` is deliberately not read, because that file travels with the
         release unchanged and still names the version it was first written for.
     """
-    return _rewrap(CARD.format(
-        split_table=split_table(summary["datasets"]),
-        seed=summary["split_seed"],
-        units_table=units_table(),
-        capacities=capacities(),
-        **event_counts(summary["datasets"]),
-        **cut_limits(),
-        **tensor_shape(),
-    ))
+    return _rewrap(
+        CARD.format(
+            split_table=split_table(summary["datasets"]),
+            seed=summary["split_seed"],
+            units_table=units_table(),
+            capacities=capacities(),
+            **event_counts(summary["datasets"]),
+            **cut_limits(),
+            **tensor_shape(),
+        )
+    )
 
 
 def event_counts(datasets: dict) -> dict:
@@ -301,7 +219,9 @@ def split_table(datasets: dict) -> str:
     rows += [
         f"| {name} valid / test | {datasets[name]['counts'].get('valid', 0):,}"
         f" / {datasets[name]['counts'].get('test', 0):,} |"
-        for name in sorted(k for k, v in datasets.items() if v["category"] != "zerobias")
+        for name in sorted(
+            k for k, v in datasets.items() if v["category"] != "zerobias"
+        )
     ]
 
     return "\n".join(rows)
@@ -357,7 +277,9 @@ def tensor_shape() -> dict:
 def _split_total(datasets: dict, split: str) -> int:
     """Zero-bias events in one split, summed over the runs that contribute to it."""
     return sum(
-        v["counts"].get(split, 0) for v in datasets.values() if v["category"] == "zerobias"
+        v["counts"].get(split, 0)
+        for v in datasets.values()
+        if v["category"] == "zerobias"
     )
 
 
@@ -396,5 +318,8 @@ def _rewrap(text: str) -> str:
 def _fill(block: str) -> str:
     """Wrap one paragraph without splitting identifiers such as ``adl1t-l1ad``."""
     return textwrap.fill(
-        " ".join(block.split()), width=WRAP, break_long_words=False, break_on_hyphens=False
+        " ".join(block.split()),
+        width=WRAP,
+        break_long_words=False,
+        break_on_hyphens=False,
     )

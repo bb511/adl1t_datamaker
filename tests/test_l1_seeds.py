@@ -51,8 +51,10 @@ def test_unprescaled_names_needs_no_root_file(menus, menu, expected):
 
 def test_every_menu_has_a_distinct_unprescaled_set(menus):
     """Menu identification from seed columns is only unambiguous if this holds."""
-    sets = [frozenset(l1_seeds.unprescaled_names(menu))
-            for menu in sorted(menus.glob("*.csv"))]
+    sets = [
+        frozenset(l1_seeds.unprescaled_names(menu))
+        for menu in sorted(menus.glob("*.csv"))
+    ]
 
     assert len(set(sets)) == len(sets), "two menus select the same seeds"
 
@@ -127,8 +129,7 @@ def test_menu_selecting_nothing_names_the_column(tmp_path):
     """
     menu = tmp_path / "wrong_layout.csv"
     menu.write_text(
-        "Index,Name,Emergency,a,b,c,9p9E34,extra\n"
-        "0,L1_Something,,,,,63000,x\n"
+        "Index,Name,Emergency,a,b,c,9p9E34,extra\n" "0,L1_Something,,,,,63000,x\n"
     )
 
     with pytest.raises(ValueError, match="9p9E34"):

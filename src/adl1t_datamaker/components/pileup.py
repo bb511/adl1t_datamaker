@@ -22,23 +22,26 @@ def add_pileup_info(pileup_folder: Path, event_data: ak.Array) -> np.ndarray:
         outside stable beams, so validation.check_pileup_present watches the fraction
         of zeros instead.
     """
-    runs_array = ak.to_numpy(event_data['run'])
-    lumi_array = ak.to_numpy(event_data['lumi'])
+    runs_array = ak.to_numpy(event_data["run"])
+    lumi_array = ak.to_numpy(event_data["lumi"])
     runs = set(runs_array.tolist())
     print(f"Getting pileup for runs: {runs}")
 
     pileup_map = {}
     for run_number in runs:
-        lumi_sections = set(event_data['lumi'][event_data['run'] == run_number])
+        lumi_sections = set(event_data["lumi"][event_data["run"] == run_number])
         # Merge, do not overwrite: a file can span several runs.
         pileup_map |= get_pileup_map(pileup_folder, run_number, lumi_sections)
 
     # frompyfunc broadcasts the per-event dict lookup over the two arrays, but returns
     # dtype object, hence the cast.
     lookup_func = np.frompyfunc(lookup_pileup, 3, 1)
-    pileup = ak.Array(lookup_func(pileup_map, runs_array, lumi_array).astype(np.float32))
+    pileup = ak.Array(
+        lookup_func(pileup_map, runs_array, lumi_array).astype(np.float32)
+    )
 
-    return ak.with_field(event_data, pileup, 'nPV_True')
+    return ak.with_field(event_data, pileup, "nPV_True")
+
 
 def get_pileup_map(
     pileup_folder: Path, run_number: int, lumi_sections: set
@@ -65,7 +68,7 @@ def get_pileup_map(
     pileup = pd.read_csv(pileup_file, skiprows=1)[:-3]
     # brilcalc writes the section as lsnum:cmslsnum, so it needs splitting before it can
     # be matched against the lumi of an event.
-    pileup["ls"] = (pileup["ls"].astype(str).str.split(":").str[0].astype(int))
+    pileup["ls"] = pileup["ls"].astype(str).str.split(":").str[0].astype(int)
 
     pileup_map = {}
     for lumi in list(lumi_sections):
@@ -74,6 +77,7 @@ def get_pileup_map(
             pileup_map[(int(run_number), int(lumi))] = pileup_value
 
     return pileup_map
+
 
 def lookup_pileup(pileup_map: dict, run: int, lumi: int):
     """Pileup of one event, 0 where the brilcalc files do not cover its (run, lumi).

@@ -13,19 +13,25 @@ MAX_SHARD_ROWS = 25
 
 def render_report(summary: dict) -> str:
     """The whole REPORT.md for one produced data folder."""
-    return "\n\n".join(
-        [title_block(summary)] + [section(summary) for section in SECTIONS]
-    ).rstrip() + "\n"
+    return (
+        "\n\n".join(
+            [title_block(summary)] + [section(summary) for section in SECTIONS]
+        ).rstrip()
+        + "\n"
+    )
 
 
 def render_comparison(comparison: dict) -> str:
     """COMPARISON.md for two data sets, which is how a reproduction gets validated."""
     first, second = comparison["labels"]
 
-    return "\n\n".join(
-        [f"# Comparison: `{first}` against `{second}`"]
-        + [section(comparison) for section in COMPARISON_SECTIONS]
-    ).rstrip() + "\n"
+    return (
+        "\n\n".join(
+            [f"# Comparison: `{first}` against `{second}`"]
+            + [section(comparison) for section in COMPARISON_SECTIONS]
+        ).rstrip()
+        + "\n"
+    )
 
 
 def comparison_totals(comparison: dict) -> str:
@@ -44,24 +50,46 @@ def comparison_totals(comparison: dict) -> str:
 def comparison_schema(comparison: dict) -> str:
     """Which columns one data set carries and the other lacks."""
     schema_ = comparison["schema"]
-    rows = [[f"`{column}`", comparison["labels"][0]] for column in schema_["only_in_first"]]
-    rows += [[f"`{column}`", comparison["labels"][1]] for column in schema_["only_in_second"]]
+    rows = [
+        [f"`{column}`", comparison["labels"][0]] for column in schema_["only_in_first"]
+    ]
+    rows += [
+        [f"`{column}`", comparison["labels"][1]] for column in schema_["only_in_second"]
+    ]
 
-    return "## Schema differences\n\n" + markdown_table(["Column", "Present only in"], rows)
+    return "## Schema differences\n\n" + markdown_table(
+        ["Column", "Present only in"], rows
+    )
 
 
 def comparison_features(comparison: dict) -> str:
     """Which shared columns moved, the largest relative shift in the mean first."""
     first, second = comparison["labels"]
     rows = [
-        [f"`{row['column']}`", fmt(row["first"]["mean"]), fmt(row["second"]["mean"]),
-         fmt(row["difference"]), _percent(row["relative"]),
-         fmt(row["first"]["median"]), fmt(row["second"]["median"]),
-         fmt(row["first"]["p99"]), fmt(row["second"]["p99"])]
+        [
+            f"`{row['column']}`",
+            fmt(row["first"]["mean"]),
+            fmt(row["second"]["mean"]),
+            fmt(row["difference"]),
+            _percent(row["relative"]),
+            fmt(row["first"]["median"]),
+            fmt(row["second"]["median"]),
+            fmt(row["first"]["p99"]),
+            fmt(row["second"]["p99"]),
+        ]
         for row in comparison["features"]
     ]
-    header = ["Column", f"Mean {first}", f"Mean {second}", "Difference", "Relative",
-              f"Median {first}", f"Median {second}", f"p99 {first}", f"p99 {second}"]
+    header = [
+        "Column",
+        f"Mean {first}",
+        f"Mean {second}",
+        "Difference",
+        "Relative",
+        f"Median {first}",
+        f"Median {second}",
+        f"p99 {first}",
+        f"p99 {second}",
+    ]
 
     return "## Feature differences\n\n" + markdown_table(header, rows)
 
@@ -70,8 +98,12 @@ def comparison_seeds(comparison: dict) -> str:
     """Whether the same menu fired at the same rate on both data sets."""
     first, second = comparison["labels"]
     rows = [
-        [f"`{row['name']}`", _percent(row["first"]), _percent(row["second"]),
-         _percent(row["difference"])]
+        [
+            f"`{row['name']}`",
+            _percent(row["first"]),
+            _percent(row["second"]),
+            _percent(row["difference"]),
+        ]
         for row in comparison["seeds"]
     ]
     header = ["Seed", f"Fraction {first}", f"Fraction {second}", "Difference"]
@@ -85,7 +117,9 @@ def markdown_table(header: list[str], rows: list[list]) -> str:
         return "_Nothing to report._"
     lines = [f"| {' | '.join(header)} |", f"|{'|'.join(['---'] * len(header))}|"]
 
-    return "\n".join(lines + [f"| {' | '.join(str(cell) for cell in row)} |" for row in rows])
+    return "\n".join(
+        lines + [f"| {' | '.join(str(cell) for cell in row)} |" for row in rows]
+    )
 
 
 def fmt(value, digits: int = 4) -> str:
@@ -112,26 +146,34 @@ def title_block(summary: dict) -> str:
     """What this data set is, in the few numbers a reader wants before any table."""
     totals = summary["totals"]
 
-    return "\n".join([
-        f"# Data summary: {summary['dataset']}",
-        "",
-        f"- **Events**: {totals['events']:,}",
-        f"- **Objects**: {len(totals['objects'])} (`{'`, `'.join(totals['objects'])}`)",
-        f"- **Shards per object**: {totals['shards']:,}",
-        f"- **Total size**: {_human_size(totals['bytes'])}",
-        f"- **CICADA present**: {'yes' if totals['cicada'] else 'no'}",
-        f"- **Source**: {'simulation' if summary['provenance'].get('mc') else 'recorded data'}",
-    ])
+    return "\n".join(
+        [
+            f"# Data summary: {summary['dataset']}",
+            "",
+            f"- **Events**: {totals['events']:,}",
+            f"- **Objects**: {len(totals['objects'])} (`{'`, `'.join(totals['objects'])}`)",
+            f"- **Shards per object**: {totals['shards']:,}",
+            f"- **Total size**: {_human_size(totals['bytes'])}",
+            f"- **CICADA present**: {'yes' if totals['cicada'] else 'no'}",
+            f"- **Source**: {'simulation' if summary['provenance'].get('mc') else 'recorded data'}",
+        ]
+    )
 
 
 def section_provenance(summary: dict) -> str:
     """Where the data came from, which is the Methods section of a descriptor."""
     known = summary["provenance"]
-    rows = [[f"`{key}`", _provenance_value(value)] for key, value in sorted(known.items())]
-    note = "" if known else (
-        "\n\n_Run without a campaign config, so only what the data itself reveals is "
-        "recorded. Use `scripts/summary_run` with the matching `+experiment=` to capture "
-        "the input paths, tree names and prescale menu._"
+    rows = [
+        [f"`{key}`", _provenance_value(value)] for key, value in sorted(known.items())
+    ]
+    note = (
+        ""
+        if known
+        else (
+            "\n\n_Run without a campaign config, so only what the data itself reveals is "
+            "recorded. Use `scripts/summary_run` with the matching `+experiment=` to capture "
+            "the input paths, tree names and prescale menu._"
+        )
     )
 
     return "## Provenance\n\n" + markdown_table(["Field", "Value"], rows) + note
@@ -141,18 +183,35 @@ def section_inventory(summary: dict) -> str:
     """What the records physically are: the Data Records section."""
     rows = [
         [
-            f"`{name}`", f"{entry['shards']:,}", f"{entry['rows']:,}",
-            len(entry["dtypes"]), _human_size(entry["bytes"]),
+            f"`{name}`",
+            f"{entry['shards']:,}",
+            f"{entry['rows']:,}",
+            len(entry["dtypes"]),
+            _human_size(entry["bytes"]),
             fmt(entry["bytes"] / entry["rows"] if entry["rows"] else 0, 3),
-            ", ".join(entry["compression"]), f"{entry['row_groups']:,}",
+            ", ".join(entry["compression"]),
+            f"{entry['row_groups']:,}",
         ]
         for name, entry in sorted(summary["inventory"].items())
     ]
-    header = ["Object", "Shards", "Rows", "Columns", "Size", "Bytes/event", "Codec", "Row groups"]
+    header = [
+        "Object",
+        "Shards",
+        "Rows",
+        "Columns",
+        "Size",
+        "Bytes/event",
+        "Codec",
+        "Row groups",
+    ]
 
-    return "\n\n".join([
-        "## Data records", markdown_table(header, rows), _shard_table(summary),
-    ])
+    return "\n\n".join(
+        [
+            "## Data records",
+            markdown_table(header, rows),
+            _shard_table(summary),
+        ]
+    )
 
 
 def section_schema(summary: dict) -> str:
@@ -161,7 +220,10 @@ def section_schema(summary: dict) -> str:
     for name, obj in sorted(summary["objects"].items()):
         if name == "seeds":
             continue  # section_trigger reports the seeds, one row per seed
-        blocks += [f"### `{name}`", markdown_table(_schema_header(), _schema_rows(name, obj))]
+        blocks += [
+            f"### `{name}`",
+            markdown_table(_schema_header(), _schema_rows(name, obj)),
+        ]
 
     return "\n\n".join(blocks)
 
@@ -170,15 +232,27 @@ def section_multiplicities(summary: dict) -> str:
     """How many entries each event carries, against the documented hardware cap."""
     rows = [
         [
-            f"`{name}`", *[fmt(obj["multiplicity"]["stats"].get(key)) for key in
-                           ("mean", "std", "min", "max")],
+            f"`{name}`",
+            *[
+                fmt(obj["multiplicity"]["stats"].get(key))
+                for key in ("mean", "std", "min", "max")
+            ],
             fmt(obj["multiplicity"]["stats"].get("quantiles", {}).get("0.99")),
             _percent(1 - obj["multiplicity"]["stats"].get("zero_fraction", 0)),
             fmt(obj["capacity"]),
         ]
         for name, obj in sorted(summary["objects"].items())
     ]
-    header = ["Object", "Mean", "Std", "Min", "Max", "p99", "Events with >=1", "Documented cap"]
+    header = [
+        "Object",
+        "Mean",
+        "Std",
+        "Min",
+        "Max",
+        "p99",
+        "Events with >=1",
+        "Documented cap",
+    ]
 
     return "## Object multiplicities\n\n" + markdown_table(header, rows)
 
@@ -189,13 +263,21 @@ def section_event_coverage(summary: dict) -> str:
     if not coverage:
         return "## Event coverage\n\n_No `event_info` object in this data set._"
     rows = [
-        [f"`{run}`", f"{entry['events']:,}", entry["first"], entry["last"],
-         f"{entry['present']:,}", f"{entry['missing']:,}"]
+        [
+            f"`{run}`",
+            f"{entry['events']:,}",
+            entry["first"],
+            entry["last"],
+            f"{entry['present']:,}",
+            f"{entry['missing']:,}",
+        ]
         for run, entry in sorted(coverage["lumi_sections"].items())
     ]
     header = ["Run", "Events", "First LS", "Last LS", "LS with events", "LS gaps"]
 
-    return "\n\n".join(["## Event coverage", markdown_table(header, rows), _beam_lines(coverage)])
+    return "\n\n".join(
+        ["## Event coverage", markdown_table(header, rows), _beam_lines(coverage)]
+    )
 
 
 def section_trigger(summary: dict) -> str:
@@ -204,14 +286,26 @@ def section_trigger(summary: dict) -> str:
     if not trigger:
         return "## Trigger content\n\n_No `seeds` object in this data set._"
     rows = [
-        [index + 1, f"`{seed['name']}`", f"{seed['fired']:,}", _percent(seed["fraction"]),
-         _percent(_of_accepts(seed["fired"], trigger))]
+        [
+            index + 1,
+            f"`{seed['name']}`",
+            f"{seed['fired']:,}",
+            _percent(seed["fraction"]),
+            _percent(_of_accepts(seed["fired"], trigger)),
+        ]
         for index, seed in enumerate(trigger["seeds"])
     ]
-    header = ["Rank", "Seed", "Events fired", "Fraction of events", "Fraction of L1 accepts"]
+    header = [
+        "Rank",
+        "Seed",
+        "Events fired",
+        "Fraction of events",
+        "Fraction of L1 accepts",
+    ]
 
-    return "\n\n".join(["## Trigger content", _trigger_lines(trigger),
-                        markdown_table(header, rows)])
+    return "\n\n".join(
+        ["## Trigger content", _trigger_lines(trigger), markdown_table(header, rows)]
+    )
 
 
 def section_validation(summary: dict) -> str:
@@ -227,15 +321,19 @@ def section_validation(summary: dict) -> str:
         "downstream selections should be justified against."
     )
     table = (
-        markdown_table(["Feature", "At the all-ones code"], saturating) if saturating
+        markdown_table(["Feature", "At the all-ones code"], saturating)
+        if saturating
         else "No column has a single entry at its all-ones code."
     )
 
-    return "\n\n".join([
-        "## Technical validation",
-        markdown_table(["Status", "Check", "Detail"], rows),
-        note, table,
-    ])
+    return "\n\n".join(
+        [
+            "## Technical validation",
+            markdown_table(["Status", "Check", "Detail"], rows),
+            note,
+            table,
+        ]
+    )
 
 
 def section_figures(summary: dict) -> str:
@@ -252,50 +350,56 @@ def section_figures(summary: dict) -> str:
 def section_usage(summary: dict) -> str:
     """How to read the data back, and what produced this report."""
     generated = summary.get("generated", {})
-    versions = ", ".join(f"{name} {value}" for name, value in
-                         sorted(generated.get("packages", {}).items()))
+    versions = ", ".join(
+        f"{name} {value}"
+        for name, value in sorted(generated.get("packages", {}).items())
+    )
 
-    return "\n".join([
-        "## Reading the data",
-        "",
-        "```python",
-        "from adl1t_datamaker.loader import Parquet2Awkward",
-        "",
-        f"data = Parquet2Awkward({summary['path']!r})",
-        "jets = data['jets']            # everything at once",
-        "for batch in data('jets'):     # or one batch at a time",
-        "    ...",
-        "```",
-        "",
-        "Values are the trigger's own integer hardware codes; nothing is scaled. The "
-        "schema tables above give the factor and unit for each column.",
-        "",
-        "## Reproducibility",
-        "",
-        f"- **Generated**: {generated.get('at', '-')}",
-        f"- **Commit**: `{generated.get('commit', '-')}`",
-        f"- **Python**: {generated.get('python', '-')}",
-        f"- **Libraries**: {versions or '-'}",
-        "",
-        "Every number above is exact, not sampled: the summary counts how often each "
-        "value occurs and derives the statistics from those counts. Standard deviations "
-        "are population (`ddof=0`) and quantiles use the `inverted_cdf` convention. "
-        "Columns marked as not exact are too widely spread to enumerate, so only their "
-        "count, extremes and mean are given.",
-    ])
+    return "\n".join(
+        [
+            "## Reading the data",
+            "",
+            "```python",
+            "from adl1t_datamaker.loader import Parquet2Awkward",
+            "",
+            f"data = Parquet2Awkward({summary['path']!r})",
+            "jets = data['jets']            # everything at once",
+            "for batch in data('jets'):     # or one batch at a time",
+            "    ...",
+            "```",
+            "",
+            "Values are the trigger's own integer hardware codes; nothing is scaled. The "
+            "schema tables above give the factor and unit for each column.",
+            "",
+            "## Reproducibility",
+            "",
+            f"- **Generated**: {generated.get('at', '-')}",
+            f"- **Commit**: `{generated.get('commit', '-')}`",
+            f"- **Python**: {generated.get('python', '-')}",
+            f"- **Libraries**: {versions or '-'}",
+            "",
+            "Every number above is exact, not sampled: the summary counts how often each "
+            "value occurs and derives the statistics from those counts. Standard deviations "
+            "are population (`ddof=0`) and quantiles use the `inverted_cdf` convention. "
+            "Columns marked as not exact are too widely spread to enumerate, so only their "
+            "count, extremes and mean are given.",
+        ]
+    )
 
 
 def comparison_reproducibility(comparison: dict) -> str:
     """Which commit and interpreter produced this comparison."""
     generated = comparison.get("generated", {})
 
-    return "\n".join([
-        "## Reproducibility",
-        "",
-        f"- **Generated**: {generated.get('at', '-')}",
-        f"- **Commit**: `{generated.get('commit', '-')}`",
-        f"- **Python**: {generated.get('python', '-')}",
-    ])
+    return "\n".join(
+        [
+            "## Reproducibility",
+            "",
+            f"- **Generated**: {generated.get('at', '-')}",
+            f"- **Commit**: `{generated.get('commit', '-')}`",
+            f"- **Python**: {generated.get('python', '-')}",
+        ]
+    )
 
 
 SECTIONS = (
@@ -321,8 +425,23 @@ COMPARISON_SECTIONS = (
 
 
 def _schema_header() -> list[str]:
-    return ["Feature", "Type", "Bits", "Entries", "Min", "Max", "Mean", "Std", "Median",
-            "p1", "p99", "Distinct", "Zero", "Saturated", "Physical range"]
+    return [
+        "Feature",
+        "Type",
+        "Bits",
+        "Entries",
+        "Min",
+        "Max",
+        "Mean",
+        "Std",
+        "Median",
+        "p1",
+        "p99",
+        "Distinct",
+        "Zero",
+        "Saturated",
+        "Physical range",
+    ]
 
 
 def _schema_rows(name: str, obj: dict) -> list[list]:
@@ -337,11 +456,21 @@ def _schema_row(name: str, feature: str, entry: dict) -> list:
     quantiles = stats_.get("quantiles", {})
 
     return [
-        f"`{feature}`", _dtype(entry), fmt(doc.get("bits")), f"{stats_['entries']:,}",
-        fmt(stats_["min"]), fmt(stats_["max"]), fmt(stats_["mean"]), fmt(stats_.get("std")),
-        fmt(quantiles.get("0.5")), fmt(quantiles.get("0.01")), fmt(quantiles.get("0.99")),
-        fmt(stats_.get("distinct")), _percent(stats_.get("zero_fraction")),
-        _percent(stats_.get("saturated_fraction")), _physical(entry),
+        f"`{feature}`",
+        _dtype(entry),
+        fmt(doc.get("bits")),
+        f"{stats_['entries']:,}",
+        fmt(stats_["min"]),
+        fmt(stats_["max"]),
+        fmt(stats_["mean"]),
+        fmt(stats_.get("std")),
+        fmt(quantiles.get("0.5")),
+        fmt(quantiles.get("0.01")),
+        fmt(quantiles.get("0.99")),
+        fmt(stats_.get("distinct")),
+        _percent(stats_.get("zero_fraction")),
+        _percent(stats_.get("saturated_fraction")),
+        _physical(entry),
     ]
 
 
@@ -357,7 +486,9 @@ def _physical(entry: dict) -> str:
     if not scale or stats_["min"] is None:
         return "-"
 
-    return f"{stats_['min'] * scale[0]:.3g} .. {stats_['max'] * scale[0]:.3g} {scale[1]}"
+    return (
+        f"{stats_['min'] * scale[0]:.3g} .. {stats_['max'] * scale[0]:.3g} {scale[1]}"
+    )
 
 
 def _units_note() -> str:
@@ -396,8 +527,12 @@ def _shard_table(summary: dict) -> str:
         )
     name = sorted(summary["inventory"])[0]
     rows = [
-        [f"`{shard['name']}`", f"{shard['rows']:,}", f"{shard['bytes']:,}",
-         f"`{shard.get('sha256', '-')[:16]}`"]
+        [
+            f"`{shard['name']}`",
+            f"{shard['rows']:,}",
+            f"{shard['bytes']:,}",
+            f"`{shard.get('sha256', '-')[:16]}`",
+        ]
         for shard in summary["inventory"][name]["files"]
     ]
 
@@ -420,7 +555,9 @@ def _beam_lines(coverage: dict) -> str:
             f"range {fmt(pileup.get('min'))} to {fmt(pileup.get('max'))}, "
             f"{_percent(coverage.get('zero_pileup_fraction'))} of events at zero"
         )
-    lines.append(f"- **Duplicate identifiers**: {fmt(coverage.get('duplicate_identifiers'))}")
+    lines.append(
+        f"- **Duplicate identifiers**: {fmt(coverage.get('duplicate_identifiers'))}"
+    )
 
     return "\n".join(lines)
 
@@ -429,22 +566,24 @@ def _trigger_lines(trigger: dict) -> str:
     accepted, events = trigger.get("l1bit_accepted"), trigger.get("events", 0)
     multiplicity = trigger["multiplicity"]["stats"]
 
-    return "\n".join([
-        f"- **Unprescaled seeds stored**: {trigger['n_seeds']:,}",
-        f"- **Prescale menu**: `{trigger.get('menu') or 'not identified'}` "
-        f"({fmt(trigger.get('menu_mismatch'))} names differing)",
-        f"- **L1 accept**: {_percent(accepted / events if events and accepted else 0)} "
-        f"({fmt(accepted)} of {fmt(events)} events)",
-        f"- **Seeds firing per event**: mean {fmt(multiplicity.get('mean'))}, "
-        f"max {fmt(multiplicity.get('max'))}, "
-        f"{_percent(multiplicity.get('zero_fraction'))} of events fire none",
-        f"- **Seeds that never fired**: {len(trigger.get('never_fired', []))} of "
-        f"{trigger['n_seeds']}",
-        f"- **Seeds that fired on every event**: {len(trigger.get('always_fired', []))}",
-        "",
-        "`L1bit` is the logical OR of every seed below and is excluded from the counts "
-        "above. The full menu is listed; seeds that never fired sit at the bottom.",
-    ])
+    return "\n".join(
+        [
+            f"- **Unprescaled seeds stored**: {trigger['n_seeds']:,}",
+            f"- **Prescale menu**: `{trigger.get('menu') or 'not identified'}` "
+            f"({fmt(trigger.get('menu_mismatch'))} names differing)",
+            f"- **L1 accept**: {_percent(accepted / events if events and accepted else 0)} "
+            f"({fmt(accepted)} of {fmt(events)} events)",
+            f"- **Seeds firing per event**: mean {fmt(multiplicity.get('mean'))}, "
+            f"max {fmt(multiplicity.get('max'))}, "
+            f"{_percent(multiplicity.get('zero_fraction'))} of events fire none",
+            f"- **Seeds that never fired**: {len(trigger.get('never_fired', []))} of "
+            f"{trigger['n_seeds']}",
+            f"- **Seeds that fired on every event**: {len(trigger.get('always_fired', []))}",
+            "",
+            "`L1bit` is the logical OR of every seed below and is excluded from the counts "
+            "above. The full menu is listed; seeds that never fired sit at the bottom.",
+        ]
+    )
 
 
 def _saturating(summary: dict) -> list[list]:

@@ -17,6 +17,7 @@ class NullIO(StringIO):
 
 def silent(fn):
     """Decorator to silence functions."""
+
     def silent_fn(*args, **kwargs):
         with redirect_stdout(NullIO()):
             return fn(*args, **kwargs)
@@ -26,7 +27,7 @@ def silent(fn):
 
 def check_xrootd_path(path: Path | str) -> Path | str:
     """Keep remote paths as strings, turn everything else into a Path."""
-    if 'root://' in str(path):
+    if "root://" in str(path):
         return str(path)
 
     return Path(path)

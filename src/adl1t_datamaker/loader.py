@@ -18,12 +18,13 @@ class ParquetLoader(object):
     :param bs: Rows (events) held in memory at one time.
     :param threading: Whether pyarrow may read the shards on several threads.
     """
+
     def __init__(
         self,
         root_folder_path: str,
         select_feats: dict = None,
         bs: int = 1_000_000,
-        threading: bool = True
+        threading: bool = True,
     ):
         super().__init__()
         self.root_folder_path = Path(root_folder_path)
@@ -36,7 +37,7 @@ class ParquetLoader(object):
         """Object names, taken from the root folder's subfolders holding parquet."""
         object_names = []
         for subdir in self.root_folder_path.iterdir():
-            if subdir.is_dir() and any(subdir.glob('*.parquet')):
+            if subdir.is_dir() and any(subdir.glob("*.parquet")):
                 object_names.append(subdir.name)
 
         return object_names
@@ -55,7 +56,7 @@ class ParquetLoader(object):
 
         missing_obj_names = set(self.object_names) - set(select_feats.keys())
 
-        return {**select_feats, **{obj: 'none' for obj in missing_obj_names}}
+        return {**select_feats, **{obj: "none" for obj in missing_obj_names}}
 
     def _read_ds(self, data_path: Path, feats: list = None) -> pyarrow.dataset.Dataset:
         """Open the shards of one object, e.g. muons, as a scanner that streams them.
@@ -63,7 +64,7 @@ class ParquetLoader(object):
         :param feats: Columns to read. ``None`` reads every column.
         :raises ValueError: If any requested feature is absent from the shards.
         """
-        data_files = sorted(list(data_path.glob('*.parquet')))
+        data_files = sorted(list(data_path.glob("*.parquet")))
         dataset = pyarrow.dataset.dataset(data_files, format="parquet")
         if not self._feats_in_obj(feats, dataset):
             raise ValueError(f"Given features are not in data loaded from {data_path}")
@@ -99,6 +100,7 @@ class Parquet2Awkward(ParquetLoader):
     into memory, while ``data('muons')`` yields it batch by batch. Keyword arguments go
     to ParquetLoader, so the batches hold 1_000_000 events unless bs says otherwise.
     """
+
     def __init__(self, root_folder_path: str, **kwargs):
         super().__init__(root_folder_path, **kwargs)
         self.data = self._construct_dataset()
@@ -112,7 +114,7 @@ class Parquet2Awkward(ParquetLoader):
         data = {}
         for obj_name in self.object_names:
             dataset_path = self.root_folder_path / obj_name
-            if self.select_feats[obj_name] == 'none':
+            if self.select_feats[obj_name] == "none":
                 continue
             object_stream = self._read_ds(dataset_path, self.select_feats[obj_name])
             data[obj_name] = object_stream

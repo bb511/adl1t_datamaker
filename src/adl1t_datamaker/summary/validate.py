@@ -52,13 +52,22 @@ def check_shard_names_match(summary: dict) -> dict:
     An object written from a different set holds different events, so the rows stop
     lining up even where the totals happen to agree.
     """
-    names = {name: {f["name"] for f in e["files"]} for name, e in summary["inventory"].items()}
+    names = {
+        name: {f["name"] for f in e["files"]}
+        for name, e in summary["inventory"].items()
+    }
     # The fullest set is the reference, so an object missing a shard is the odd one out.
     reference = max(names.values(), key=len)
-    odd = {name: len(reference ^ shards) for name, shards in names.items() if shards != reference}
+    odd = {
+        name: len(reference ^ shards)
+        for name, shards in names.items()
+        if shards != reference
+    }
 
     return _record(
-        "shard names match across objects", odd, FAIL,
+        "shard names match across objects",
+        odd,
+        FAIL,
         f"all {len(names)} objects share the same {len(reference)} shard names",
         f"objects with a differing shard set: {odd}",
     )
@@ -73,11 +82,15 @@ def check_no_empty_shards(summary: dict) -> dict:
     empty = {
         f"{name}/{shard['name']}": 0
         for name, entry in summary["inventory"].items()
-        for shard in entry["files"] if shard["rows"] == 0
+        for shard in entry["files"]
+        if shard["rows"] == 0
     }
 
     return _record(
-        "no empty shards", empty, WARN, "every shard holds at least one row",
+        "no empty shards",
+        empty,
+        WARN,
+        "every shard holds at least one row",
         f"{len(empty)} empty shards, e.g. {_listed(sorted(empty))}",
     )
 
@@ -97,7 +110,9 @@ def check_singletons_hold_one_entry(summary: dict) -> dict:
     }
 
     return _record(
-        "per-event objects hold exactly one entry", odd, FAIL,
+        "per-event objects hold exactly one entry",
+        odd,
+        FAIL,
         "seeds, event_info and the six energy sums all hold one entry per event",
         f"objects with a multiplicity other than 1: {odd}",
     )
@@ -116,8 +131,11 @@ def check_no_duplicate_events(summary: dict) -> dict:
     severity = WARN if summary["provenance"].get("mc") else FAIL
 
     return _record(
-        "no duplicate event identifiers", duplicates, severity,
-        "every (run, lumi, event) is unique", f"{duplicates} repeated identifiers",
+        "no duplicate event identifiers",
+        duplicates,
+        severity,
+        "every (run, lumi, event) is unique",
+        f"{duplicates} repeated identifiers",
     )
 
 
@@ -136,7 +154,9 @@ def check_pileup_present(summary: dict) -> dict:
     # One per cent is a judgement: it tolerates the odd section outside stable beams,
     # where a mapping that missed a run or a whole file zeroes far more than that.
     return _record(
-        "pileup is populated", zero > 0.01, WARN,
+        "pileup is populated",
+        zero > 0.01,
+        WARN,
         f"{zero:.4%} of events have nPV_True == 0",
         f"{zero:.2%} of events have nPV_True == 0, check the brilcalc coverage",
     )
@@ -154,7 +174,9 @@ def check_seed_columns_match_menu(summary: dict) -> dict:
         return _skip("seed columns match the menu", "no menu could be identified")
 
     return _record(
-        "seed columns match the menu", trigger["menu_mismatch"], FAIL,
+        "seed columns match the menu",
+        trigger["menu_mismatch"],
+        FAIL,
         f"the {trigger['n_seeds']} seeds are the unprescaled set of {trigger['menu']}",
         f"{trigger['menu_mismatch']} seeds differ from {trigger['menu']}",
     )
@@ -169,7 +191,10 @@ def check_no_all_zero_columns(summary: dict) -> dict:
     zeroed = _features_where(summary, lambda s: s.get("zero_fraction") == 1.0)
 
     return _record(
-        "no all-zero columns", zeroed, FAIL, "no column is zero in every entry",
+        "no all-zero columns",
+        zeroed,
+        FAIL,
+        "no column is zero in every entry",
         f"columns that are always zero: {_listed(zeroed)}",
     )
 
@@ -182,7 +207,10 @@ def check_constant_columns(summary: dict) -> dict:
     constant = _features_where(summary, lambda s: s.get("distinct") == 1)
 
     return _record(
-        "columns are not constant", constant, WARN, "no column holds a single value",
+        "columns are not constant",
+        constant,
+        WARN,
+        "no column holds a single value",
         f"columns holding one value throughout: {_listed(constant)}",
     )
 
@@ -196,7 +224,9 @@ def check_values_fit_documented_bits(summary: dict) -> dict:
     over = _features_where(summary, _exceeds_documented_width)
 
     return _record(
-        "values fit their documented bit width", over, FAIL,
+        "values fit their documented bit width",
+        over,
+        FAIL,
         "every value fits the width docs/README.md documents",
         f"values wider than documented: {_listed(over)}",
     )
@@ -216,7 +246,9 @@ def check_multiplicity_within_capacity(summary: dict) -> dict:
     }
 
     return _record(
-        "multiplicities respect the documented cap", over, FAIL,
+        "multiplicities respect the documented cap",
+        over,
+        FAIL,
         "no event holds more objects than the trigger can emit",
         f"collections exceeding their cap: {over}",
     )
@@ -230,7 +262,9 @@ def check_columns_are_documented(summary: dict) -> dict:
     undocumented = _features_where(summary, lambda s: s.get("undocumented"))
 
     return _record(
-        "every stored column is documented", undocumented, WARN,
+        "every stored column is documented",
+        undocumented,
+        WARN,
         "docs/README.md documents every stored column",
         f"columns missing from docs/README.md: {_listed(undocumented)}",
     )
@@ -251,7 +285,9 @@ def check_no_duplicate_columns(summary: dict) -> dict:
     clashes = sorted(group for group in groups.values() if len(group) > 1)
 
     return _record(
-        "no two columns hold the same distribution", clashes, WARN,
+        "no two columns hold the same distribution",
+        clashes,
+        WARN,
         "every column has a distribution of its own",
         "columns with identical distributions: "
         + "; ".join(" == ".join(f"`{name}`" for name in group) for group in clashes),
@@ -268,7 +304,10 @@ def check_no_nonfinite_values(summary: dict) -> dict:
     dirty = _features_where(summary, lambda s: s.get("nonfinite", 0) > 0)
 
     return _record(
-        "no non-finite values", dirty, FAIL, "no NaN or infinity in any column",
+        "no non-finite values",
+        dirty,
+        FAIL,
+        "no NaN or infinity in any column",
         f"columns holding NaN or infinity: {_listed(dirty)}",
     )
 
@@ -348,7 +387,11 @@ def _listed(names: list) -> str:
     """Names, but never so many that the validation table stops being readable."""
     shown = ", ".join(f"`{name}`" for name in names[:MAX_LISTED])
 
-    return shown if len(names) <= MAX_LISTED else f"{shown} and {len(names) - MAX_LISTED} more"
+    return (
+        shown
+        if len(names) <= MAX_LISTED
+        else f"{shown} and {len(names) - MAX_LISTED} more"
+    )
 
 
 def _view(entry: dict) -> dict:

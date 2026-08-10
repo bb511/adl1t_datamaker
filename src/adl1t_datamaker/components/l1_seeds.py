@@ -7,7 +7,6 @@ import uproot
 import re
 from pathlib import Path
 
-
 # Zero-based columns of the prescale menu CSV. The prescale one holds the prescale at
 # nominal luminosity, and its header names that luminosity, so it changes with the menu
 # generation (2p1E34 in the 2023 menus, a 2p0E34 variant in 2024, 1p95E34 in 2025,
@@ -32,6 +31,7 @@ def get_initial_decision(global_trigger_tree: uproot.TTree) -> np.ndarray:
 
     return initial_bits
 
+
 def get_final_decision(global_trigger_tree: uproot.TTree) -> np.ndarray[bool]:
     """Extracts the final decision bits from the global trigger tree in the root file.
 
@@ -45,6 +45,7 @@ def get_final_decision(global_trigger_tree: uproot.TTree) -> np.ndarray[bool]:
     final_bits = np.stack(final_bits["m_algoDecisionFinal"], axis=0)
 
     return final_bits
+
 
 def get_algo_map(global_trigger_tree: uproot.TTree) -> dict:
     """Get all the algorithms in the global trigger and their corresp decision bit nbs.
@@ -63,6 +64,7 @@ def get_algo_map(global_trigger_tree: uproot.TTree) -> dict:
         algo_map[name] = int(matchbit.group(1))
 
     return algo_map
+
 
 def unprescaled_names(prescale_file_path: Path) -> list[str]:
     """Names of the seeds a menu leaves unprescaled, in menu order.

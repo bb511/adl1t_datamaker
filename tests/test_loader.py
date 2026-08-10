@@ -86,7 +86,9 @@ def test_two_loaders_can_share_one_dict(tmp_path, dataset):
     second = Parquet2Awkward(str(dataset), select_feats=shared)
 
     assert first.object_names == ["muons"]
-    assert sorted(second.object_names) == sorted(OBJECTS), "jets/event_info were dropped"
+    assert sorted(second.object_names) == sorted(
+        OBJECTS
+    ), "jets/event_info were dropped"
 
 
 def test_empty_select_feats_loads_nothing(dataset):

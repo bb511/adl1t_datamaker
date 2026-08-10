@@ -48,7 +48,7 @@ class Root2Parquet(object):
         uGT_tree_name: str,
         event_tree_name: str,
         calosumm_tree_name: str = None,
-        silent: bool = False
+        silent: bool = False,
     ):
         self.l1_tree_name = l1_tree_name
         self.uGT_tree_name = uGT_tree_name
@@ -81,12 +81,12 @@ class Root2Parquet(object):
         # they are two fields of the same entry: the feature name decides whether
         # sumIEt or sumIPhi is read.
         self.energies = {
-            "ET":{"Et": 0, "ETTEM": 16},
-            "HT":{"Et": 1, "tower_count": 21},
-            "MET":{"Et": 2, "phi": 2},
-            "MHT":{"Et": 3, "phi": 3},
-            "FET":{"Et": 8, "phi": 8},
-            "FHT":{"Et": 20, "phi": 20},
+            "ET": {"Et": 0, "ETTEM": 16},
+            "HT": {"Et": 1, "tower_count": 21},
+            "MET": {"Et": 2, "phi": 2},
+            "MHT": {"Et": 3, "phi": 3},
+            "FET": {"Et": 8, "phi": 8},
+            "FHT": {"Et": 20, "phi": 20},
         }
 
         # CICADA scores the calorimeter towers for anomaly. It sits in the calorimeter
@@ -252,9 +252,9 @@ class Root2Parquet(object):
         the OR over all of them. The final decision bits are used, so the global trigger
         rules that veto an otherwise accepted event are already folded in.
         """
-        seeds_directory = self.output_path / 'seeds'
+        seeds_directory = self.output_path / "seeds"
         seeds_directory.mkdir(parents=True, exist_ok=True)
-        seeds_file = seeds_directory / f'{self.output_filename}.parquet'
+        seeds_file = seeds_directory / f"{self.output_filename}.parquet"
 
         initial_decision_bits = l1_seeds.get_initial_decision(self._global_trigger_tree)
         final_decision_bits = l1_seeds.get_final_decision(self._global_trigger_tree)
@@ -268,7 +268,7 @@ class Root2Parquet(object):
         # in a length-1 list takes (nevents, nfeats) to (nevents, 1, nfeats), the one
         # object being the event itself.
         seeds = ak.singletons(seeds)
-        ak.to_parquet(seeds, seeds_file, compression='snappy')
+        ak.to_parquet(seeds, seeds_file, compression="snappy")
 
     def _store_eventinfo(self):
         """Store the event information data and save to given parquet.
@@ -278,22 +278,22 @@ class Root2Parquet(object):
         """
         einfo_directory = self.output_path / "event_info"
         einfo_directory.mkdir(parents=True, exist_ok=True)
-        einfo_file = einfo_directory / f'{self.output_filename}.parquet'
+        einfo_file = einfo_directory / f"{self.output_filename}.parquet"
 
-        event_data = self._gtrigger_event_tree.arrays(self.event_info['event_info'])
+        event_data = self._gtrigger_event_tree.arrays(self.event_info["event_info"])
         if not self.mc:
             event_data = pileup.add_pileup_info(self.pileup_folder, event_data)
 
         # As for the seeds: (nevents, nfeats) becomes (nevents, 1, nfeats) so that every
         # object folder shares one layout.
         event_data = ak.singletons(event_data)
-        ak.to_parquet(event_data, einfo_file, compression='snappy')
+        ak.to_parquet(event_data, einfo_file, compression="snappy")
 
     def _store_muons(self):
         """Store the muon feature data and save to parquet."""
         muons_directory = self.output_path / "muons"
         muons_directory.mkdir(parents=True, exist_ok=True)
-        muons_file = muons_directory / f'{self.output_filename}.parquet'
+        muons_file = muons_directory / f"{self.output_filename}.parquet"
 
         data = self._level1_trigger_tree.arrays(self.particles["muons"])
 
@@ -304,47 +304,47 @@ class Root2Parquet(object):
 
         data = ak.Array({feature: data[feature][mask] for feature in data.fields})
 
-        ak.to_parquet(data, muons_file, compression='snappy')
-        print("Conversion of muon objects finished! \U0001F504")
+        ak.to_parquet(data, muons_file, compression="snappy")
+        print("Conversion of muon objects finished! \U0001f504")
 
     def _store_jets(self):
         """Store the jets feature data and save to parquet."""
         jets_directory = self.output_path / "jets"
         jets_directory.mkdir(parents=True, exist_ok=True)
-        jets_file = jets_directory / f'{self.output_filename}.parquet'
+        jets_file = jets_directory / f"{self.output_filename}.parquet"
 
         data = self._level1_trigger_tree.arrays(self.particles["jets"])
         mask = self._level1_trigger_tree.arrays(["jetBx"])["jetBx"] == 0
         data = ak.Array({feature: data[feature][mask] for feature in data.fields})
 
-        ak.to_parquet(data, jets_file, compression='snappy')
-        print("Conversion of jet objects finished! \U0001F504")
+        ak.to_parquet(data, jets_file, compression="snappy")
+        print("Conversion of jet objects finished! \U0001f504")
 
     def _store_egammas(self):
         """Store the electron/gamma feature data and save to parquet."""
         egammas_directory = self.output_path / "egammas"
         egammas_directory.mkdir(parents=True, exist_ok=True)
-        egammas_file = egammas_directory / f'{self.output_filename}.parquet'
+        egammas_file = egammas_directory / f"{self.output_filename}.parquet"
 
         data = self._level1_trigger_tree.arrays(self.particles["egammas"])
         mask = self._level1_trigger_tree.arrays(["egBx"])["egBx"] == 0
         data = ak.Array({feature: data[feature][mask] for feature in data.fields})
 
-        ak.to_parquet(data, egammas_file, compression='snappy')
-        print("Conversion of egamma objects finished! \U0001F504")
+        ak.to_parquet(data, egammas_file, compression="snappy")
+        print("Conversion of egamma objects finished! \U0001f504")
 
     def _store_taus(self):
         """Store the taus feature data and save to parquet."""
         taus_directory = self.output_path / "taus"
         taus_directory.mkdir(parents=True, exist_ok=True)
-        taus_file = taus_directory / f'{self.output_filename}.parquet'
+        taus_file = taus_directory / f"{self.output_filename}.parquet"
 
         data = self._level1_trigger_tree.arrays(self.particles["taus"])
         mask = self._level1_trigger_tree.arrays(["tauBx"])["tauBx"] == 0
         data = ak.Array({feature: data[feature][mask] for feature in data.fields})
 
-        ak.to_parquet(data, taus_file, compression='snappy')
-        print("Conversion of tau objects finished! \U0001F504")
+        ak.to_parquet(data, taus_file, compression="snappy")
+        print("Conversion of tau objects finished! \U0001f504")
 
     def _store_energies(self):
         """Store the different types of energies associated with the event.
@@ -355,7 +355,7 @@ class Root2Parquet(object):
         values stay in hardware units: sumIEt counts 0.5 GeV and sumIPhi counts
         2*pi/144 (see docs/README.md).
         """
-        sums_feats = ['sumType', 'sumBx', 'sumIEt', 'sumIPhi']
+        sums_feats = ["sumType", "sumBx", "sumIEt", "sumIPhi"]
         sums_data = self._level1_trigger_tree.arrays(sums_feats)
 
         self._store_ET(sums_data)
@@ -364,7 +364,7 @@ class Root2Parquet(object):
         self._store_MHT(sums_data)
         self._store_FET(sums_data)
         self._store_FHT(sums_data)
-        print("Conversion of energy objects finished! \U0001F504")
+        print("Conversion of energy objects finished! \U0001f504")
 
     def _store_ET(self, sums_data: ak.Array):
         """Store the transverse energy event object and save to parquet.
@@ -374,16 +374,16 @@ class Root2Parquet(object):
         """
         ET_directory = self.output_path / "ET"
         ET_directory.mkdir(parents=True, exist_ok=True)
-        ET_file = ET_directory / f'{self.output_filename}.parquet'
+        ET_file = ET_directory / f"{self.output_filename}.parquet"
 
         data = {}
-        for feature in self.energies['ET']:
-            sum_type = self.energies['ET'][feature]
-            mask = (sums_data['sumType'] == sum_type) & (sums_data['sumBx'] == 0)
-            data[feature] = sums_data['sumIEt'][mask]
+        for feature in self.energies["ET"]:
+            sum_type = self.energies["ET"][feature]
+            mask = (sums_data["sumType"] == sum_type) & (sums_data["sumBx"] == 0)
+            data[feature] = sums_data["sumIEt"][mask]
 
         data = ak.Array(data)
-        ak.to_parquet(data, ET_file, compression='snappy')
+        ak.to_parquet(data, ET_file, compression="snappy")
 
     def _store_HT(self, sums_data: ak.Array):
         """Store the hadronic transverse energy event object.
@@ -394,52 +394,52 @@ class Root2Parquet(object):
         """
         HT_directory = self.output_path / "HT"
         HT_directory.mkdir(parents=True, exist_ok=True)
-        HT_file = HT_directory / f'{self.output_filename}.parquet'
+        HT_file = HT_directory / f"{self.output_filename}.parquet"
 
         data = {}
-        for feature in self.energies['HT']:
-            sum_type = self.energies['HT'][feature]
-            mask = (sums_data['sumType'] == sum_type) & (sums_data['sumBx'] == 0)
-            data[feature] = sums_data['sumIEt'][mask]
+        for feature in self.energies["HT"]:
+            sum_type = self.energies["HT"][feature]
+            mask = (sums_data["sumType"] == sum_type) & (sums_data["sumBx"] == 0)
+            data[feature] = sums_data["sumIEt"][mask]
 
         data = ak.Array(data)
-        ak.to_parquet(data, HT_file, compression='snappy')
+        ak.to_parquet(data, HT_file, compression="snappy")
 
     def _store_MET(self, sums_data: ak.Array):
         """Store the missing transverse energy event object."""
         MET_directory = self.output_path / "MET"
         MET_directory.mkdir(parents=True, exist_ok=True)
-        MET_file = MET_directory / f'{self.output_filename}.parquet'
+        MET_file = MET_directory / f"{self.output_filename}.parquet"
 
         data = {}
-        for feature in self.energies['MET']:
-            sum_type = self.energies['MET'][feature]
-            mask = (sums_data['sumType'] == sum_type) & (sums_data['sumBx'] == 0)
-            if 'phi' in feature:
-                data[feature] = sums_data['sumIPhi'][mask]
+        for feature in self.energies["MET"]:
+            sum_type = self.energies["MET"][feature]
+            mask = (sums_data["sumType"] == sum_type) & (sums_data["sumBx"] == 0)
+            if "phi" in feature:
+                data[feature] = sums_data["sumIPhi"][mask]
             else:
-                data[feature] = sums_data['sumIEt'][mask]
+                data[feature] = sums_data["sumIEt"][mask]
 
         data = ak.Array(data)
-        ak.to_parquet(data, MET_file, compression='snappy')
+        ak.to_parquet(data, MET_file, compression="snappy")
 
     def _store_MHT(self, sums_data: ak.Array):
         """Store the missing hadronic transverse energy object."""
         MHT_directory = self.output_path / "MHT"
         MHT_directory.mkdir(parents=True, exist_ok=True)
-        MHT_file = MHT_directory / f'{self.output_filename}.parquet'
+        MHT_file = MHT_directory / f"{self.output_filename}.parquet"
 
         data = {}
-        for feature in self.energies['MHT']:
-            sum_type = self.energies['MHT'][feature]
-            mask = (sums_data['sumType'] == sum_type) & (sums_data['sumBx'] == 0)
-            if 'phi' in feature:
-                data[feature] = sums_data['sumIPhi'][mask]
+        for feature in self.energies["MHT"]:
+            sum_type = self.energies["MHT"][feature]
+            mask = (sums_data["sumType"] == sum_type) & (sums_data["sumBx"] == 0)
+            if "phi" in feature:
+                data[feature] = sums_data["sumIPhi"][mask]
             else:
-                data[feature] = sums_data['sumIEt'][mask]
+                data[feature] = sums_data["sumIEt"][mask]
 
         data = ak.Array(data)
-        ak.to_parquet(data, MHT_file, compression='snappy')
+        ak.to_parquet(data, MHT_file, compression="snappy")
 
     def _store_FET(self, sums_data: ak.Array):
         """Store the forward missing transverse energy event object.
@@ -449,19 +449,19 @@ class Root2Parquet(object):
         """
         FET_directory = self.output_path / "FET"
         FET_directory.mkdir(parents=True, exist_ok=True)
-        FET_file = FET_directory / f'{self.output_filename}.parquet'
+        FET_file = FET_directory / f"{self.output_filename}.parquet"
 
         data = {}
-        for feature in self.energies['FET']:
-            sum_type = self.energies['FET'][feature]
-            mask = (sums_data['sumType'] == sum_type) & (sums_data['sumBx'] == 0)
-            if 'phi' in feature:
-                data[feature] = sums_data['sumIPhi'][mask]
+        for feature in self.energies["FET"]:
+            sum_type = self.energies["FET"][feature]
+            mask = (sums_data["sumType"] == sum_type) & (sums_data["sumBx"] == 0)
+            if "phi" in feature:
+                data[feature] = sums_data["sumIPhi"][mask]
             else:
-                data[feature] = sums_data['sumIEt'][mask]
+                data[feature] = sums_data["sumIEt"][mask]
 
         data = ak.Array(data)
-        ak.to_parquet(data, FET_file, compression='snappy')
+        ak.to_parquet(data, FET_file, compression="snappy")
 
     def _store_FHT(self, sums_data: ak.Array):
         """Store the forward missing transverse hadronic energy event object.
@@ -471,19 +471,19 @@ class Root2Parquet(object):
         """
         FHT_directory = self.output_path / "FHT"
         FHT_directory.mkdir(parents=True, exist_ok=True)
-        FHT_file = FHT_directory / f'{self.output_filename}.parquet'
+        FHT_file = FHT_directory / f"{self.output_filename}.parquet"
 
         data = {}
-        for feature in self.energies['FHT']:
-            sum_type = self.energies['FHT'][feature]
-            mask = (sums_data['sumType'] == sum_type) & (sums_data['sumBx'] == 0)
-            if 'phi' in feature:
-                data[feature] = sums_data['sumIPhi'][mask]
+        for feature in self.energies["FHT"]:
+            sum_type = self.energies["FHT"][feature]
+            mask = (sums_data["sumType"] == sum_type) & (sums_data["sumBx"] == 0)
+            if "phi" in feature:
+                data[feature] = sums_data["sumIPhi"][mask]
             else:
-                data[feature] = sums_data['sumIEt'][mask]
+                data[feature] = sums_data["sumIEt"][mask]
 
         data = ak.Array(data)
-        ak.to_parquet(data, FHT_file, compression='snappy')
+        ak.to_parquet(data, FHT_file, compression="snappy")
 
     def _store_cica(self):
         """Store the CICADA (calo anomaly detector) scores, if a calo tree was given."""
@@ -492,10 +492,10 @@ class Root2Parquet(object):
 
         cica_directory = self.output_path / "cica"
         cica_directory.mkdir(parents=True, exist_ok=True)
-        cica_file = cica_directory / f'{self.output_filename}.parquet'
+        cica_file = cica_directory / f"{self.output_filename}.parquet"
 
         data = self._gtrigger_calos_tree.arrays(self.cicada["cicada"])
         data = ak.Array({feature: data[feature] for feature in data.fields})
 
-        ak.to_parquet(data, cica_file, compression='snappy')
-        print("Conversion of cicada objects finished! \U0001F504")
+        ak.to_parquet(data, cica_file, compression="snappy")
+        print("Conversion of cicada objects finished! \U0001f504")

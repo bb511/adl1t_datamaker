@@ -32,9 +32,16 @@ parser.add_argument(
 parser.add_argument(
     '--splitmap',
     type=Path,
-    default=None,
-    help="Folder of frozen (split, order) maps and their index.json. Defaults to "
-         "_splitmap inside --out."
+    default=Path("scripts/publish/splitmap"),
+    help="Folder of frozen (split, order) maps and their index.json. The checked-in "
+         "map is the published partition; point elsewhere only to test."
+)
+parser.add_argument(
+    '--summary',
+    type=Path,
+    default=Path("scripts/publish/split_summary.json"),
+    help="The frozen split summary: the seed, the fractions, and the counts the card "
+         "quotes. Checked in beside the split map."
 )
 parser.add_argument(
     '--version', type=str, default="adl1t-l1ad-v2", help="Name of the exported tree."
@@ -62,7 +69,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-splitmap = args.splitmap or args.out / "_splitmap"
+splitmap = args.splitmap
 work = args.work or args.out.parent / f"{args.out.name}_work"
 tree = work / args.version
 metadata = args.out / "metadata"
@@ -76,14 +83,14 @@ if 'export' in args.stage:
     if args.only:
         index = {name: entry for name, entry in index.items() if name in args.only}
     counts = export.export_all(
-        index, read(metadata / "split_summary.json"), splitmap,
+        index, read(args.summary), splitmap,
         work / "consolidated", tree, args.ncores,
     )
     export.write_manifest(metadata / "release.json", args.version, counts, index)
 
 if 'card' in args.stage:
     tree.mkdir(parents=True, exist_ok=True)
-    (tree / "README.md").write_text(card.render(read(metadata / "split_summary.json")))
+    (tree / "README.md").write_text(card.render(read(args.summary)))
     (tree / "LICENSE").write_text(card.LICENCE)
     print(f"  card and licence written into {tree}")
 

@@ -1,12 +1,15 @@
 # L1TNtuple to parquet
 
-The conversion keeps what the global trigger (uGT) sees, together with the metadata that says which event it saw.
-The rest of the L1TNtuple is dropped: float reconstructions, detector-level branches that never reach the trigger boards, and the objects of neighbouring bunch crossings.
-The tables below describe every feature that reaches the parquet; a tick in the `in` column marks it as written.
+The conversion code in this repository constructs parquet files that contain information on what the global trigger (uGT) records during a run,
+along with metadata corresponding to each event.
+The input to these scripts are L1Ntuples, which are in CERN ROOT tree data format.
+The code in thie repository only keeps a subset of the data available in the L1TNtuples;
+the rest are dropped: float reconstructions, detector-level branches that never reach the trigger boards, and the objects of neighbouring bunch crossings.
+The tables below describe every feature that reaches the parquet files.
 
 The ranges, steps, and bit widths come from the [scales](./scales_inputs_2_ugt.pdf) and [firmware](./gt-mp7-firmware-specification.pdf) specifications.
-The explanatory text was assembled from exchanges with subsystem experts and carries no citation: read the numbers as specification and the descriptions as expert opinion.
-Where a description says a quantity is not yet defined, that reports the state of the subsystem, not a gap in this document.
+The explanatory text was assembled from exchanges with subsystem experts.
+If a description says a quantity is not yet defined, that reports the state of the subsystem, not a gap in this document.
 
 > [!IMPORTANT]
 > This file is parsed. `src/adl1t_datamaker/schema.py` reads the tables below into the feature specification behind the summary reports, the validation checks, and the dataset card, and `tests/test_schema_matches_docs.py` fails when the converter and these tables disagree.
@@ -23,8 +26,9 @@ Where a description says a quantity is not yet defined, that reports the state o
 
 # Objects
 
-An `I` in a feature name abbreviates `Integer` and marks a quantity taken straight from hardware, but its absence means nothing: `muonQual`, `muonChg`, `muonTfMuonIdx`, `jetHwQual`, `jetRawEt`, `egIso`, and `tauIso` are hardware integers too.
-Every value keeps its hardware units, so a reader that wants GeV or radians applies the `Step` column itself.
+An `I` in a feature name abbreviates `Integer` and marks a quantity taken straight from hardware.
+The absence of `I` does not signify float values: for example, `muonQual`, `muonChg`, `muonTfMuonIdx`, `jetHwQual`, `jetRawEt`, `egIso`, and `tauIso` are hardware integers too.
+Every value keeps its hardware units, if you want GeV or radians, apply the `Step` column.
 
 Each event carries objects from five bunch crossings, ±2 around the one that fired.
 The conversion keeps crossing 0 alone, selected through each particle collection's `Bx` branch and through `sumBx` for the energy sums, and drops the `Bx` column itself, so the parquet cannot say which crossing an object came from.

@@ -129,8 +129,11 @@ def _count_bools(values: np.ndarray) -> dict:
     """One pass and no copy. The seed columns are booleans and there are hundreds."""
     fired = int(np.count_nonzero(values))
 
-    return {value: weight for value, weight in
-            ((0, values.size - fired), (1, fired)) if weight}
+    return {
+        value: weight
+        for value, weight in ((0, values.size - fired), (1, fired))
+        if weight
+    }
 
 
 def merge_counts(into: dict, other: dict) -> dict:
@@ -257,7 +260,9 @@ def _exact_summary(store: ValueCounts, saturation: int | None) -> dict:
         "quantiles": {str(q): quantile(values, weights, q) for q in QUANTILES},
     }
     if saturation is not None:
-        summary["saturated_fraction"] = fraction_equal(store.counts, saturation, store.n)
+        summary["saturated_fraction"] = fraction_equal(
+            store.counts, saturation, store.n
+        )
 
     return summary
 

@@ -148,7 +148,9 @@ def measure(folder: Path, batch_size: int, objects: list[str] | None = None) -> 
     :returns: One ObjectCounts per folder, keyed by folder name.
     """
     documented = schema.documented_features()
-    loader = Parquet2Awkward(str(folder), bs=batch_size, select_feats=_selection(objects))
+    loader = Parquet2Awkward(
+        str(folder), bs=batch_size, select_feats=_selection(objects)
+    )
     measured = {}
     for name in sorted(loader.object_names):
         measured[name] = ObjectCounts(name, documented.get(name, {}))
@@ -241,7 +243,9 @@ def _pack_event_key(run: np.ndarray, lumi: np.ndarray, event: np.ndarray):
     or event number makes the check report itself as not performed rather than answer
     wrongly.
     """
-    if any(int(part.max()) >= limit for part, limit in zip((run, lumi, event), KEY_LIMITS)):
+    if any(
+        int(part.max()) >= limit for part, limit in zip((run, lumi, event), KEY_LIMITS)
+    ):
         return None
     packed = (run.astype(np.int64) << RUN_SHIFT) | (lumi.astype(np.int64) << LUMI_SHIFT)
 

@@ -52,7 +52,8 @@ def test_no_two_energy_columns_share_a_sum_type(energies):
         if feature != "phi"
     }
     duplicated = [
-        kind for kind in set(magnitudes.values())
+        kind
+        for kind in set(magnitudes.values())
         if list(magnitudes.values()).count(kind) > 1
     ]
 

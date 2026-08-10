@@ -74,13 +74,19 @@ def test_two_run_map_is_merged_not_overwritten(pileup_files):
     survived and every event of the other run silently fell back to 0.
     """
     early, late = 381148, 381149
-    lumis_early = sorted(_first_lumi_sections(pileup_files, early, 3, only_with_pileup=True))
-    lumis_late = sorted(_first_lumi_sections(pileup_files, late, 3, only_with_pileup=True))
+    lumis_early = sorted(
+        _first_lumi_sections(pileup_files, early, 3, only_with_pileup=True)
+    )
+    lumis_late = sorted(
+        _first_lumi_sections(pileup_files, late, 3, only_with_pileup=True)
+    )
 
-    event_data = ak.Array({
-        "run": [early] * len(lumis_early) + [late] * len(lumis_late),
-        "lumi": lumis_early + lumis_late,
-    })
+    event_data = ak.Array(
+        {
+            "run": [early] * len(lumis_early) + [late] * len(lumis_late),
+            "lumi": lumis_early + lumis_late,
+        }
+    )
     enriched = pileup.add_pileup_info(pileup_files, event_data)
 
     values = ak.to_numpy(enriched["nPV_True"])

@@ -1,9 +1,5 @@
 # Building the HuggingFace mirror from the finished release tree.
-#
-# Same events, same order, same values: only the shape differs. The archival record
-# ships one directory per object collection, which is faithful to the source, while
-# HuggingFace wants one row per event, so the collections are joined side by side with
-# prefixed columns and the raw ntuple names are mapped onto the short ones.
+# Same events, same order, same values: only the shape differs.
 
 import json
 from pathlib import Path
@@ -19,10 +15,23 @@ SHARD_BYTES = 500 * 1024**2
 
 # Collections joined into the main table. seeds takes a third of the volume on its own,
 # so it gets its own config and travels separately.
-MAIN_OBJECTS = ("ET", "FET", "FHT", "HT", "MET", "MHT", "egammas", "jets", "muons", "taus")
+MAIN_OBJECTS = (
+    "ET",
+    "FET",
+    "FHT",
+    "HT",
+    "MET",
+    "MHT",
+    "egammas",
+    "jets",
+    "muons",
+    "taus",
+)
 
 
-def build(tree: Path, hf_root: Path, labels: dict, only: list[str] | None = None) -> dict:
+def build(
+    tree: Path, hf_root: Path, labels: dict, only: list[str] | None = None
+) -> dict:
     """Write the mirror and report the data files each config resolves to."""
     written = {}
     for split_dir in sorted(tree.glob("*/*/*")):
@@ -58,7 +67,9 @@ def seeds_table(split_dir: Path, dataset: str) -> pa.Table | None:
     if not seeds_dir.is_dir():
         return None
 
-    table = pq.read_table(sorted(seeds_dir.glob("*.parquet"))).replace_schema_metadata(None)
+    table = pq.read_table(sorted(seeds_dir.glob("*.parquet"))).replace_schema_metadata(
+        None
+    )
 
     return table.append_column("dataset", pa.array([dataset] * table.num_rows))
 
@@ -75,7 +86,8 @@ def write_shards(table: pa.Table, out_dir: Path, split: str) -> int:
     chunks = [table.slice(s, per_shard) for s in range(0, table.num_rows, per_shard)]
     for index, chunk in enumerate(chunks):
         pq.write_table(
-            chunk, out_dir / f"{split}-{index:05d}-of-{len(chunks):05d}.parquet",
+            chunk,
+            out_dir / f"{split}-{index:05d}-of-{len(chunks):05d}.parquet",
             compression="snappy",
         )
 
@@ -134,9 +146,9 @@ def copy_assets(hf_root: Path) -> list[str]:
     return [p.name for p in copied]
 
 
-def read_labels(metadata: Path) -> dict:
-    """Sample labels, taken from the split summary beside the release."""
-    return labels_for(json.loads((metadata / "split_summary.json").read_text()))
+def read_labels(summary_path: Path) -> dict:
+    """Sample labels, taken from the frozen split summary."""
+    return labels_for(json.loads(summary_path.read_text()))
 
 
 def _prefixed_columns(renamed: dict) -> dict:
@@ -161,9 +173,9 @@ def _write_dataset_split(
     seeds = seeds_table(split_dir, dataset)
     if seeds is not None:
         write_shards(seeds, hf_root / "data" / dataset / "seeds", split)
-        written.setdefault(f"{dataset}-seeds", {})[split] = (
-            f"data/{dataset}/seeds/{split}-*.parquet"
-        )
+        written.setdefault(f"{dataset}-seeds", {})[
+            split
+        ] = f"data/{dataset}/seeds/{split}-*.parquet"
     print(f"  {dataset:46s} {split:5s} {table.num_rows:>9,} rows")
 
 

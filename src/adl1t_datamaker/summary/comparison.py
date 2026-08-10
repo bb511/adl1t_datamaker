@@ -36,7 +36,12 @@ def summarise_comparison(
     comparison["generated"] = generated_block(generated_at)
     outdir.mkdir(parents=True, exist_ok=True)
     comparison["figures"] = figures.draw_comparison(
-        first, second, comparison["labels"], outdir / "figures", figure_format, fractions
+        first,
+        second,
+        comparison["labels"],
+        outdir / "figures",
+        figure_format,
+        fractions,
     )
     (outdir / "COMPARISON.md").write_text(report.render_comparison(comparison))
     write_json(comparison, outdir / "comparison.json")
@@ -93,7 +98,9 @@ def _delta(first: dict, second: dict, column: str) -> dict:
         "first": _quoted_stats(left),
         "second": _quoted_stats(right),
         "difference": change,
-        "relative": change / left["mean"] if change is not None and left.get("mean") else None,
+        "relative": (
+            change / left["mean"] if change is not None and left.get("mean") else None
+        ),
     }
 
 
@@ -115,12 +122,18 @@ def _quoted_stats(entry: dict) -> dict:
 
 def _seed_deltas(first: dict, second: dict) -> list[dict]:
     """Seeds by how much their firing fraction moved between the two data sets."""
-    rates = [{seed["name"]: seed["fraction"] for seed in entry["trigger"].get("seeds", [])}
-             for entry in (first, second)]
+    rates = [
+        {seed["name"]: seed["fraction"] for seed in entry["trigger"].get("seeds", [])}
+        for entry in (first, second)
+    ]
     shared = sorted(set(rates[0]) & set(rates[1]))
     deltas = [
-        {"name": name, "first": rates[0][name], "second": rates[1][name],
-         "difference": rates[1][name] - rates[0][name]}
+        {
+            "name": name,
+            "first": rates[0][name],
+            "second": rates[1][name],
+            "difference": rates[1][name] - rates[0][name],
+        }
         for name in shared
     ]
 

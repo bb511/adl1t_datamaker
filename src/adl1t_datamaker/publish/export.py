@@ -1,15 +1,11 @@
 # Partitioning a converted data set into the published train/valid/test tree.
 #
-# The split is not drawn here. It arrives as a frozen map, one (split, order) pair per
+# The split is a frozen map in the scripts/publish folder, one (split, order) pair per
 # raw row, drawn once by the study this data was produced for and carried with the data
-# ever since. That study's generator advances across data sets in a fixed sequence, so
-# one data set's split cannot be replayed on its own, and redrawing here would partition
-# the release differently from the published one.
+# ever since.
 #
-# Two passes do the work. The first consolidates each object's thousands of shards into
-# a single file, in the lexicographic order the map was built against. The second takes
-# the rows of each split out of that file by position, which is cheap on one file and
-# ruinous across thousands.
+# Each object's thousands of shards are consolidated into a single file, in the
+# lexicographic order the map was built against.
 
 import hashlib
 import subprocess
@@ -55,7 +51,9 @@ def raw_objects(dataset_dir: Path) -> list[str]:
 
 def dataset_rows(dataset_dir: Path) -> int:
     """Events in one converted data set, counted on its event_info shards."""
-    return pds.dataset(_shards(dataset_dir, "event_info"), format="parquet").count_rows()
+    return pds.dataset(
+        _shards(dataset_dir, "event_info"), format="parquet"
+    ).count_rows()
 
 
 def event_fingerprint(dataset_dir: Path) -> str:
@@ -74,7 +72,9 @@ def event_fingerprint(dataset_dir: Path) -> str:
     return digest.hexdigest()
 
 
-def check_dataset(name: str, raw_dir: Path, expected: int, fingerprint: str | None) -> None:
+def check_dataset(
+    name: str, raw_dir: Path, expected: int, fingerprint: str | None
+) -> None:
     """Refuse a data set the frozen map no longer describes.
 
     :param expected: Rows the map covers.
@@ -84,7 +84,9 @@ def check_dataset(name: str, raw_dir: Path, expected: int, fingerprint: str | No
     """
     rows = dataset_rows(raw_dir)
     if rows != expected:
-        raise ValueError(f"{name} holds {rows} rows but its split map covers {expected}.")
+        raise ValueError(
+            f"{name} holds {rows} rows but its split map covers {expected}."
+        )
 
     if fingerprint and event_fingerprint(raw_dir) != fingerprint:
         raise ValueError(
@@ -135,7 +137,9 @@ def consolidate(dataset_dir: Path, obj: str, out_path: Path) -> int:
     return _stream_into(_shards(dataset_dir, obj), out_path)
 
 
-def consolidate_dataset(name: str, raw_dir: Path, work: Path, ncores: int) -> dict[str, Path]:
+def consolidate_dataset(
+    name: str, raw_dir: Path, work: Path, ncores: int
+) -> dict[str, Path]:
     """Consolidate every published object of one data set, one job per object."""
     objects = raw_objects(raw_dir)
     paths = [work / name / f"{obj}.parquet" for obj in objects]
@@ -147,8 +151,13 @@ def consolidate_dataset(name: str, raw_dir: Path, work: Path, ncores: int) -> di
 
 
 def export_dataset(
-    name: str, category: str, raw_dir: Path, split_map: Path, work: Path,
-    tree: Path, ncores: int = 1,
+    name: str,
+    category: str,
+    raw_dir: Path,
+    split_map: Path,
+    work: Path,
+    tree: Path,
+    ncores: int = 1,
 ) -> dict[str, int]:
     """Partition every object of one data set into its split directories."""
     split_of, order = read_split_map(split_map)
@@ -164,7 +173,11 @@ def export_dataset(
 
 
 def export_all(
-    index: dict, split_summary: dict, splitmap: Path, work: Path, tree: Path,
+    index: dict,
+    split_summary: dict,
+    splitmap: Path,
+    work: Path,
+    tree: Path,
     ncores: int = 1,
 ) -> dict[str, dict]:
     """Check every data set against its frozen map, then partition them all.
@@ -179,8 +192,13 @@ def export_all(
     counts = {}
     for name, entry in sorted(index.items()):
         counts[name] = export_dataset(
-            name, entry["category"], Path(entry["raw_dir"]),
-            splitmap / f"{entry['category']}__{name}.npz", work, tree, ncores,
+            name,
+            entry["category"],
+            Path(entry["raw_dir"]),
+            splitmap / f"{entry['category']}__{name}.npz",
+            work,
+            tree,
+            ncores,
         )
         print(f"  {name:46s} {counts[name]}")
 
@@ -250,11 +268,22 @@ def tar_cmd(tree: Path, members, out_path: Path) -> list[str]:
     :param tree: Directory tar runs from, which the members are relative to.
     """
     return [
-        "tar", "--sort=name", "--owner=0", "--group=0", "--numeric-owner",
-        f"--mtime={SOURCE_DATE}", "--format=pax",
+        "tar",
+        "--sort=name",
+        "--owner=0",
+        "--group=0",
+        "--numeric-owner",
+        f"--mtime={SOURCE_DATE}",
+        "--format=pax",
         "--pax-option=delete=atime,delete=ctime",
-        "--no-acls", "--no-xattrs", "--no-selinux",
-        "-C", str(tree), "-cf", str(out_path), *[str(m) for m in members],
+        "--no-acls",
+        "--no-xattrs",
+        "--no-selinux",
+        "-C",
+        str(tree),
+        "-cf",
+        str(out_path),
+        *[str(m) for m in members],
     ]
 
 
@@ -263,7 +292,9 @@ def split_members(tree: Path) -> dict[str, list[str]]:
     members = {}
     for split_dir in sorted(tree.glob("*/*/*")):
         if split_dir.is_dir():
-            members.setdefault(split_dir.name, []).append(str(split_dir.relative_to(tree)))
+            members.setdefault(split_dir.name, []).append(
+                str(split_dir.relative_to(tree))
+            )
 
     return members
 
@@ -347,25 +378,34 @@ def _stream_into(shards: list[Path], out_path: Path) -> int:
     return rows
 
 
-def _write_objects(objects: dict, rows: np.ndarray, order: np.ndarray, split_dir: Path) -> None:
+def _write_objects(
+    objects: dict, rows: np.ndarray, order: np.ndarray, split_dir: Path
+) -> None:
     """Write one split of every object, giving event_info its two extra columns."""
     for obj, consolidated in objects.items():
         extra = None
         if obj == "event_info":
             # So a file separated from its directory still says which split it belongs
             # to and where in that split's row order it sits.
-            extra = {"split": [split_dir.name] * len(rows), "order": order[rows].tolist()}
+            extra = {
+                "split": [split_dir.name] * len(rows),
+                "order": order[rows].tolist(),
+            }
         write_split(consolidated, rows, split_dir / obj, extra)
 
 
-def _take(dataset: pds.Dataset, chunk: np.ndarray, extra: dict | None, offset: int) -> pa.Table:
+def _take(
+    dataset: pds.Dataset, chunk: np.ndarray, extra: dict | None, offset: int
+) -> pa.Table:
     """One chunk of rows, with the per-row extra columns appended."""
     table = drop_excluded_columns(dataset.take(pa.array(chunk)))
     if not extra:
         return table
 
     for column, values in extra.items():
-        table = table.append_column(column, pa.array(values[offset : offset + len(chunk)]))
+        table = table.append_column(
+            column, pa.array(values[offset : offset + len(chunk)])
+        )
 
     return table.replace_schema_metadata(None)
 

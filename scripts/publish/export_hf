@@ -19,10 +19,10 @@ parser.add_argument(
     '--out', type=Path, required=True, help="Folder the mirror is written into."
 )
 parser.add_argument(
-    '--metadata',
+    '--summary',
     type=Path,
-    required=True,
-    help="Release metadata folder, read for the split summary that assigns the labels."
+    default=Path("scripts/publish/split_summary.json"),
+    help="The frozen split summary, read for the labels it assigns each data set."
 )
 parser.add_argument(
     '--only',
@@ -34,7 +34,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 args.out.mkdir(parents=True, exist_ok=True)
-labels = huggingface.read_labels(args.metadata)
+labels = huggingface.read_labels(args.summary)
 written = huggingface.build(args.tree, args.out, labels, args.only)
 huggingface.finish(args.tree, args.out, written)
 print(f"  mirror written to {args.out} with {len(written)} configs")

@@ -1,0 +1,117 @@
+{
+  "ZB_run396102": {
+    "category": "zerobias",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/EphZB_2025E_run396102",
+    "fingerprint": "b7eccc2096ff50bc7874fcc85d9bd3ac1e9967b9c675bda9325913fcb8185370"
+  },
+  "ZB_run398183": {
+    "category": "zerobias",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/EphZB_2025G_run398183",
+    "fingerprint": "8c63f3cd1b99e0b208b3e37d30e7c4b440bda7e924a9bc1ac64020d96160ec05"
+  },
+  "SingleNeutrino_E-10-gun": {
+    "category": "background",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/SingleNeutrino_E-10-gun",
+    "fingerprint": "ecadfdd25756ada3a6ad1f9c3165ee74a1ddfaf56315eae68b99f16df3a5713d"
+  },
+  "GluGluHTo2B_Par-MH-125": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/GluGluHTo2B_Par-MH-125_TuneCP5_13p6TeV_powhegMINLO-pythia8",
+    "fingerprint": "6c96069d2a14b6394283074a215af620c7e5d1ad6c1fcf9f26a40f113ed40c69"
+  },
+  "GluGluHto2G_Par-MH-125": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/GluGluHto2G_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8",
+    "fingerprint": "7bda27a01e1166be2817e38e23caa9ed13f9d98ff20751da5d760f3585a316ee"
+  },
+  "GluGluHto2G_Par-MH-90": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/GluGluHto2G_Par-MH-90_TuneCP5_13p6TeV_powheg-pythia8",
+    "fingerprint": "e311f6613a1951540b8e8b2172f1a8328c0915617bea19a9c87c3a81e8b17332"
+  },
+  "GluGluHto2Tau_Par-MH-125": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/GluGluHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-minlo-pythia8",
+    "fingerprint": "aa64714ba2eb4edfe0b1aa006d4080252780045a7318b988f80a90865876ae82"
+  },
+  "GluGlutoHHto2B2WtoLNu2Q_Par-c2-0-kl-1-kt-1": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/GluGlutoHHto2B2WtoLNu2Q_Par-c2-0-kl-1-kt-1_TuneCP5_13p6TeV_powheg-pythia8",
+    "fingerprint": "66304c5d84523b4ce6d7647a05fa77cb54a5eab6bcc83491bf5e35ae154cc6b3"
+  },
+  "HHHto4B2Tau_Par-c3-0-d4-0": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/HHHto4B2Tau_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8",
+    "fingerprint": "42256b5f5c7b3473c002da4eafe7f18d2ec0b23f237d75e6de9560b6f19209c6"
+  },
+  "HHHto6B_Par-c3-0-d4-0": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/HHHto6B_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8",
+    "fingerprint": "58c47ac5f9cfd20ad87f214608590fdb7b5d8903bf5e295cd44996018056e1f7"
+  },
+  "SUSYGluGluToBBHTo2B_Par-M-1200": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/SUSYGluGluToBBHTo2B_Par-M-1200_TuneCP5_13p6TeV_pythia8",
+    "fingerprint": "ce355e4ffa9154dabb5a1952e0040db24d7f76d86462d6b789eaefaba7cc7252"
+  },
+  "SUSYGluGluToBBHToBB_Par-M-120": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/SUSYGluGluToBBHToBB_Par-M-120_TuneCP5_13p6TeV_pythia8",
+    "fingerprint": "8e537b1c5bee6c8c6dce0e5ec4632a79f45a826dfbadb58e3c71b8d3c7ceec75"
+  },
+  "SUSYGluGluToBBHToBB_Par-M-350": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/SUSYGluGluToBBHToBB_Par-M-350_TuneCP5_13p6TeV_pythia8",
+    "fingerprint": "ee2eba3031fd44d0b881280d05a5787a457a787601bc0360642ae2de7d6d181e"
+  },
+  "SUSYGluGluToBBHToBB_Par-M-600": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/SUSYGluGluToBBHToBB_Par-M-600_TuneCP5_13p6TeV_pythia8",
+    "fingerprint": "33eea0643a0544a6da59e088cfdc036ae172659ac565647969691e30e92a2d5a"
+  },
+  "TTHTo2C_Par-MH-125": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/TTHTo2C_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8",
+    "fingerprint": "f8100524ee0ee9a7b355757fcd88d2ea287b3e8911a1a0701038b6f0409df901"
+  },
+  "TTHto2B_Par-MH-125": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/TTHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8",
+    "fingerprint": "961ed9adcb3ccc2d39c6b15480b0dd12ecee39e2562e5d6e66edd26b8907800d"
+  },
+  "VBFHTo2C_Par-MH-125": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/VBFHTo2C_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8",
+    "fingerprint": "841e509181748bf9c031863527690a9bbef29729003ddcdf53dc074c5c144c58"
+  },
+  "VBFHto2B_Par-MH-125": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/VBFHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8",
+    "fingerprint": "94b92c3e9416899464a3fa5bdab64601e0a55d4e35dc42091ed03f8e60ae35a6"
+  },
+  "VBFHto2Tau_Par-MH-125": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/VBFHto2Tau_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8",
+    "fingerprint": "18875011e18fef96f87a9bd94939392295b1c64549cf0f1733fda22109fcf049"
+  },
+  "WtoTauto3Mu": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/WtoTauto3Mu_TuneCP5_13p6TeV_pythia8",
+    "fingerprint": "e77747e77b98ce2e6250e8d6ef1867035311cb2bcf78e2d7dc2dd27da1b28002"
+  },
+  "ggH-suep-decay": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/ggH-suep-decay-POWHEGnoISR",
+    "fingerprint": "13ed13cfd93243256d1034c851161cf61afdb323239a91f3dcec2a6cf275157d"
+  },
+  "haa-4b-ma15": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/haa-4b-ma15-POWHEG",
+    "fingerprint": "fc02d4b910ded60d7e2ec69fe7fcdc0fa4b8c7438c3bc1bec42db13a07942c67"
+  },
+  "smj-case-A": {
+    "category": "signal",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/smj-case-A",
+    "fingerprint": "08bb737840d8bddc301d13ecbe1efdf77947e97a4495baa5c830a88dec02f99e"
+  }
+}
