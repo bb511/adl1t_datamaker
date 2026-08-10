@@ -49,7 +49,7 @@ courtesy: cite this record by its DOI, and the accompanying data descriptor once
 it is published.
 """
 
-CARD = """# Trigger Anomaly Detection for New Physics
+CARD = """# Trigger Anomaly Detection for New Physics at the LHC
 
 This dataset contains Level-1 Trigger objects from the CMS experiment at the CERN Large Hadron Collider, assembled for research on unsupervised anomaly detection in the trigger.
 The goal of unsupervised anomaly detection in this context is the discovery of new physics.
