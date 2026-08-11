@@ -74,7 +74,7 @@ Each event provides particle level and event information, as recorded by the tri
 The data is published pre-partitioned into training, validation and test splits: the zero-bias data 60/20/20, the simulated samples 60/40 between validation and test.
 All the feature values are in the trigger-native format of hardware integers.
 
-The associated github repository that was used to produce this data will be linked here once this record can be deanonymised.
+Specific technical data can be found in the github repo that was used to produce this data: https://github.com/bb511/adl1t_datamaker
 
 ## Layout
 
@@ -196,7 +196,7 @@ Each event provides particle level and event information, as recorded by the tri
 The data is published pre-partitioned into training, validation and test splits: the zero-bias data 60/20/20, the simulated samples 60/40 between validation and test.
 All the feature values are in the trigger-native format of hardware integers.
 
-The associated github repository that was used to produce this data will be linked here once this record can be deanonymised.
+Specific technical data can be found in the github repo that was used to produce this data: https://github.com/bb511/adl1t_datamaker
 
 ## Comparison with other algorithms
 
