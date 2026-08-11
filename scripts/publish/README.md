@@ -45,7 +45,7 @@ publish_work/
   adl1t-l1ad-v2/        the exported tree the archives are built from
 ```
 
-**You can delete the `publish_work` repository after running the `export_hf.py` file.**
+**You can delete the `publish_work` repository after running the `export_hf` script.**
 One needs about 10 GB of space for the full release. Plan to have that much when generating
 a new release.
 
@@ -61,4 +61,4 @@ excluded from the release along with the `L1_CICADA_*` seed bits.
 | `publish.export` | partition a data set by its frozen map, then archive and checksum it |
 | `publish.card` | the dataset card and the licence that ship inside the record |
 | `publish.huggingface` | the row-per-event mirror |
-| `publish.assets` | code that ships inside the record, copied rather than run from here |
+| `publish.assets` | the loading pipeline and its configs, which ship inside the HuggingFace mirror rather than run from here |

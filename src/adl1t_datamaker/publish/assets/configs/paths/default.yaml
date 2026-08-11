@@ -1,0 +1,12 @@
+# @package paths
+
+# Root of the downloaded record, the folder holding data/, loader/ and configs/.
+# Override it on the command line with paths.root_dir=/path/to/the/record.
+root_dir: ${oc.env:ADL1T_ROOT,.}
+
+# The published tables.
+raw_data_dir: ${paths.root_dir}/data
+
+# Where the extracted, processed and ml-ready caches are built. They are written to and
+# several times the size of the record, so they stay outside the downloaded copy.
+base_data_dir: ${oc.env:ADL1T_CACHE,./cache}

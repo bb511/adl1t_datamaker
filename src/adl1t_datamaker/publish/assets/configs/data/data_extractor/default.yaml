@@ -1,0 +1,57 @@
+# @package data.data_extractor
+
+# Which objects and features to read out of the published tables.
+#
+# Everything the record carries, seeds aside. Ask for the seeds by name to read the
+# menu decisions from the -seeds files, or for L1bit alone to keep just the verdict.
+
+_target_: loader.extraction.L1DataExtractor
+select_features:
+  muons: [
+    'muonIPhiAtVtx', 'muonIEt', 'muonQual',
+    'muonIEtaAtVtx', 'muonChg', 'muonTfMuonIdx',
+    'muonIPhi', 'muonIEta', 'muonIEtUnconstrained'
+  ]
+  jets: ['jetIEt', 'jetIEta', 'jetIPhi', 'jetHwQual', 'jetRawEt']
+  egammas: ['egIEt', 'egIEta', 'egIPhi', 'egIso']
+  taus: ['tauIEt', 'tauIEta', 'tauIPhi', 'tauIso']
+  ET: ['Et', 'ETTEM']
+  HT: ['Et', 'tower_count']
+  MET: ['Et', 'phi']
+  MHT: ['Et', 'phi']
+  FET: ['Et', 'phi']
+  FHT: ['Et', 'phi']
+  event_info: 'none'
+  seeds: 'none'
+
+# Change the field names for easier access when processing.
+feat_name_map:
+  muons:
+    muonIEt: Et
+    muonIPhiAtVtx: phi_vtx
+    muonIEtaAtVtx: eta_vtx
+    muonIPhi: phi
+    muonIEta: eta
+    muonQual: quality
+    muonChg: charge
+    muonTfMuonIdx: idx
+    muonIEtUnconstrained: rawEt
+  jets:
+    jetIEt: Et
+    jetIPhi: phi
+    jetIEta: eta
+    jetHwQual: quality
+    jetRawEt: rawEt
+  egammas:
+    egIEt: Et
+    egIPhi: phi
+    egIEta: eta
+    egIso: iso
+  taus:
+    tauIEt: Et
+    tauIPhi: phi
+    tauIEta: eta
+    tauIso: iso
+
+cache_root_dir: ${paths.data_dir}
+name: default

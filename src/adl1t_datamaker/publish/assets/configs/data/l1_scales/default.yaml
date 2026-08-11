@@ -1,0 +1,63 @@
+# @package data.l1_scales
+
+# Trigger scales of all the features, i.e. hardware units to GeV, radians and
+# pseudorapidity. They are carried for the rate calculations, which need physical units.
+# Nothing in the loading pipeline applies them, so the tensors a model sees stay in the
+# integer hardware units the record stores.
+#
+# The eta steps are 0.0870/2 for the calorimeter objects and 0.0870/8 for muons, which
+# is four times finer. The phi codes tile 2*pi in 144 calorimeter bins and 576 muon bins.
+# The feature names are the short ones, after data_extractor.feat_name_map.
+
+muons:
+  Et: 0.5
+  phi: 0.010908307824965
+  eta: 0.010875
+  phi_vtx: 0.010908307824965
+  eta_vtx: 0.010875
+  rawEt: 1
+  quality: 1
+  charge: 1
+  idx: 1
+jets:
+  Et: 0.5
+  eta: 0.0435
+  phi: 0.043633231299858
+  quality: 1
+  rawEt: 1
+egammas:
+  Et: 0.5
+  eta: 0.0435
+  phi: 0.043633231299858
+  iso: 1
+taus:
+  Et: 0.5
+  eta: 0.0435
+  phi: 0.043633231299858
+  iso: 1
+ET:
+  Et: 0.5
+  ETTEM: 0.5
+HT:
+  Et: 0.5
+  tower_count: 1
+MET:
+  Et: 0.5
+  phi: 0.043633231299858
+MHT:
+  Et: 0.5
+  phi: 0.043633231299858
+FET:
+  Et: 0.5
+  phi: 0.043633231299858
+FHT:
+  Et: 0.5
+  phi: 0.043633231299858
+event_info:
+  run: 1
+  lumi: 1
+  event: 1
+  bx: 1
+  orbit: 1
+  time: 1
+  nPV_True: 1

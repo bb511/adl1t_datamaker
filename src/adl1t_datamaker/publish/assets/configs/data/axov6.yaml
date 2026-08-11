@@ -1,0 +1,28 @@
+# @package data
+
+# The configuration behind the axol1tl v6 training, which used the same 2025 zero bias
+# this record publishes: muons, jets, e-gammas and MET, with no taus.
+
+defaults:
+  - /paths: data_2025E+G
+  - data_extractor: minimal
+  - data_processor: default
+  - data_normalizer: robust
+  - data_mlready: default
+  - data_awkward2torch: minimal
+  - l1_scales: default
+  - _self_
+
+_target_: loader.datamodule.L1ADData
+
+# Where each category of the record is read from.
+zerobias: ${paths.zerobias}
+signal: ${paths.signal}
+background: ${paths.background}
+
+# The kinematic features of each object a model is trained on.
+train_features:
+  muons: ['Et', 'eta', 'phi']
+  jets: ['Et', 'eta', 'phi']
+  egammas: ['Et', 'eta', 'phi']
+  MET: ['Et', 'phi']

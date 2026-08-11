@@ -1,0 +1,12 @@
+# @package data.data_awkward2torch
+
+# Constituents kept per object, at the global trigger's own capacity for each of them,
+# so that nothing is truncated.
+
+_target_: loader.awkward2torch.L1DataAwkward2Torch
+workers: 16
+nconst:
+  muons: 8
+  egammas: 12
+  jets: 12
+  taus: 12

@@ -9,4 +9,4 @@
 # export      partition a data set by a frozen split map, then archive it
 # card        the dataset card and licence that ship inside the record
 # huggingface the row-per-event mirror
-# assets      code that ships inside the record itself, not run from here
+# assets      the loading pipeline and its configs, which ship inside the mirror

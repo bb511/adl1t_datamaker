@@ -1,0 +1,12 @@
+# @package data.data_awkward2torch
+
+# Constituents kept per object. With the FET of the basis configuration, which carries
+# one entry per event and is not listed here, this gives a 39 by 3 model input.
+
+_target_: loader.awkward2torch.L1DataAwkward2Torch
+workers: 16
+nconst:
+  muons: 4
+  jets: 10
+  egammas: 12
+  taus: 12

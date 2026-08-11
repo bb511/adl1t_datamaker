@@ -1,0 +1,8 @@
+# @package data.data_normalizer
+
+# How to normalise the processed data. The schemes are implemented in loader/normalization.py.
+# Feature-wise standard scaling, fitted on the training split alone.
+
+_target_: loader.normalization.L1DataNormalizer
+name: standard
+hyperparams: null

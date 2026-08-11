@@ -1,0 +1,30 @@
+# @package data
+
+# The configuration the published studies were run with: taus kept and the forward
+# energy sum FET in place of MET, which is what makes the model input 39 constituents
+# wide (1 FET, 12 e-gammas, 10 jets, 4 muons, 12 taus) by 3 features.
+
+defaults:
+  - /paths: data_2025E+G
+  - data_extractor: minimal_tau_fet
+  - data_processor: default_tau_FET
+  - data_normalizer: robust
+  - data_mlready: default
+  - data_awkward2torch: extended_taus
+  - l1_scales: default
+  - _self_
+
+_target_: loader.datamodule.L1ADData
+
+# Where each category of the record is read from.
+zerobias: ${paths.zerobias}
+signal: ${paths.signal}
+background: ${paths.background}
+
+# The kinematic features of each object a model is trained on.
+train_features:
+  muons: ['Et', 'eta', 'phi']
+  jets: ['Et', 'eta', 'phi']
+  egammas: ['Et', 'eta', 'phi']
+  taus: ['Et', 'eta', 'phi']
+  FET: ['Et', 'phi']

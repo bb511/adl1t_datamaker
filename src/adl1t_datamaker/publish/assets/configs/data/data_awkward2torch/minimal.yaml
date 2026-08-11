@@ -1,0 +1,10 @@
+# @package data.data_awkward2torch
+
+# Constituents kept per object, for the configurations that train without taus.
+
+_target_: loader.awkward2torch.L1DataAwkward2Torch
+workers: 16
+nconst:
+  muons: 4
+  egammas: 4
+  jets: 10

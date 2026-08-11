@@ -1,0 +1,37 @@
+# @package paths
+
+# The data sets this record publishes: 2025 zero bias from eras E and G, twenty
+# simulated anomalies and one simulated normal-data sample. Each entry names the
+# directory of published shards that data set is read from.
+
+defaults:
+  - default.yaml
+
+data_dir: ${.base_data_dir}/data_2025E+G
+
+zerobias:
+  ZB_run396102: ${paths.raw_data_dir}/ZB_run396102
+  ZB_run398183: ${paths.raw_data_dir}/ZB_run398183
+signal:
+  GluGluHTo2B_Par-MH-125: ${paths.raw_data_dir}/GluGluHTo2B_Par-MH-125
+  GluGluHto2G_Par-MH-125: ${paths.raw_data_dir}/GluGluHto2G_Par-MH-125
+  GluGluHto2G_Par-MH-90: ${paths.raw_data_dir}/GluGluHto2G_Par-MH-90
+  GluGluHto2Tau_Par-MH-125: ${paths.raw_data_dir}/GluGluHto2Tau_Par-MH-125
+  GluGlutoHHto2B2WtoLNu2Q_Par-c2-0-kl-1-kt-1: ${paths.raw_data_dir}/GluGlutoHHto2B2WtoLNu2Q_Par-c2-0-kl-1-kt-1
+  HHHto4B2Tau_Par-c3-0-d4-0: ${paths.raw_data_dir}/HHHto4B2Tau_Par-c3-0-d4-0
+  HHHto6B_Par-c3-0-d4-0: ${paths.raw_data_dir}/HHHto6B_Par-c3-0-d4-0
+  SUSYGluGluToBBHTo2B_Par-M-1200: ${paths.raw_data_dir}/SUSYGluGluToBBHTo2B_Par-M-1200
+  SUSYGluGluToBBHToBB_Par-M-120: ${paths.raw_data_dir}/SUSYGluGluToBBHToBB_Par-M-120
+  SUSYGluGluToBBHToBB_Par-M-350: ${paths.raw_data_dir}/SUSYGluGluToBBHToBB_Par-M-350
+  SUSYGluGluToBBHToBB_Par-M-600: ${paths.raw_data_dir}/SUSYGluGluToBBHToBB_Par-M-600
+  TTHTo2C_Par-MH-125: ${paths.raw_data_dir}/TTHTo2C_Par-MH-125
+  TTHto2B_Par-MH-125: ${paths.raw_data_dir}/TTHto2B_Par-MH-125
+  VBFHTo2C_Par-MH-125: ${paths.raw_data_dir}/VBFHTo2C_Par-MH-125
+  VBFHto2B_Par-MH-125: ${paths.raw_data_dir}/VBFHto2B_Par-MH-125
+  VBFHto2Tau_Par-MH-125: ${paths.raw_data_dir}/VBFHto2Tau_Par-MH-125
+  WtoTauto3Mu: ${paths.raw_data_dir}/WtoTauto3Mu
+  ggH-suep-decay: ${paths.raw_data_dir}/ggH-suep-decay
+  haa-4b-ma15: ${paths.raw_data_dir}/haa-4b-ma15
+  smj-case-A: ${paths.raw_data_dir}/smj-case-A
+background:
+  SingleNeutrino_E-10-gun: ${paths.raw_data_dir}/SingleNeutrino_E-10-gun

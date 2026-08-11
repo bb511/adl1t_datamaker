@@ -1,0 +1,9 @@
+# @package data.data_normalizer
+
+# How to normalise the processed data. The schemes are implemented in loader/normalization.py.
+# Robust normalisation is what the published studies used.
+
+_target_: loader.normalization.L1DataNormalizer
+name: robust
+hyperparams:
+  percentiles: [0.05, 0.95]

@@ -1,0 +1,14 @@
+# @package data.data_mlready
+
+# Where the normalised, model-ready arrays are cached.
+#
+# There are no split fractions here: the record is published pre-split, 60/20/20 for the
+# zero bias and 60/40 between valid and test for the simulated samples, and this stage
+# reads that split rather than drawing its own.
+
+_target_: loader.mlready.L1DataMLReady
+
+processed_datapath: ${data.data_processor.cache_root_dir}/processed/${data.data_processor.name}
+
+cache_root_dir: ${paths.data_dir}
+name: ${data.data_processor.name}_default

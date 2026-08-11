@@ -2,16 +2,32 @@
 # Same events, same order, same values: only the shape differs.
 
 import json
+import shutil
 from pathlib import Path
 
 import awkward as ak
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
-from adl1t_datamaker.publish import export
-from adl1t_datamaker.publish.assets import adl1t_l1ad as l1
+from adl1t_datamaker.publish import card, export
 
 SHARD_BYTES = 500 * 1024**2
+
+# HuggingFace reads this block and nothing else to file the page. It takes the licence
+# from the identifier here and never opens the LICENSE file, so a record without one
+# renders as unlicensed. cc0-1.0 names the dedication in publish.card.LICENCE.
+FRONT_MATTER = """license: cc0-1.0
+pretty_name: Trigger Anomaly Detection for New Physics at the LHC
+size_categories:
+- 10M<n<100M
+tags:
+- physics
+- particle-physics
+- anomaly-detection
+- cms
+- level-1-trigger
+"""
 
 # Collections joined into the main table. seeds takes a third of the volume on its own,
 # so it gets its own config and travels separately.
@@ -28,6 +44,14 @@ MAIN_OBJECTS = (
     "taus",
 )
 
+# Directories of publish/assets that ship with the mirror: the loading pipeline and the
+# configuration tree that drives it.
+ASSET_DIRS = ("loader", "configs")
+
+# Carried into the seeds table as well, so that a menu decision can be matched to the
+# event it belongs to rather than to a row number.
+JOIN_COLUMNS = ("event", "order")
+
 
 def build(
     tree: Path, hf_root: Path, labels: dict, only: list[str] | None = None
@@ -43,20 +67,30 @@ def build(
     return written
 
 
+def read_split(split_dir: Path) -> dict:
+    """One split directory of the release tree, as ``{object: awkward array}``."""
+    return {
+        obj.name: ak.from_arrow(pq.read_table(sorted(obj.glob("*.parquet"))))
+        for obj in sorted(split_dir.iterdir())
+        if obj.is_dir()
+    }
+
+
 def joined_table(split_dir: Path, dataset: str, label: int) -> pa.Table:
     """Zip one split's object collections into a single row-per-event table."""
-    objects = l1.read_split(split_dir)
-    renamed = l1.rename_fields(objects)
+    objects = read_split(split_dir)
 
-    columns = _prefixed_columns(renamed)
-    for field in objects.get("event_info", ak.Array([])).fields:
+    columns = _prefixed_columns(objects)
+    event_level = list(objects.get("event_info", ak.Array([])).fields)
+    for field in event_level:
         columns[field] = objects["event_info"][field]
     if "seeds" in objects and "L1bit" in objects["seeds"].fields:
         columns["L1bit"] = objects["seeds"]["L1bit"]
+        event_level.append("L1bit")
 
     rows = len(next(iter(columns.values())))
     table = ak.to_arrow_table(ak.Array(columns), extensionarray=False)
-    table = table.append_column("dataset", pa.array([dataset] * rows))
+    table = unwrapped(table, event_level).append_column("dataset", pa.array([dataset] * rows))
 
     return table.append_column("label", pa.array([label] * rows, type=pa.int16()))
 
@@ -70,8 +104,35 @@ def seeds_table(split_dir: Path, dataset: str) -> pa.Table | None:
     table = pq.read_table(sorted(seeds_dir.glob("*.parquet"))).replace_schema_metadata(
         None
     )
+    table = unwrapped(table, table.schema.names)
+    for name, column in _join_columns(split_dir).items():
+        table = table.append_column(name, column)
 
     return table.append_column("dataset", pa.array([dataset] * table.num_rows))
+
+
+def unwrapped(table: pa.Table, names) -> pa.Table:
+    """Turn the named one-entry-per-event columns into one value per event.
+
+    The record stores every column as a list, which is the shape the collections need and
+    the shape nothing else does: a one-element list is truthy whatever it holds, so a cut
+    on a seed would keep every event, and it cannot be sorted or joined on. The
+    collections are left alone, the energy sums with them, so that a column prefixed by a
+    collection is a list and every other column is a value.
+    """
+    for name in names:
+        column = table[name]
+        if not (pa.types.is_list(column.type) or pa.types.is_large_list(column.type)):
+            continue
+        flat = pc.list_flatten(column)
+        if len(flat) != table.num_rows:
+            raise ValueError(
+                f"{name} holds {len(flat)} values for {table.num_rows} events, so it is "
+                "not one per event and cannot be unwrapped."
+            )
+        table = table.set_column(table.schema.get_field_index(name), name, flat)
+
+    return table
 
 
 def write_shards(table: pa.Table, out_dir: Path, split: str) -> int:
@@ -82,6 +143,7 @@ def write_shards(table: pa.Table, out_dir: Path, split: str) -> int:
     known until the bytes are written.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
+    _clear_shards(out_dir, split)
     per_shard = max(1, int(table.num_rows * SHARD_BYTES / max(table.nbytes, 1)))
     chunks = [table.slice(s, per_shard) for s in range(0, table.num_rows, per_shard)]
     for index, chunk in enumerate(chunks):
@@ -125,39 +187,69 @@ def configs_block(written: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def write_card(tree: Path, hf_root: Path, written: dict) -> None:
-    """Copy the record's card with the configs block as YAML front matter.
+def write_card(hf_root: Path, written: dict, summary: dict) -> None:
+    """Write the card, whose front matter is what HuggingFace reads to find the data.
 
-    HuggingFace reads the front matter and nothing else to locate the data files, so a
-    card copied without it renders but does not load.
+    A card copied without that block renders but does not load.
     """
-    body = (tree / "README.md").read_text()
-    (hf_root / "README.md").write_text(f"---\n{configs_block(written)}---\n\n{body}")
-    (hf_root / "LICENSE").write_text((tree / "LICENSE").read_text())
+    front = f"{FRONT_MATTER}{configs_block(written)}"
+    body = card.render_hf(summary, labels_for(summary))
+    (hf_root / "README.md").write_text(f"---\n{front}---\n\n{body}")
+    (hf_root / "LICENSE").write_text(card.LICENCE)
 
 
 def copy_assets(hf_root: Path) -> list[str]:
-    """Copy the reader that ships with the record into the mirror."""
-    assets = Path(l1.__file__).resolve().parent
-    copied = [p for p in sorted(assets.glob("*.py")) if p.name != "__init__.py"]
-    for asset in copied:
-        (hf_root / asset.name).write_text(asset.read_text())
+    """Copy the loading pipeline and its configuration tree into the mirror.
 
-    return [p.name for p in copied]
+    Each directory is replaced rather than written over, so a file renamed or dropped
+    here does not survive in a mirror built on top of an earlier one.
+    """
+    assets = Path(__file__).resolve().parent / "assets"
+    for name in ASSET_DIRS:
+        shutil.rmtree(hf_root / name, ignore_errors=True)
+        shutil.copytree(
+            assets / name, hf_root / name, ignore=shutil.ignore_patterns("__pycache__")
+        )
+
+    return list(ASSET_DIRS)
 
 
-def read_labels(summary_path: Path) -> dict:
-    """Sample labels, taken from the frozen split summary."""
-    return labels_for(json.loads(summary_path.read_text()))
+def read_summary(summary_path: Path) -> dict:
+    """The frozen split summary, which fixes the labels and the counts the card quotes."""
+    return json.loads(Path(summary_path).read_text())
 
 
-def _prefixed_columns(renamed: dict) -> dict:
-    """One column per object field, named ``<collection>_<field>``."""
+def _clear_shards(out_dir: Path, split: str) -> None:
+    """Drop shards an earlier run left, which a rerun writing fewer would not overwrite.
+
+    They carry the old shard count in their names, so nothing overwrites them and the
+    config's glob would read them as extra rows.
+    """
+    for shard in out_dir.glob(f"{split}-*.parquet"):
+        shard.unlink()
+
+
+def _join_columns(split_dir: Path) -> dict:
+    """The event_info columns that match a seeds row to a main-table row."""
+    table = pq.read_table(
+        sorted((split_dir / "event_info").glob("*.parquet")), columns=list(JOIN_COLUMNS)
+    )
+    table = unwrapped(table, JOIN_COLUMNS)
+
+    return {name: table[name].combine_chunks() for name in JOIN_COLUMNS}
+
+
+def _prefixed_columns(objects: dict) -> dict:
+    """One column per object field, named ``<collection>_<branch>``.
+
+    The branch names are the record's own, so that a column of the mirror and the column
+    of the tree it was taken from are called the same thing.
+    """
     return {
-        f"{name}_{field}": renamed[name][field]
+        f"{name}_{field}": objects[name][field]
         for name in MAIN_OBJECTS
-        if name in renamed
-        for field in renamed[name].fields
+        if name in objects
+        for field in objects[name].fields
     }
 
 
@@ -179,8 +271,8 @@ def _write_dataset_split(
     print(f"  {dataset:46s} {split:5s} {table.num_rows:>9,} rows")
 
 
-def finish(tree: Path, hf_root: Path, written: dict) -> None:
-    """Write the card, copy the reader, and clear the stray files before upload."""
-    write_card(tree, hf_root, written)
+def finish(hf_root: Path, written: dict, summary: dict) -> None:
+    """Write the card, copy the loader, and clear the stray files before upload."""
+    write_card(hf_root, written, summary)
     copy_assets(hf_root)
     export.prune_stray(hf_root)

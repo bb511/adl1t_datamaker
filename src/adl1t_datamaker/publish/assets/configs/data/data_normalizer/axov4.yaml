@@ -1,0 +1,11 @@
+# @package data.data_normalizer
+
+# How to normalise the processed data. The schemes are implemented in loader/normalization.py.
+# Robust normalisation with the quantile range mapped onto [-2, 2], as the axol1tl v4
+# and v5 trainings were run with.
+
+_target_: loader.normalization.L1DataNormalizer
+name: robust_axov4
+hyperparams:
+  percentiles: [0.05, 0.95]
+  scale: [2, -2]

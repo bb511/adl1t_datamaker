@@ -1,0 +1,8 @@
+# @package data.data_normalizer
+
+# How to normalise the processed data. The schemes are implemented in loader/normalization.py.
+# This one leaves the hardware integers exactly as the record stores them.
+
+_target_: loader.normalization.L1DataNormalizer
+name: unnormalized
+hyperparams: null

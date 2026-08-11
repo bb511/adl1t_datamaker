@@ -1,0 +1,35 @@
+# @package data.data_extractor
+
+# Which objects and features to read out of the published tables.
+#
+# The minimal set the anomaly detection pipeline needs, which is what the early versions
+# of axol1tl were trained on.
+
+_target_: loader.extraction.L1DataExtractor
+select_features:
+  muons: ['muonIEt', 'muonIPhi', 'muonIEta']
+  jets: ['jetIEt', 'jetIEta', 'jetIPhi']
+  egammas: ['egIEt', 'egIEta', 'egIPhi']
+  ET: ['Et']
+  MET: ['Et', 'phi']
+  HT: ['Et']
+  event_info: ['nPV_True']
+  seeds: ['L1bit']
+
+# Change the field names for easier access when processing.
+feat_name_map:
+  muons:
+    muonIEt: Et
+    muonIPhi: phi
+    muonIEta: eta
+  jets:
+    jetIEt: Et
+    jetIPhi: phi
+    jetIEta: eta
+  egammas:
+    egIEt: Et
+    egIPhi: phi
+    egIEta: eta
+
+cache_root_dir: ${paths.data_dir}
+name: minimal
