@@ -1,6 +1,7 @@
 [![Email Badge](https://img.shields.io/badge/blah-podagiu%40ethz.ch-blue?style=flat-square&logo=minutemailer&logoColor=white&label=%20&labelColor=grey)](mailto:podagiu@ethz.ch)
 [![Python: version](https://img.shields.io/badge/python-3.10-blue?style=flat-square&logo=python)](https://www.python.org/downloads/)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21787779-blue?style=flat-square&logo=doi)](https://doi.org/10.5281/zenodo.21787779)
+[![Dataset on HF](https://huggingface.co/datasets/huggingface/badges/resolve/main/dataset-on-hf-md.svg)](https://huggingface.co/datasets/podagiu/anomaly_detection_cmsl1t)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000?style=flat-square)](https://github.com/psf/black)
 
 # Level-1 CMS Trigger Anomaly Detection Data
