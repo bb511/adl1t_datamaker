@@ -119,8 +119,3 @@ For example, a seed is read as `data["seeds"].L1bit[:, 0]` and a sum as
 `data["ET"].Et[:, 0]`.
 Batches from two folders are not aligned, so join folders shard by shard
 rather than by zipping streams.
-
-
-## Mirror
-
-Repository mirrored at CERN GitLab: `cms-l1-ad/data_converter`.
