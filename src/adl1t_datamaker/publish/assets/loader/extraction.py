@@ -64,7 +64,9 @@ class L1DataExtractor:
         """
         shards = _shards(dataset_dir)
         if not shards:
-            log.warning("No shards under %s, so %s is left out.", dataset_dir, out_dir.name)
+            log.warning(
+                "No shards under %s, so %s is left out.", dataset_dir, out_dir.name
+            )
             return
 
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -80,7 +82,9 @@ class L1DataExtractor:
 
     def _objects(self, table: pa.Table) -> dict:
         """One shard regrouped by object collection, with the split index alongside."""
-        objects = {common.SPLIT_INDEX: ak.from_arrow(table.select(common.INDEX_COLUMNS))}
+        objects = {
+            common.SPLIT_INDEX: ak.from_arrow(table.select(common.INDEX_COLUMNS))
+        }
         for obj, feats in self.feats.items():
             if obj != "seeds":
                 objects[obj] = self._collection(table, obj, feats)

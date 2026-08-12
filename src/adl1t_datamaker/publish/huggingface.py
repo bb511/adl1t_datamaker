@@ -90,7 +90,9 @@ def joined_table(split_dir: Path, dataset: str, label: int) -> pa.Table:
 
     rows = len(next(iter(columns.values())))
     table = ak.to_arrow_table(ak.Array(columns), extensionarray=False)
-    table = unwrapped(table, event_level).append_column("dataset", pa.array([dataset] * rows))
+    table = unwrapped(table, event_level).append_column(
+        "dataset", pa.array([dataset] * rows)
+    )
 
     return table.append_column("label", pa.array([label] * rows, type=pa.int16()))
 

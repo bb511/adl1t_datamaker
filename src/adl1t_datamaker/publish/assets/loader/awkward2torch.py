@@ -51,10 +51,16 @@ class L1DataAwkward2Torch:
             return cached
 
         parts = self._process_folder(folder_path)
-        data = torch.from_numpy(np.concatenate([values for _, _, values, _ in parts], axis=1))
-        mask = torch.from_numpy(np.concatenate([flags for _, _, _, flags in parts], axis=1))
+        data = torch.from_numpy(
+            np.concatenate([values for _, _, values, _ in parts], axis=1)
+        )
+        mask = torch.from_numpy(
+            np.concatenate([flags for _, _, _, flags in parts], axis=1)
+        )
 
-        return self._write_cache(folder_path, parts, (data, mask, _l1bit(folder_path, len(data))))
+        return self._write_cache(
+            folder_path, parts, (data, mask, _l1bit(folder_path, len(data)))
+        )
 
     def _process_folder(self, folder_path: Path) -> list[tuple]:
         """Every object of one split, padded, in the order they are stacked in."""
@@ -62,7 +68,9 @@ class L1DataAwkward2Torch:
         if not paths:
             raise FileNotFoundError(f"No ml-ready object files in {folder_path}.")
 
-        with ThreadPoolExecutor(max_workers=min(self.workers, os.cpu_count() or 4)) as pool:
+        with ThreadPoolExecutor(
+            max_workers=min(self.workers, os.cpu_count() or 4)
+        ) as pool:
             return list(pool.map(self._object_tensor, paths))
 
     def _object_tensor(self, path: Path) -> tuple:
@@ -73,7 +81,12 @@ class L1DataAwkward2Torch:
         mask = ak.Array({f: ~ak.is_none(padded[f], axis=-1) for f in padded.fields})
         padded = ak.values_astype(ak.fill_none(padded, 0.0), np.float32)
 
-        return path.stem, sorted(data.fields), _rectangular(padded), _rectangular(mask, bool)
+        return (
+            path.stem,
+            sorted(data.fields),
+            _rectangular(padded),
+            _rectangular(mask, bool),
+        )
 
     def _read_cache(self, folder_path: Path) -> tuple | None:
         """The cached tensors, or None when they are absent or describe other columns."""
@@ -82,18 +95,24 @@ class L1DataAwkward2Torch:
         if not (listing.is_file() and all(path.is_file() for path in paths)):
             return None
         if json.loads(listing.read_text()) != self._listing(folder_path):
-            log.warning("Cached tensors in %s were built otherwise, rebuilding.", folder_path)
+            log.warning(
+                "Cached tensors in %s were built otherwise, rebuilding.", folder_path
+            )
             return None
 
         self._read_feature_map(folder_path)
 
         return tuple(torch.load(path) for path in paths)
 
-    def _write_cache(self, folder_path: Path, parts: list[tuple], tensors: tuple) -> tuple:
+    def _write_cache(
+        self, folder_path: Path, parts: list[tuple], tensors: tuple
+    ) -> tuple:
         """Keep the tensors and the metadata a later run needs to trust them."""
         for name, tensor in zip(CACHE_NAMES, tensors):
             torch.save(tensor, folder_path / f"torch_{name}.pt")
-        (folder_path / "cached_objects.json").write_text(json.dumps(self._listing(folder_path)))
+        (folder_path / "cached_objects.json").write_text(
+            json.dumps(self._listing(folder_path))
+        )
         self.object_feature_map = _feature_map(parts)
         _map_path(folder_path).write_text(json.dumps(self.object_feature_map, indent=4))
 
@@ -112,9 +131,15 @@ class L1DataAwkward2Torch:
         tensor of the run before it.
         """
         nconst = common.as_dict(self.nconst)
-        objects = {path.stem: sorted(pq.read_schema(path).names) for path in _object_paths(folder_path)}
+        objects = {
+            path.stem: sorted(pq.read_schema(path).names)
+            for path in _object_paths(folder_path)
+        }
 
-        return {"columns": objects, "nconst": {name: nconst.get(name) for name in objects}}
+        return {
+            "columns": objects,
+            "nconst": {name: nconst.get(name) for name in objects},
+        }
 
 
 def _object_paths(folder_path: Path) -> list[Path]:

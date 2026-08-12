@@ -51,7 +51,9 @@ class L1DataProcessor:
         for path in sorted(dataset_dir.glob("*.parquet")):
             data = ak.from_parquet(path)[keep]
             criterion = filters.get(path.stem)
-            ak.to_parquet(data[_mask(data, criterion)] if criterion else data, out_dir / path.name)
+            ak.to_parquet(
+                data[_mask(data, criterion)] if criterion else data, out_dir / path.name
+            )
         log.info("Cached processed data at %s.", out_dir)
 
     def _event_mask(self, dataset_dir: Path) -> ak.Array:

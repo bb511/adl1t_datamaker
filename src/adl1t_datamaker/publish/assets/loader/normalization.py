@@ -54,7 +54,9 @@ class L1DataNormalizer:
     def export_norm_params(self, norm_filepath: Path, obj_name: str) -> None:
         """Write one object's parameters beside the split they were fitted on."""
         if Path(norm_filepath).suffix != ".pkl":
-            raise ValueError(f"Norm params are only written to .pkl, not {norm_filepath}.")
+            raise ValueError(
+                f"Norm params are only written to .pkl, not {norm_filepath}."
+            )
 
         Path(norm_filepath).write_bytes(pickle.dumps(self.norm_params[obj_name]))
 
@@ -110,7 +112,10 @@ class L1DataNormalizer:
         params = self.norm_params[obj_name]
 
         return ak.Array(
-            {f: (data[f] - params[f]["shift"]) / params[f]["scale"] for f in data.fields}
+            {
+                f: (data[f] - params[f]["shift"]) / params[f]["scale"]
+                for f in data.fields
+            }
         )
 
     def _unnormalized(self, data: ak.Array, obj_name: str) -> ak.Array:
@@ -153,7 +158,10 @@ class L1DataNormalizer:
         fitted = {}
         for feat in data.fields:
             low, high = np.quantile(_values(data[feat]), percentiles)
-            fitted[feat] = ((low * scale[0] - high * scale[1]) / width, (high - low) / width)
+            fitted[feat] = (
+                (low * scale[0] - high * scale[1]) / width,
+                (high - low) / width,
+            )
 
         self._record(fitted)
 

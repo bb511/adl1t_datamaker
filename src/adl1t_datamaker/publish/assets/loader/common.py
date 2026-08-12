@@ -50,7 +50,11 @@ def datasets_in(directory: Path) -> list[Path]:
     """The data set directories of one category, in name order."""
     directory = Path(directory)
 
-    return sorted(p for p in directory.iterdir() if p.is_dir()) if directory.is_dir() else []
+    return (
+        sorted(p for p in directory.iterdir() if p.is_dir())
+        if directory.is_dir()
+        else []
+    )
 
 
 def split_rows(paths: list[Path]) -> dict[str, np.ndarray]:
@@ -65,12 +69,16 @@ def split_rows(paths: list[Path]) -> dict[str, np.ndarray]:
     order = index["order"].combine_chunks().to_numpy(zero_copy_only=False)
     names = pc.unique(index["split"].combine_chunks()).to_pylist()
 
-    return {name: _ordered(_rows_of(index["split"], name), order) for name in sorted(names)}
+    return {
+        name: _ordered(_rows_of(index["split"], name), order) for name in sorted(names)
+    }
 
 
 def _rows_of(column, name: str) -> np.ndarray:
     """Rows belonging to one split, in file order."""
-    return np.flatnonzero(pc.equal(column, name).combine_chunks().to_numpy(zero_copy_only=False))
+    return np.flatnonzero(
+        pc.equal(column, name).combine_chunks().to_numpy(zero_copy_only=False)
+    )
 
 
 def _ordered(rows: np.ndarray, order: np.ndarray) -> np.ndarray:
