@@ -121,6 +121,10 @@ dmypy.json
 outputs/
 parquet_files/
 
+# Working notes for the data descriptor manuscript
+DATA_DESCRIPTOR.md
+DATA_DESCRIPTOR_REFERENCE.md
+
 # Pyre type checker
 .pyre/
 

@@ -21,6 +21,10 @@ log = logging.getLogger(__name__)
 # event-level column, which is what keeps nPV_True whole rather than splitting it in two.
 OBJECTS = ("ET", "FET", "FHT", "HT", "MET", "MHT", "egammas", "jets", "muons", "taus")
 
+# The collections that can hold more than one object, and so have an order to fix. The
+# rest are energy sums, one entry per event.
+COLLECTIONS = ("egammas", "jets", "muons", "taus")
+
 
 @dataclass
 class L1DataExtractor:
@@ -96,12 +100,31 @@ class L1DataExtractor:
         prefix = f"{obj}_" if obj in OBJECTS else ""
         mapping = self.renames.get(obj, {})
         array = ak.from_arrow(table.select([f"{prefix}{feat}" for feat in feats]))
+        array = ak.Array({mapping.get(f, f): array[f"{prefix}{f}"] for f in feats})
 
-        return ak.Array({mapping.get(f, f): array[f"{prefix}{f}"] for f in feats})
+        return _et_ordered(array) if obj in COLLECTIONS else array
 
     def _seed_shards(self, dataset_dir: Path) -> list[Path]:
         """The menu shards, which only matter when the configuration asks for seeds."""
         return _shards(dataset_dir / "seeds") if "seeds" in self.feats else []
+
+
+def _et_ordered(data: ak.Array) -> ak.Array:
+    """One collection's objects, hardest first.
+
+    The record keeps the order the global trigger read the objects out in. That is ET
+    descending for the calorimeter objects but not for the muons, a quarter of the
+    multi-muon zero bias events carrying a softer muon ahead of a harder one. The torch
+    stage clips each collection to a fixed count and then stacks it by position, so
+    without this a truncated event would lose the wrong muons and the leading muon would
+    not always land in the leading slot. The sort is stable, so the collections that
+    already arrive ordered come out untouched.
+    """
+    if "Et" not in data.fields:
+        log.warning("No Et among %s, so the record's own order is kept.", data.fields)
+        return data
+
+    return data[ak.argsort(data["Et"], axis=-1, ascending=False, stable=True)]
 
 
 def _selected(select_features) -> dict:

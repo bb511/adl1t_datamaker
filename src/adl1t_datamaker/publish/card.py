@@ -133,6 +133,8 @@ global trigger's capacity of {capacities}, with no padding and no truncation.
 
 ## Caveats
 
+**Ordering.** Objects arrive in the trigger's readout order, which is ET-descending for the calorimeter objects and not for the muons.
+
 **The menu differs between data and simulation.** Zero bias has 183 algorithm
 columns and simulation has 161, of which 147 are shared, and the two do not order
 them the same way. Select seeds by name, never by position.
@@ -297,6 +299,9 @@ Two energies are not on the table: `muons_muonIEtUnconstrained` counts 1 GeV per
 Quality, charge, isolation, index and tower-count fields are already integers and unscaled, as is every event information field and every seed.
 
 ## Caveats
+
+**Ordering.** Objects arrive in the trigger's readout order, which is ET-descending for the calorimeter objects and not for the muons.
+The shipped loader sorts objects by ET before processing them.
 
 **The menu differs between data and simulation.**
 Zero bias data has 183 algorithm columns and the simulations have 161, of which 147 are shared.
