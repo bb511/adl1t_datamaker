@@ -17,8 +17,17 @@ SHARD_BYTES = 500 * 1024**2
 # HuggingFace reads this block and nothing else to file the page. It takes the licence
 # from the identifier here and never opens the LICENSE file, so a record without one
 # renders as unlicensed. cc0-1.0 names the dedication in publish.card.LICENCE.
+#
+# Everything the Hub filters its dataset listing by lives here rather than only on the
+# Hub itself, because write_card replaces the whole README: a field set through the web
+# interface and not repeated here is dropped by the next export.
 FRONT_MATTER = """license: cc0-1.0
-pretty_name: Trigger Anomaly Detection for New Physics at the LHC
+language:
+- en
+task_categories:
+- tabular-regression
+- tabular-classification
+pretty_name: Trigger Anomaly Detection for New Physics at the Large Hadron Collider
 size_categories:
 - 10M<n<100M
 tags:
@@ -47,6 +56,9 @@ MAIN_OBJECTS = (
 # Directories of publish/assets that ship with the mirror: the loading pipeline and the
 # configuration tree that drives it.
 ASSET_DIRS = ("loader", "configs")
+
+# Files of publish/assets that ship beside those directories, at the mirror's root.
+ASSET_FILES = ("requirements.txt",)
 
 # Carried into the seeds table as well, so that a menu decision can be matched to the
 # event it belongs to rather than to a row number.
@@ -196,12 +208,12 @@ def write_card(hf_root: Path, written: dict, summary: dict) -> None:
     """
     front = f"{FRONT_MATTER}{configs_block(written)}"
     body = card.render_hf(summary, labels_for(summary))
-    (hf_root / "README.md").write_text(f"---\n{front}---\n\n{body}")
+    (hf_root / "README.md").write_text(f"---\n{front}---\n\n{body}\n")
     (hf_root / "LICENSE").write_text(card.LICENCE)
 
 
 def copy_assets(hf_root: Path) -> list[str]:
-    """Copy the loading pipeline and its configuration tree into the mirror.
+    """Copy the loading pipeline, its configuration tree and its requirements over.
 
     Each directory is replaced rather than written over, so a file renamed or dropped
     here does not survive in a mirror built on top of an earlier one.
@@ -212,8 +224,10 @@ def copy_assets(hf_root: Path) -> list[str]:
         shutil.copytree(
             assets / name, hf_root / name, ignore=shutil.ignore_patterns("__pycache__")
         )
+    for name in ASSET_FILES:
+        shutil.copy(assets / name, hf_root / name)
 
-    return list(ASSET_DIRS)
+    return [*ASSET_DIRS, *ASSET_FILES]
 
 
 def read_summary(summary_path: Path) -> dict:

@@ -1,0 +1,19 @@
+# What the pipeline in loader/ needs, on python 3.10 or newer. From the root of the
+# downloaded record:
+#
+#   pip install -r requirements.txt
+#
+# These are lower bounds rather than pins, and name the major versions the APIs used
+# here belong to rather than floors anyone has tested. The pipeline was run on python
+# 3.10 with awkward 2.9, numpy 2.2, pyarrow 22, torch 2.7, omegaconf 2.3 and
+# hydra-core 1.3.
+awkward>=2.0
+numpy>=1.24
+pyarrow>=14
+torch>=2.0
+omegaconf>=2.3
+hydra-core>=1.3
+
+# Only for fetching the record, as the dataset card's example does. Nothing in loader/
+# imports it, so a record already on disk does not need it.
+huggingface-hub>=0.24

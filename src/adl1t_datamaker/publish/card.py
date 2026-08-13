@@ -91,6 +91,8 @@ The simulated anomaly samples, as well as the simulated background sample only a
 
 Each subdirectory is a different object that contains its collection of parquet files.
 Every collection of a split has the same rows in the same order, so row *i* of `jets/` and row *i* of `muons/` describe one event.
+That position is the only correspondence that always holds.
+**Neither `order` nor the `event` entry fulfils this same role.**
 
 
 ## Comparison with other algorithms
@@ -141,6 +143,11 @@ them the same way. Select seeds by name, never by position.
 
 **`nPV_True` has two types.** It is float32 in zero bias and int32 in simulation.
 
+**Simulation has no beam coordinates.** Every simulated sample has `run` of 1, `bx` of
+4294967295 and `orbit` of 18446744073709551615, the all-ones codes of their types, in place
+of the values a collision would have.
+Only the zero bias has non-trivial values.
+
 **`jetRawEt` is zero throughout the zero-bias data.** The branch is unfilled in original data
 ntuples, though it describes real values in simulation.
 
@@ -153,6 +160,11 @@ file separated from its directory is still self-describing, and `order`, the pos
 in that ordering, which is `-1` for the events that the conventional preprocessing removed.
 Links to the papers detailing these studies will be attached here once these studies
 become public.
+
+The standard steps involve dropping an event whose total `ET` reached the all-ones code of its 12 bits, 4095,
+and masking the muons, e-gammas, jets and taus above an `Et` of 511.
+511 is the all-ones code of the 9-bit muon, e-gamma and tau energies, so for them the mask removes the saturated objects.
+The jet energy is 11 bits wide and saturates at 2047: on jets the same number is the study's own threshold, at 255.5 GeV, and not a hardware limit.
 
 **A split can span several directories.** The two zero-bias runs were permuted together,
 so their training rows interleave and `order` counts across the whole split rather than
@@ -207,8 +219,9 @@ These algorithms were applied to every event in the presented data sets as well.
 Their results are in the `-seeds` configs and can be used to do comparative studies with other live algorithms currently running in the CMS trigger.
 Skip them if you want kinematics alone and do not want to compare your anomaly detector with the rest of the algorithms.
 
-Row *i* of `<data set>-seeds` is row *i* of `<data set>`.
-To keep the correspondence through a filter or a shuffle, join on `order`, which is unique within a split, or on `event`, which contains the event number of the collision.
+Row *i* of `<data set>-seeds` is row *i* of `<data set>`, which is the correspondence that always holds.
+Neither column is a key on its own: every event the standard preprocessing dropped carries `order = -1`, and `event` cycles over a hundred values in `ggH-suep-decay`, `haa-4b-ma15` and `smj-case-A`.
+Among the rows with `order >= 0` it is unique within a split, so a filter or a shuffle can be undone by joining on `order` once those rows are set aside.
 
 ## Loading
 
@@ -242,7 +255,7 @@ train = data.load("train")
 `prepare` reads the whole record and caches each stage under `./cache`, which the `ADL1T_CACHE` environment variable moves elsewhere; allow it a few times the record's size on disk.
 `train` then has `x`, the model input, of shape (events, 39, 3) under the `basis` configuration, its padding `mask`, whether the event passed ANY other algorithm in the trigger `l1bit` and the label `y` (0 for zerobias, > 0 for anomalies, < 0 for zerobias simulation).
 `data.load_aux("valid")` returns the same for every simulated sample.
-The pipeline needs `awkward`, `pyarrow`, `numpy`, `torch`, `omegaconf` and `hydra-core`.
+The pipeline needs python 3.10 or newer with `awkward`, `pyarrow`, `numpy`, `torch`, `omegaconf` and `hydra-core`, which `pip install -r requirements.txt` at the record's root installs.
 **If you would just rather read the raw data, you need none of the above dependencies.**
 Just call `load_dataset`.
 
@@ -253,6 +266,7 @@ data/<data set>/<split>-NNNNN-of-NNNNN.parquet
 data/<data set>/seeds/<split>-NNNNN-of-NNNNN.parquet
 loader/
 configs/
+requirements.txt
 ```
 
 One row is one event.
@@ -310,6 +324,9 @@ Additionally, the order of the other trigger algorithm decisions is not the same
 **`nPV_True` has two types.**
 It is float32 in zero bias and int32 in simulation.
 
+**Simulation carries no beam coordinates.**
+Every simulated sample has `run` of 1, `bx` of 4294967295 and `orbit` of 18446744073709551615, the all-ones codes of their types, in place of the values a collision would have. Only the zero bias locates its events in the machine.
+
 **`jetRawEt` is zero throughout the zero-bias data.**
 The branch is unfilled in original data ntuples, though it has real values in simulation.
 
@@ -328,7 +345,9 @@ To rebuild the same order as in previous studies, read both zero-bias configs, c
 Concatenating one run after the other gives the right rows in the wrong order.
 
 The pipeline in `loader/` goes through the standard preprocessing steps.
-In the four stages the studies used: read the tables into one array per collection, drop the events saturated in ET and mask the saturated objects, fit the normalisation on the training split alone and apply it to every other split, then pad each collection to a fixed number of constituents and stack them into one tensor.
+In the four stages the studies used: read the tables into one array per collection, drop the events saturated in ET and mask the objects above a cut, fit the normalisation on the training split alone and apply it to every other split, then pad each collection to a fixed number of constituents and stack them into one tensor.
+That object cut is `Et < 511` for muons, e-gammas, jets and taus.
+511 is the all-ones code of the 9-bit muon, e-gamma and tau energies, so for them it removes the saturated objects, but jet energy is 11 bits wide and saturates at 2047: on jets the same number is the study's own threshold, at 255.5 GeV, and not a hardware limit.
 The events cut by this pipeline have the `order` set to `-1`: run over the zero bias it removes the {dropped:,} events marked `-1`, {dropped_pct} of them, and no others.
 
 ## Provenance
@@ -337,10 +356,31 @@ Zero-bias data: CMS, 2025, runs {runs}. Simulated samples: CMS Run 3 Winter25 ca
 The values are the Level-1 trigger's own reconstructed objects rather than offline
 reconstruction.
 
+## Citation
+
+Cite the Zenodo record that this dataset mirrors.
+The data descriptor is not published yet; its citation will be added here once it is.
+
+```bibtex
+@dataset{{cms_l1t_anomaly_2026,
+  author    = {{{{CMS Collaboration}}}},
+  title     = {{Trigger Anomaly Detection for New Physics at the Large Hadron Collider}},
+  year      = {{2026}},
+  publisher = {{Zenodo}},
+  version   = {{1.0}},
+  doi       = {{10.5281/zenodo.21787779}},
+  url       = {{https://doi.org/10.5281/zenodo.21787779}}
+}}
+```
+
 ## Licence
 
 CC0 1.0, a public domain dedication with no restrictions on reuse. See `LICENSE`.
 Citation by DOI is requested as a courtesy, not required.
+
+## Contact
+
+Questions and problems are welcome as a discussion on this dataset's page, or as an issue on the repository that produced it: https://github.com/bb511/adl1t_datamaker.
 """
 
 
