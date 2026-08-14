@@ -125,7 +125,7 @@ Multiply by these to get GeV, radians and pseudorapidity:
 {units_table}
 
 The decimals are rounded. The steps are exact fractions: calorimeter eta is 0.0870/2,
-muon eta is 0.0870/8, calorimeter phi is 2*pi/144, and muon phi is 2*pi/576.
+muon eta is 0.0870/8, calorimeter phi is 2pi/144, and muon phi is 2pi/576.
 `muonIEtaAtVtx` and `muonIPhiAtVtx` take the same scales as muon eta and phi.
 Quality, charge, isolation, index and tower-count fields are already integers and unscaled, as is
 every `event_info` field and every `seeds` bit.
@@ -164,13 +164,13 @@ become public.
 The standard steps involve dropping an event whose total `ET` reached the all-ones code of its 12 bits, 4095,
 and masking the muons, e-gammas, jets and taus above an `Et` of 511.
 511 is the all-ones code of the 9-bit muon, e-gamma and tau energies, so for them the mask removes the saturated objects.
-The jet energy is 11 bits wide and saturates at 2047: on jets the same number is the study's own threshold, at 255.5 GeV, and not a hardware limit.
+The jet energy is 11 bits wide and saturates at 2047, however, the cut is at 255.5 GeV and not a hardware limit.
 
 **A split can span several directories.** The two zero-bias runs were permuted together,
 so their training rows interleave and `order` counts across the whole split rather than
-within one run. To rebuild the study's order, read both run directories, concatenate
-them, then stable-sort by `order` with the `-1` rows left at the end. Concatenating one
-run after the other gives the right rows in the wrong order.
+within one run.
+To rebuild the study's order, read both run directories, concatenate them, then stable-sort by `order` with the `-1` rows left at the end.
+Concatenating one run after the other gives the right rows in the wrong order.
 
 ## Provenance
 
@@ -288,7 +288,7 @@ The energy sums are collections too, of one entry each. The event information, t
 The collections have one entry per object in the event.
 The energy sums have a single entry (list with one value).
 Everything else holds one value: `row["L1bit"]` is `True`, `row["event"]` is an integer, and `ds.filter(lambda r: r["L1bit"])` selects the events the trigger accepted.
-A `-seeds` config carries one boolean column per trigger algorithm and, in place of the kinematics, `L1bit`, `dataset`, `event` and `order`.
+A `-seeds` config has one boolean column per trigger algorithm and four other columns: `L1bit`, `dataset`, `event` and `order`.
 
 ## Data sets
 
@@ -307,9 +307,9 @@ Multiply by the following to get GeV, radians and pseudorapidity:
 {units_table}
 
 The decimals are rounded.
-The steps are exact fractions: calorimeter eta is 0.0870/2, muon eta is 0.0870/8, calorimeter phi is 2*pi/144, and muon phi is 2*pi/576.
+The steps are exact fractions: calorimeter eta is 0.0870/2, muon eta is 0.0870/8, calorimeter phi is 2pi/144, and muon phi is 2pi/576.
 `muons_muonIEtaAtVtx` and `muons_muonIPhiAtVtx` take the same scales as muon eta and phi.
-Two energies are not on the table: `muons_muonIEtUnconstrained` counts 1 GeV per unit rather than 0.5, and `jets_jetRawEt` carries no documented scale.
+Two energies are missing from the table: `muons_muonIEtUnconstrained` is 1 GeV per unit rather than 0.5, and `jets_jetRawEt` has no documented scale.
 Quality, charge, isolation, index and tower-count fields are already integers and unscaled, as is every event information field and every seed.
 
 ## Caveats
@@ -325,7 +325,8 @@ Additionally, the order of the other trigger algorithm decisions is not the same
 It is float32 in zero bias and int32 in simulation.
 
 **Simulation carries no beam coordinates.**
-Every simulated sample has `run` of 1, `bx` of 4294967295 and `orbit` of 18446744073709551615, the all-ones codes of their types, in place of the values a collision would have. Only the zero bias locates its events in the machine.
+Every simulated sample has `run` of 1, `bx` of 4294967295 and `orbit` of 18446744073709551615, the all-ones codes of their types, in place of the values a collision would have.
+Only the zero bias has non-trivial values in these fields.
 
 **`jetRawEt` is zero throughout the zero-bias data.**
 The branch is unfilled in original data ntuples, though it has real values in simulation.
@@ -346,9 +347,10 @@ Concatenating one run after the other gives the right rows in the wrong order.
 
 The pipeline in `loader/` goes through the standard preprocessing steps.
 In the four stages the studies used: read the tables into one array per collection, drop the events saturated in ET and mask the objects above a cut, fit the normalisation on the training split alone and apply it to every other split, then pad each collection to a fixed number of constituents and stack them into one tensor.
-That object cut is `Et < 511` for muons, e-gammas, jets and taus.
-511 is the all-ones code of the 9-bit muon, e-gamma and tau energies, so for them it removes the saturated objects, but jet energy is 11 bits wide and saturates at 2047: on jets the same number is the study's own threshold, at 255.5 GeV, and not a hardware limit.
-The events cut by this pipeline have the `order` set to `-1`: run over the zero bias it removes the {dropped:,} events marked `-1`, {dropped_pct} of them, and no others.
+That object cut is `Et < 511` for muons, e-gammas, jets and taus; 511 is the all-ones code of the 9-bit muon, e-gamma and tau energies, so this cut removes saturated objects.
+For the jet energy, the full bit width is 11, which would saturate at 2047.
+The loader cuts any jets above 255.5 GeV, and not at the hardware limit.
+The events cut by this pipeline have the `order` set to `-1`: run over the zero bias it removes the {dropped:,} events marked `-1`, {dropped_pct} of them.
 
 ## Provenance
 
