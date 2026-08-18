@@ -1,8 +1,9 @@
 # Rendering a measured data set as Markdown.
 #
-# Nothing here measures. The numbers arrive ready in the summary dictionary, and the
-# renderers only arrange them, in the order a Nature Scientific Data descriptor uses: how
-# the data was made, what the records are, what is in them, and what was checked.
+# No parquet is read here: every number comes from the summary dictionary core.py
+# assembles, and the renderers only arrange it, in the order a Nature Scientific Data
+# descriptor uses: how the data was made, what the records are, what is in them, and what
+# was checked.
 
 from adl1t_datamaker import schema
 
@@ -95,7 +96,7 @@ def comparison_features(comparison: dict) -> str:
 
 
 def comparison_seeds(comparison: dict) -> str:
-    """Whether the same menu fired at the same rate on both data sets."""
+    """Each shared seed's firing fraction on both data sets, largest shift first."""
     first, second = comparison["labels"]
     rows = [
         [
@@ -143,7 +144,7 @@ def fmt(value, digits: int = 4) -> str:
 
 
 def title_block(summary: dict) -> str:
-    """What this data set is, in the few numbers a reader wants before any table."""
+    """What this data set is, in the counts that come before any table."""
     totals = summary["totals"]
 
     return "\n".join(
@@ -180,7 +181,11 @@ def section_provenance(summary: dict) -> str:
 
 
 def section_inventory(summary: dict) -> str:
-    """What the records physically are: the Data Records section."""
+    """What the records physically are: the Data Records section.
+
+    A parquet row is one event in every object folder, the jagged ones included, so the
+    bytes per row quoted here are bytes per event.
+    """
     rows = [
         [
             f"`{name}`",
@@ -215,7 +220,11 @@ def section_inventory(summary: dict) -> str:
 
 
 def section_schema(summary: dict) -> str:
-    """What each stored column holds, measured, beside its `docs/README.md` entry."""
+    """What each stored column holds, measured, beside its `docs/README.md` entry.
+
+    `Entries` counts stored values rather than events: a particle collection contributes
+    one entry per object, so its count is a total object count.
+    """
     blocks = ["## Schema and measured statistics", _units_note()]
     for name, obj in sorted(summary["objects"].items()):
         if name == "seeds":
@@ -229,7 +238,11 @@ def section_schema(summary: dict) -> str:
 
 
 def section_multiplicities(summary: dict) -> str:
-    """How many entries each event carries, against the documented hardware cap."""
+    """How many entries each event carries, against the documented hardware cap.
+
+    The cap is read out of docs/README.md, so it is blank for a collection the docs leave
+    silent, CICADA among them.
+    """
     rows = [
         [
             f"`{name}`",
@@ -258,7 +271,11 @@ def section_multiplicities(summary: dict) -> str:
 
 
 def section_event_coverage(summary: dict) -> str:
-    """Which runs, luminosity sections and beam conditions the data spans."""
+    """Which runs, luminosity sections and beam conditions the data spans.
+
+    `LS gaps` counts the sections missing between the first and last one seen in a run,
+    since nothing in the parquet says where the run itself began or ended.
+    """
     coverage = summary["event_coverage"]
     if not coverage:
         return "## Event coverage\n\n_No `event_info` object in this data set._"
@@ -281,7 +298,7 @@ def section_event_coverage(summary: dict) -> str:
 
 
 def section_trigger(summary: dict) -> str:
-    """What the level 1 menu did, seed by seed."""
+    """What the level 1 menu did, seed by seed, ranked by how often each fired."""
     trigger = summary["trigger"]
     if not trigger:
         return "## Trigger content\n\n_No `seeds` object in this data set._"
@@ -337,7 +354,11 @@ def section_validation(summary: dict) -> str:
 
 
 def section_figures(summary: dict) -> str:
-    """What the data looks like. figures.py stores paths relative to the report."""
+    """What the data looks like.
+
+    figures.py stores the paths relative to the directory the report sits in, so the
+    Markdown links resolve.
+    """
     figures = summary.get("figures", [])
     blocks = ["## Figures"] + [
         f"**{figure['caption']}**\n\n![{figure['caption']}]({figure['path']})"
@@ -480,7 +501,13 @@ def _dtype(entry: dict) -> str:
 
 
 def _physical(entry: dict) -> str:
-    """The measured range converted to GeV, radians or pseudorapidity."""
+    """The measured range converted to GeV, radians or pseudorapidity.
+
+    `scale` is the (factor, unit label) pair schema.unit_scale gives, so the stored
+    hardware code times the factor is the physical quantity. A column carrying no
+    physical unit, such as a quality flag or an event identifier, gives `-`, as does one
+    with nothing measured in it.
+    """
     scale = entry.get("scale")
     stats_ = entry["stats"]
     if not scale or stats_["min"] is None:
@@ -503,7 +530,7 @@ def _units_note() -> str:
 
 
 def _provenance_value(value) -> str:
-    """One config value as a table cell; several input paths stack inside it."""
+    """One config value as a table cell; a list becomes `<br>`-separated lines in it."""
     if isinstance(value, (list, tuple)):
         return "<br>".join(f"`{item}`" for item in value) or "-"
     if isinstance(value, bool):
@@ -580,8 +607,9 @@ def _trigger_lines(trigger: dict) -> str:
             f"{trigger['n_seeds']}",
             f"- **Seeds that fired on every event**: {len(trigger.get('always_fired', []))}",
             "",
-            "`L1bit` is the logical OR of every seed below and is excluded from the counts "
-            "above. The full menu is listed; seeds that never fired sit at the bottom.",
+            "`L1bit` is a logical OR of seeds, synthesised at conversion time, and is "
+            "excluded from the counts above. The full menu is listed; seeds that never "
+            "fired sit at the bottom.",
         ]
     )
 
@@ -618,6 +646,7 @@ def _extent(extent: dict | None) -> str:
 
 
 def _percent(fraction) -> str:
+    """Four decimals, so a seed firing on one event in a million still reads non-zero."""
     return "-" if fraction is None else f"{fraction:.4%}"
 
 

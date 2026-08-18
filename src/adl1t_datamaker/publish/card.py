@@ -78,7 +78,7 @@ Specific technical data can be found in the github repo that was used to produce
 
 ## Layout
 
-The tree tar files in the record contain the following directory structure:
+The three tar files in the record contain the following directory structure:
 
 ```
 zerobias/<run>/{{train,valid,test}}/<object>/*.parquet
@@ -95,23 +95,25 @@ That position is the only correspondence that always holds.
 **Neither `order` nor the `event` entry fulfils this same role.**
 
 
-## Comparison with other algorithms
+## Comparison with other trigger algorithms
 
-The level-1 trigger contains around 180 algorithms that take data like the one in this record and output a decision.
-These algorithms were applied to every event in the presented data sets as well.
-The results are stored in the `seeds` folder and can be used to do comparatives studies with other live algorithms currently running in the CMS trigger.
-Skip this folder if you want kinematics alone and do not want to compare your anomaly detector with the rest of the algorithms.
+The level-1 trigger menu contains hundreds of algorithms that take data, like the one present in this record, and output a decision.
+All of them ran on every event of the presented data sets, outputting a decision.
+The results are stored in the `seeds` folder and can be used to do comparative studies between your anomaly detection algorithm and the standard algorithms running in the CMS trigger.
+The trigger's own anomaly detection algorithms, `L1_AXO_*` and `L1_CICADA_*`, are left out, since benchmarking an anomaly detector against the decisions of another anomaly detector would be circular.
+The folder also contains an `L1bit` field, which encodes the logical OR of the algorithm columns deposited beside it.
+Skip the `seeds` folder if you want kinematics alone and do not want to compare your anomaly detector with the rest of the algorithms.
 
 ## Splits
 
-The zero-bias data are split 60/20/20. The simulated samples are validation-only and are
-split 60/40 between `valid` and `test`.
+The zero-bias data are split 60/20/20.
+The simulated samples are validation-only and are split 60/40 between `valid` and `test`.
 
 | split | events |
 |---|---|
 {split_table}
 
-The split was drawn once with NumPy's PCG64 generator seeded with **{seed}**.
+The split was drawn once with NumPy's PCG64 generator seeded with **seed={seed}**.
 The two zero-bias runs concatenated in the order: `{zb_order}`.
 
 ## Units
@@ -124,64 +126,69 @@ Multiply by these to get GeV, radians and pseudorapidity:
 |---|---|---|---|
 {units_table}
 
-The decimals are rounded. The steps are exact fractions: calorimeter eta is 0.0870/2,
-muon eta is 0.0870/8, calorimeter phi is 2pi/144, and muon phi is 2pi/576.
-`muonIEtaAtVtx` and `muonIPhiAtVtx` take the same scales as muon eta and phi.
-Quality, charge, isolation, index and tower-count fields are already integers and unscaled, as is
-every `event_info` field and every `seeds` bit.
+The decimals are rounded.
+The steps are exact fractions: calorimeter eta is 0.0870/2, muon eta is 0.0870/8, calorimeter phi is 2pi/144, and muon phi is 2pi/576.
+`muonIEtaAtVtx` and `muonIPhiAtVtx` have the same scales as muon eta and phi.
+Three energy columns are missing from the table: the `muonIEtUnconstrained` counts 1 GeV per unit, `ETTEM` takes the same 0.5 GeV as the `Et` of `ET`, and `jetRawEt` has no documented scale, but it's probably 1 GeV per step.
+The muon energies also carry an offset, since the hardware `0` marks the absence of a muon: the momentum is (`muonIEt` - 1) x 0.5 GeV and the unconstrained momentum is (`muonIEtUnconstrained` - 1) GeV.
+No other collection has such an offset.
+Quality, charge, isolation, index, and tower-count fields are already integers and unscaled, as is every `seeds` bit and every `event_info` field.
+The only exception is `nPV_True`, which is a float32 average per luminosity section in the zero bias data and an integer count in the simulations.
 
-The four object collections are jagged, holding one entry per in-time object up to the
-global trigger's capacity of {capacities}, with no padding and no truncation.
+The four object collections are jagged: they have one entry per in-time object up to the global trigger's capacity of {capacities}.
+
 
 ## Caveats
 
-**Ordering.** Objects arrive in the trigger's readout order, which is ET-descending for the calorimeter objects and not for the muons.
+**Ordering.**
+Objects arrive in the trigger's readout order, which is ET-descending for the calorimeter objects.
+This is not true for the muons.
 
-**The menu differs between data and simulation.** Zero bias has 183 algorithm
-columns and simulation has 161, of which 147 are shared, and the two do not order
-them the same way. Select seeds by name, never by position.
+**The menu differs between data and simulation.**
+Zero bias has 178 algorithm columns and simulation has 158, of which 145 are shared.
+The two data sets do not have the same order for the trigger algorithms in their corresponding menus.
+Therefore, please select seeds by name, not by position.
 
-**`nPV_True` has two types.** It is float32 in zero bias and int32 in simulation.
+**`nPV_True` has two types.**
+It is float32 in zero bias and int32 in simulation.
 
-**Simulation has no beam coordinates.** Every simulated sample has `run` of 1, `bx` of
-4294967295 and `orbit` of 18446744073709551615, the all-ones codes of their types, in place
-of the values a collision would have.
-Only the zero bias has non-trivial values.
+**Simulation has no beam coordinates in `event_info`.**
+Every simulated sample has `run` of 1, `bx` of 4294967295, and `orbit` of 18446744073709551615, the all-ones codes of their types.
+The zero bias data has non-trivial values for these fields.
 
-**`jetRawEt` is zero throughout the zero-bias data.** The branch is unfilled in original data
-ntuples, though it describes real values in simulation.
+**`jetRawEt` is zero throughout the zero-bias data.**
+The branch is unfilled in original data ntuples, though it contains real values in simulation.
+
 
 ## Standard Preprocessing
 
 Multiple studies were done internally at CERN on this data set.
 A number of conventional preprocessing steps were applied in each of these studies.
-Therefore, `event_info` contains two columns that the raw data does not: `split`, so a
-file separated from its directory is still self-describing, and `order`, the position
-in that ordering, which is `-1` for the events that the conventional preprocessing removed.
-Links to the papers detailing these studies will be attached here once these studies
-become public.
+Therefore, `event_info` contains two columns that the raw data does not: `split`, so a file separated from its directory is still self-describing, and `order`, the position in that ordering, which is `-1` for the events that the conventional preprocessing removed.
+Links to the papers detailing these studies will be attached here once these studies become public.
 
-The standard steps involve dropping an event whose total `ET` reached the all-ones code of its 12 bits, 4095,
-and masking the muons, e-gammas, jets and taus above an `Et` of 511.
-511 is the all-ones code of the 9-bit muon, e-gamma and tau energies, so for them the mask removes the saturated objects.
-The jet energy is 11 bits wide and saturates at 2047, however, the cut is at 255.5 GeV and not a hardware limit.
+The standard steps involve dropping an event whose total `ET` reached the all-ones code of its 12 bits, 4095, and removing the muons, e-gammas and taus whose `Et` reached 511, the jets whose `Et` reached 2047, and the `MET` or `FET` that reached 4095.
+Each threshold is the all-ones code of that object's own energy width, so exactly the saturated objects are removed, and a removed object does not count towards the multiplicity.
 
-**A split can span several directories.** The two zero-bias runs were permuted together,
-so their training rows interleave and `order` counts across the whole split rather than
-within one run.
+**A split can span several directories.**
+The two zero-bias runs were permuted together, so their training rows interleave and `order` counts across the whole split rather than within one run.
 To rebuild the study's order, read both run directories, concatenate them, then stable-sort by `order` with the `-1` rows left at the end.
 Concatenating one run after the other gives the right rows in the wrong order.
 
 ## Provenance
 
-Zero-bias data: CMS, 2025, runs {runs}. Simulated samples: CMS Run 3 Winter25 campaign.
-The values are the Level-1 trigger's own reconstructed objects rather than offline
-reconstruction.
+Zero-bias data: CMS, 2025, runs {runs}.
+Simulated samples: CMS Run 3 Winter25 campaign.
+The values are the Level-1 trigger's own reconstructed objects rather than offline reconstruction.
 
 ## Licence
 
 CC0 1.0, a public domain dedication with no restrictions on reuse. See `LICENSE`.
 Citation by DOI is requested as a courtesy, not required.
+
+## Contact
+
+Questions and problems are welcome as a discussion on the HuggingFace dataset page, or as an issue on the repository that produced it: https://github.com/bb511/adl1t_datamaker.
 """
 
 
@@ -212,12 +219,14 @@ All the feature values are in the trigger-native format of hardware integers.
 
 Specific technical data can be found in the github repo that was used to produce this data: https://github.com/bb511/adl1t_datamaker
 
-## Comparison with other algorithms
+## Comparison with other trigger algorithms
 
-The level-1 trigger contains around 180 algorithms that take data like the one in this record and output a decision.
-These algorithms were applied to every event in the presented data sets as well.
-Their results are in the `-seeds` configs and can be used to do comparative studies with other live algorithms currently running in the CMS trigger.
-Skip them if you want kinematics alone and do not want to compare your anomaly detector with the rest of the algorithms.
+The level-1 trigger menu contains hundreds of algorithms that take data, like the one present in this record, and output a decision.
+All of them ran on every event of the presented data sets, outputting a decision.
+The results are stored in the `seeds` folder and can be used to do comparative studies between your anomaly detection algorithm and the standard algorithms running in the CMS trigger.
+The trigger's own anomaly detection algorithms, `L1_AXO_*` and `L1_CICADA_*`, are left out, since benchmarking an anomaly detector against the decisions of another anomaly detector would be circular.
+The folder also contains an `L1bit` field, which encodes the logical OR of the algorithm columns deposited beside it.
+Skip the `seeds` folder if you want kinematics alone and do not want to compare your anomaly detector with the rest of the algorithms.
 
 Row *i* of `<data set>-seeds` is row *i* of `<data set>`, which is the correspondence that always holds.
 Neither column is a key on its own: every event the standard preprocessing dropped carries `order = -1`, and `event` cycles over a hundred values in `ggH-suep-decay`, `haa-4b-ma15` and `smj-case-A`.
@@ -280,15 +289,16 @@ The energy sums are collections too, of one entry each. The event information, t
 | `<collection>_<branch>` | one collection's features, e.g. `muons_muonIEt` or `jets_jetIEta`. The collections are `muons`, `jets`, `egammas`, `taus` and the energy sums `ET`, `HT`, `MET`, `MHT`, `FET`, `FHT`, and the branch names are the trigger's own |
 | `run`, `lumi`, `event`, `bx`, `orbit`, `time`, `nPV_True` | event information, carried without a prefix |
 | `split`, `order` | the published partition and the position within it, described below |
-| `L1bit` | whether the trigger menu accepted the event, i.e. the OR over its algorithms |
+| `L1bit` | whether the trigger accepted the event, i.e. the OR over the algorithm columns deposited in the `-seeds` config |
 | `dataset` | the data set the row came from, so that a concatenation stays self-describing |
 | `label` | 0 for zero bias, negative for a simulated background, positive for a signal |
 
 **A column prefixed by a collection is a list, and every other column is a plain value.**
 The collections have one entry per object in the event.
 The energy sums have a single entry (list with one value).
-Everything else holds one value: `row["L1bit"]` is `True`, `row["event"]` is an integer, and `ds.filter(lambda r: r["L1bit"])` selects the events the trigger accepted.
+Everything else contains one value: `row["L1bit"]` is `True`, `row["event"]` is an integer, and `ds.filter(lambda r: r["L1bit"])` selects the events the trigger accepted.
 A `-seeds` config has one boolean column per trigger algorithm and four other columns: `L1bit`, `dataset`, `event` and `order`.
+The trigger's own anomaly detection algorithms, `L1_AXO_*` and `L1_CICADA_*`, are left out, since benchmarking an anomaly detector against the decisions of another anomaly detector would be circular.
 
 ## Data sets
 
@@ -309,16 +319,19 @@ Multiply by the following to get GeV, radians and pseudorapidity:
 The decimals are rounded.
 The steps are exact fractions: calorimeter eta is 0.0870/2, muon eta is 0.0870/8, calorimeter phi is 2pi/144, and muon phi is 2pi/576.
 `muons_muonIEtaAtVtx` and `muons_muonIPhiAtVtx` take the same scales as muon eta and phi.
-Two energies are missing from the table: `muons_muonIEtUnconstrained` is 1 GeV per unit rather than 0.5, and `jets_jetRawEt` has no documented scale.
-Quality, charge, isolation, index and tower-count fields are already integers and unscaled, as is every event information field and every seed.
+Three energies are missing from the table: `muons_muonIEtUnconstrained` is 1 GeV per unit rather than 0.5, `ET_ETTEM` takes the same 0.5 GeV as `ET_Et`, and `jets_jetRawEt` has no documented scale, but it's probably 1 GeV per step.
+The muon energies also carry an offset, since the hardware `0` marks the absence of a muon: the momentum is (`muons_muonIEt` - 1) x 0.5 GeV and the unconstrained momentum is (`muons_muonIEtUnconstrained` - 1) GeV.
+Quality, charge, isolation, index and tower-count fields are already integers and unscaled, as is every seed and every event information field except `nPV_True`, which is a float32 average per luminosity section in the zero bias and an integer count in the simulations.
 
 ## Caveats
 
-**Ordering.** Objects arrive in the trigger's readout order, which is ET-descending for the calorimeter objects and not for the muons.
+**Ordering.**
+Objects arrive in the trigger's readout order, which is ET-descending for the calorimeter objects.
+This is not the case for the muons.
 The shipped loader sorts objects by ET before processing them.
 
 **The menu differs between data and simulation.**
-Zero bias data has 183 algorithm columns and the simulations have 161, of which 147 are shared.
+Zero bias data has 178 algorithm columns and the simulations have 158, of which 145 are shared.
 Additionally, the order of the other trigger algorithm decisions is not the same between zerobias and simulations.
 
 **`nPV_True` has two types.**
@@ -340,23 +353,21 @@ Links to the papers detailing these studies will be attached here once these stu
 
 The split was drawn once with NumPy's PCG64 generator seeded with **{seed}**, over the two zero-bias runs concatenated in the order `{zb_order}`.
 
-**A split can span two configs.** The two zero-bias runs were permuted together.
+**A split can span two configs.**
+The two zero-bias runs were permuted together.
 Their training rows interleave and `order` counts across the whole split rather than within one run.
 To rebuild the same order as in previous studies, read both zero-bias configs, concatenate them, then stable-sort by `order` with the `-1` rows left at the end.
 Concatenating one run after the other gives the right rows in the wrong order.
 
 The pipeline in `loader/` goes through the standard preprocessing steps.
-In the four stages the studies used: read the tables into one array per collection, drop the events saturated in ET and mask the objects above a cut, fit the normalisation on the training split alone and apply it to every other split, then pad each collection to a fixed number of constituents and stack them into one tensor.
-That object cut is `Et < 511` for muons, e-gammas, jets and taus; 511 is the all-ones code of the 9-bit muon, e-gamma and tau energies, so this cut removes saturated objects.
-For the jet energy, the full bit width is 11, which would saturate at 2047.
-The loader cuts any jets above 255.5 GeV, and not at the hardware limit.
+In the four stages the studies used: read the tables into one array per collection, drop the events saturated in ET and remove the saturated objects, fit the normalisation on the training split alone and apply it to every other split, then pad each collection to a fixed number of constituents and stack them into one tensor.
+That object cut is `Et < 511` for muons, e-gammas and taus, `Et < 2047` for jets and `Et < 4095` for `MET` or `FET`, each the all-ones code of the object's own energy width, so this cut removes saturated objects.
 The events cut by this pipeline have the `order` set to `-1`: run over the zero bias it removes the {dropped:,} events marked `-1`, {dropped_pct} of them.
 
 ## Provenance
 
 Zero-bias data: CMS, 2025, runs {runs}. Simulated samples: CMS Run 3 Winter25 campaign.
-The values are the Level-1 trigger's own reconstructed objects rather than offline
-reconstruction.
+The values are the Level-1 trigger's own reconstructed objects rather than offline reconstruction.
 
 ## Citation
 

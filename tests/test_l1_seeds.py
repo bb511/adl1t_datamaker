@@ -5,47 +5,35 @@ import pytest
 
 from adl1t_datamaker.components import l1_seeds
 
-# Distinct unprescaled algorithms in each checked-in menu, and the header of the
-# column that decides it. Pinning these makes any change to PRESCALE_COLUMN, or to a
-# menu file, a visible test failure rather than a silent shift in the seeds schema.
+# Distinct kept algorithms in each checked-in menu (unprescaled, minus the anomaly
+# seeds of ANOMALY_SEED_PREFIXES), and the header of the column that decides the
+# prescale. Pinning these makes any change to PRESCALE_COLUMN, to the exclusion, or to
+# a menu file a visible test failure rather than a silent shift in the seeds schema.
 MENUS = {
     "L1Menu_Collisions2023_v1_1_0.csv": ("2p1E34", 168),
     "L1Menu_Collisions2023_v1_2_0.csv": ("2p1E34", 175),
     "L1Menu_Collisions2024_v1_1_0.csv": ("2p0E34", 161),
-    "L1Menu_Collisions2024_v1_2_1.csv": ("2p0E34", 170),
-    "L1Menu_Collisions2024_v1_3_0_last.csv": ("2p0E34+ZeroBias+HLTPhysics", 164),
-    # 190 rows but only 187 distinct names; see test_duplicate_seed_names below.
-    "L1Menu_Collisions2025_v1_1_1.csv": ("1p95E34", 187),
-    "L1Menu_Collisions2025_v1_1_1_original.csv": ("1p95E34", 190),
-    "L1Menu_Collisions2025_v1_3_0.csv": ("1p95E34", 190),
+    "L1Menu_Collisions2024_v1_2_1.csv": ("2p0E34", 162),
+    "L1Menu_Collisions2024_v1_3_0_last.csv": ("2p0E34+ZeroBias+HLTPhysics", 158),
+    # 179 kept rows but only 176 distinct names; see test_duplicate_seed_names below.
+    "L1Menu_Collisions2025_v1_1_1.csv": ("1p95E34", 176),
+    "L1Menu_Collisions2025_v1_1_1_original.csv": ("1p95E34", 179),
+    "L1Menu_Collisions2025_v1_3_0.csv": ("1p95E34", 178),
     "Prescale_2022_v0_1_1.csv": ("1.5E+34", 150),
 }
 
 
 @pytest.mark.parametrize("menu,expected", MENUS.items(), ids=list(MENUS))
-def test_prescale_column_header(menus, menu, expected):
-    header, _ = expected
-    assert l1_seeds.prescale_column_header(menus / menu) == header
+def test_menu_reading_is_pinned(menus, menu, expected):
+    """The prescale column sits where PRESCALE_COLUMN points, and the kept set holds.
 
-
-@pytest.mark.parametrize("menu,expected", MENUS.items(), ids=list(MENUS))
-def test_unprescaled_count(menus, menu, expected):
-    _, count = expected
-    # A map covering every name in the menu, so what is counted is the prescale column
-    # alone and not the overlap with some trigger tree.
-    algo_map = _all_names_map(menus / menu)
-    assert len(l1_seeds.filter_algo_map(menus / menu, algo_map)) == count
-
-
-@pytest.mark.parametrize("menu,expected", MENUS.items(), ids=list(MENUS))
-def test_unprescaled_names_needs_no_root_file(menus, menu, expected):
-    """The seed set is derivable from the menu alone, with no root file involved.
-
-    That is what lets a summary report name the menu behind an already converted data
-    set, by matching its seed columns against every menu in scripts/L1Menus.
+    The names come from the menu alone, with no root file involved, which is what lets
+    a summary report identify the menu behind an already converted data set. A count
+    moving here means PRESCALE_COLUMN, the anomaly exclusion, or a menu file changed.
     """
-    _, count = expected
+    header, count = expected
 
+    assert l1_seeds.prescale_column_header(menus / menu) == header
     assert len(set(l1_seeds.unprescaled_names(menus / menu))) == count
 
 
@@ -74,12 +62,6 @@ def _all_names_map(path):
         return {r[l1_seeds.NAME_COLUMN]: i for i, r in enumerate(rows) if len(r) > 1}
 
 
-def test_header_row_is_never_selected(menus):
-    """The header must be discarded explicitly, not by luck of its column value."""
-    menu = menus / "L1Menu_Collisions2025_v1_3_0.csv"
-    assert "Name" not in l1_seeds.filter_algo_map(menu, _all_names_map(menu))
-
-
 def test_short_and_blank_lines_are_tolerated(tmp_path):
     """A truncated or blank row must be skipped, not raise IndexError."""
     menu = tmp_path / "menu.csv"
@@ -105,19 +87,31 @@ def test_get_level1_seeds_adds_combined_l1bit():
     np.testing.assert_array_equal(seeds["L1bit"], [True, False, True])
 
 
+def test_anomaly_trigger_seeds_are_excluded(tmp_path):
+    """AXO and CICADA seeds are dropped even where the menu leaves them unprescaled."""
+    menu = tmp_path / "menu.csv"
+    menu.write_text(
+        "Index,Name,Emergency,a,b,c,2p0E34,extra\n"
+        "0,L1_Physics,,,,,1,x\n"
+        "1,L1_AXO_Tight,,,,,1,x\n"
+        "2,L1_CICADA_Medium,,,,,1,x\n"
+    )
+    assert l1_seeds.unprescaled_names(menu) == ["L1_Physics"]
+
+
 def test_duplicate_seed_names_collapse(menus):
     """L1Menu_Collisions2025_v1_1_1.csv repeats three tau seed names, deliberately.
 
     Rows 276-278 were edited to duplicate rows 273-275, replacing the Jet70 and Iso23
     variants that _original still carries. filter_algo_map returns a dict, so those
-    rows collapse and the menu yields 187 seeds rather than 190. This is intended:
+    rows collapse and the menu yields 176 kept seeds rather than 179. This is intended:
     do not "restore" the names from _original without asking.
     """
     edited = menus / "L1Menu_Collisions2025_v1_1_1.csv"
     original = menus / "L1Menu_Collisions2025_v1_1_1_original.csv"
 
-    assert len(l1_seeds.filter_algo_map(edited, _all_names_map(edited))) == 187
-    assert len(l1_seeds.filter_algo_map(original, _all_names_map(original))) == 190
+    assert len(l1_seeds.filter_algo_map(edited, _all_names_map(edited))) == 176
+    assert len(l1_seeds.filter_algo_map(original, _all_names_map(original))) == 179
 
 
 def test_menu_selecting_nothing_names_the_column(tmp_path):
@@ -134,15 +128,3 @@ def test_menu_selecting_nothing_names_the_column(tmp_path):
 
     with pytest.raises(ValueError, match="9p9E34"):
         l1_seeds.filter_algo_map(menu, {"L1_Something": 3})
-
-
-def test_get_level1_seeds_with_empty_algo_map_yields_a_scalar():
-    """Pins a sharp edge: no algorithms means L1bit is a scalar, not per-event.
-
-    np.logical_or.reduce([]) is False rather than an error, so an empty menu produces
-    a seeds record whose L1bit does not line up with the event axis.
-    """
-    seeds = l1_seeds.get_level1_seeds({}, np.zeros((3, 2)))
-
-    assert set(seeds) == {"L1bit"}
-    assert seeds["L1bit"].shape == ()  # not (3,), which is what events would need

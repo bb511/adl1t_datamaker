@@ -44,7 +44,7 @@ parser.add_argument(
          "quotes. Checked in beside the split map."
 )
 parser.add_argument(
-    '--version', type=str, default="adl1t-l1ad-v2", help="Name of the exported tree."
+    '--version', type=str, default="adl1t-l1ad-v1", help="Name of the exported tree."
 )
 parser.add_argument(
     '--only',

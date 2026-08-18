@@ -1,8 +1,10 @@
 # @package data.data_processor
 
-# How to process the extracted data. This is the standard preprocessing applied in
-# axol1tl, throughout its versions. The record's `order` column marks the events this
-# cut removes with -1, so a split read in `order` order reproduces the study's input.
+# How to process the extracted data, following the axol1tl studies: their event cut, and
+# their per-object saturation cuts except for the jets, which they cut at the 9-bit code
+# 511 rather than the 11-bit one the jet energy actually saturates at. The record's
+# `order` column marks the events the event cut removes with -1, so a split read in
+# `order` order reproduces the study's input.
 
 _target_: loader.processing.L1DataProcessor
 extracted_folder: ${data.data_extractor.cache_root_dir}/extracted/${data.data_extractor.name}
@@ -11,12 +13,16 @@ extracted_folder: ${data.data_extractor.cache_root_dir}/extracted/${data.data_ex
 event_filters:
   ET: 'Et < 4095'
 
-# Mask objects with energies above certain saturation thresholds.
+# Remove saturated objects, each threshold the all-ones code of the object's own Et
+# width: 9 bits for muons and e-gammas, 11 for jets, 12 for MET. A removed object does
+# not count towards the multiplicity.
 object_filters:
   muons: 'Et < 511'
   egammas: 'Et < 511'
-  jets: 'Et < 511'
+  jets: 'Et < 2047'
   MET: 'Et < 4095'
 
 cache_root_dir: ${paths.data_dir}
+# The cache is reused whenever a file of this name exists, whatever is inside it, so a
+# changed filter above needs either a new name here or the old cache deleted.
 name: e${data.data_extractor.name}_pdefault

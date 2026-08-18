@@ -21,20 +21,23 @@ from adl1t_datamaker import schema
 from adl1t_datamaker.loader import Parquet2Awkward
 from adl1t_datamaker.summary import stats
 
-# The overall level 1 accept, synthesised by l1_seeds as the OR of every other seed, so
-# counting it as a seed would add one to the fired count of every accepted event.
+# The OR of every other column of the seeds folder, synthesised by l1_seeds, so it is
+# the accept of the stored unprescaled seeds rather than of the whole menu. Counting it
+# as a seed would add one to the fired count of every accepted event.
 L1BIT = "L1bit"
 
 # The event_info columns that identify an event rather than measure it. Their values
-# barely repeat, so an exact count map would hold one entry per event; extremes and a
-# running total are all any report reads of them.
+# barely repeat, so an exact count map would hold one entry per event; the reports give
+# only the count, extremes and mean of such a column, which Extremes carries.
 COUNTER_COLUMNS = ("event", "orbit", "time")
 
 
 class ObjectCounts:
-    """Exact counts for one object folder, accumulated over streamed batches.
+    """Every count one object folder contributes, accumulated over streamed batches.
 
     `rows` counts events, since every folder stores one row per event whatever its depth.
+    Each feature is counted exactly, bar the event_info identifiers of COUNTER_COLUMNS,
+    which go through Extremes instead.
     """
 
     def __init__(self, name: str, documented: dict):
@@ -76,6 +79,8 @@ class ObjectCounts:
             self.seed_multiplicity.update(seeds_per_event(columns, len(batch)))
 
     def _update_occupancy(self, columns: dict) -> None:
+        # Keys are (eta, phi) hardware codes in that order; count_pairs skips a batch
+        # whose grid is too wide, so the map need not cover every batch.
         wanted = schema.OCCUPANCY_COLUMNS.get(self.name)
         if wanted and all(column in columns for column in wanted):
             stats.count_pairs(self.occupancy, *(columns[column] for column in wanted))
@@ -90,12 +95,13 @@ class ObjectCounts:
         self.event_keys = None if packed is None else (self.event_keys or []) + [packed]
 
     def duplicate_events(self) -> int | None:
-        """Identifiers occurring more than once, or None when they could not be packed.
+        """How many rows repeat an identifier, or None when the keys would not pack.
 
-        The keys of every batch are held to the end of the pass, since a repeat can span
-        batches. A batch too wide to pack drops the store to None, which a later packable
-        batch clears again: the check assumes a field that overflows its slot does so for
-        the whole data set rather than for one batch.
+        Every occurrence past the first counts once, so a triple seen three times adds
+        two. The keys of every batch are held to the end of the pass, since a repeat can
+        span batches. A batch too wide to pack drops the store to None, and a later
+        packable batch starts it afresh from its own keys: the check assumes a field that
+        overflows its slot does so for the whole data set rather than for one batch.
         """
         if self.event_keys is None or not self.event_keys:
             return None if self.event_keys is None else 0
@@ -114,7 +120,7 @@ def counts_per_event(batch: ak.Array) -> np.ndarray:
 
     The converter stores one CICADA score per event rather than a list, so cica arrives
     one deep rather than two and ak.num would raise on it. The first column answers for
-    the whole folder, whose columns all carry the same event structure.
+    the whole folder, on the assumption that its columns share one event structure.
     """
     column = batch[sorted(batch.fields)[0]]
     if column.ndim < 2:
@@ -185,7 +191,11 @@ def sha256(path: Path) -> str:
 
 
 def _selection(objects: list[str] | None) -> dict | None:
-    """Read every column of every object unless the caller named the objects it wants."""
+    """Every column of the named objects, or None to read every object.
+
+    A None value against a name reads every column of that object, and the loader reads
+    no object the mapping omits.
+    """
     return None if not objects else {name: None for name in objects}
 
 
@@ -223,7 +233,8 @@ def _compression(shard: Path) -> list[str]:
     metadata = pq.ParquetFile(shard).metadata
     if not metadata.num_row_groups:
         return []
-    # The converter writes a shard with one codec, so the first row group speaks for it.
+    # The converter writes a shard with one codec, so the codecs of the first row group
+    # stand for the whole shard.
     group = metadata.row_group(0)
 
     return sorted({group.column(i).compression for i in range(group.num_columns)})

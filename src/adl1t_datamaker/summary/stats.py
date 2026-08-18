@@ -1,10 +1,11 @@
 # Exact statistics for the converted parquet, accumulated in one streaming pass.
 #
 # The physics quantities the global trigger stores are bounded hardware integers, the
-# widest documented at 13 bits. So instead of sampling, or histogramming against guessed
-# bin edges, this module counts how often each value occurs and derives the rest from that
-# map: mean, standard deviation, any quantile, distinct values, zero and saturation
-# fractions, and the histograms the figures draw.
+# widest documented in docs/README.md at 13 bits (the tower count). So instead of
+# sampling, or histogramming against guessed bin edges, this module counts how often
+# each value occurs and derives the rest from that map: mean, standard deviation, any
+# quantile, distinct values, zero and saturation fractions, and the histograms the
+# figures draw.
 #
 # The event, orbit and time identifiers barely repeat, so counting them would hold one
 # entry per event; measure.py accumulates those through Extremes instead, which keeps
@@ -80,7 +81,7 @@ class Extremes:
     """Count, extremes and a running total for a feature never counted exactly.
 
     The empty `counts` and `exact = False` give it the shape every consumer of a store
-    expects: statistics an exact map would afford are simply absent from its summary.
+    expects: the statistics only an exact map can give are absent from its summary.
     """
 
     exact = False
@@ -99,7 +100,9 @@ class Extremes:
         if not values.size:
             return
         self.n += values.size
-        # Summed in float64: a uint64 sum of packed time values wraps within one batch.
+        # Summed in float64: a uint64 sum of packed time values, Unix seconds shifted
+        # left by 32 bits, wraps after two events. Past 2**53 the sum rounds, so the
+        # mean it feeds is approximate for a column that wide.
         self._total += float(values.sum(dtype=np.float64))
         low, high = values.min().item(), values.max().item()
         self.low = low if self.low is None else min(self.low, low)
@@ -145,7 +148,10 @@ def merge_counts(into: dict, other: dict) -> dict:
 
 
 def count_pairs(into: dict, first: np.ndarray, second: np.ndarray) -> dict:
-    """Add the exact joint counts of two aligned integer arrays into a map, keyed by pair.
+    """Add the exact joint counts of two aligned integer arrays into a map.
+
+    Each key is the pair (value from `first`, value from `second`), the order an
+    occupancy map reads as (eta, phi) and a coverage map as (run, lumi).
 
     The arrays must be of equal length. A batch whose bounding grid spans more than
     MAX_DENSE_SPAN cells is skipped and `into` returned unchanged: a grid that large is
@@ -212,7 +218,7 @@ def quantile(values: np.ndarray, weights: np.ndarray, q: float) -> float:
 
 
 def fraction_equal(counts: dict, value, total: int) -> float:
-    """Share of the entries equal to `value`; 0.0 when there are no entries."""
+    """Entries equal to `value` as a share of `total`; 0.0 when `total` is zero."""
     return counts.get(value, 0) / total if total else 0.0
 
 
@@ -221,9 +227,10 @@ def summarise(store: ValueCounts | Extremes, saturation: int | None = None) -> d
 
     :param saturation: The all-ones hardware code for this feature, which signed and
         angular features lack. None leaves the saturated fraction out.
-    :returns: The entry count, non-finite tally, extremes and mean always, and the
-        standard deviation, distinct values, zero fraction and quantiles only for a
-        store counting exactly.
+    :returns: The entry count, non-finite tally, extremes, mean and the `exact` flag
+        always, and the standard deviation, distinct values, zero fraction and quantiles
+        only for a store counting exactly. An empty store gives None for the extremes
+        and the mean.
     """
     summary = {
         "entries": store.n,
@@ -241,7 +248,7 @@ def counts_to_json(counts: dict) -> dict:
     """Serialise a count map as parallel sorted lists.
 
     A JSON object would have its keys re-ordered lexicographically by the sort_keys dump
-    in core.py, putting "10" before "2", so the values travel as a list instead.
+    in core.py, putting "10" before "2", so the values are written as a list instead.
     """
     values = sorted(counts)
 
@@ -270,8 +277,9 @@ def _exact_summary(store: ValueCounts, saturation: int | None) -> dict:
 def _count_integers(values: np.ndarray, low=None) -> dict:
     """Bincount over values shifted down to zero, so negatives count correctly.
 
-    A batch spanning MAX_DENSE_SPAN or more falls back to np.unique: exact either way,
-    just without the dense allocation.
+    A batch needing more than MAX_DENSE_SPAN bins, one per value from the batch minimum
+    to its maximum, falls back to np.unique: exact either way, without the dense
+    allocation.
     """
     flat = values.ravel()
     low = int(flat.min()) if low is None else int(low)
@@ -290,10 +298,12 @@ def _count_integers(values: np.ndarray, low=None) -> dict:
 def _shifted(flat: np.ndarray, low: int) -> np.ndarray:
     """Values moved down to start at zero, without leaving the representable range.
 
-    Unsigned columns shift within their own dtype: simulation writes the all-ones
-    sentinel into orbit and bx, and 2**64 - 1 does not survive the trip through int64.
-    That subtraction relies on `low` being no greater than the minimum of `flat`, since
-    an unsigned difference below zero wraps instead of going negative.
+    An unsigned column is shifted within its own dtype rather than through int64, which
+    cannot hold a value such as 2**64 - 1. Nothing counted here is that wide, the uint64
+    identifiers going through Extremes instead; the largest `low` that does reach here is
+    the uint32 all-ones code 4294967295 that simulation writes into bx. The subtraction
+    relies on `low` being no greater than the minimum of `flat`, since an unsigned
+    difference below zero wraps instead of going negative.
     """
     if low == 0:
         return flat
@@ -304,7 +314,11 @@ def _shifted(flat: np.ndarray, low: int) -> np.ndarray:
 
 
 def _finite(values: np.ndarray) -> tuple[np.ndarray, int]:
-    """The finite entries, and how many entries were dropped as non-finite."""
+    """The finite entries, and how many entries were dropped as non-finite.
+
+    Integer and boolean arrays are returned unchanged, with nothing dropped: neither can
+    hold a non-finite value, so the mask and the copy are spent on floats alone.
+    """
     if values.dtype.kind != "f":
         return values, 0
     good = np.isfinite(values)

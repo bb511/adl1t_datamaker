@@ -8,11 +8,11 @@ There are two paths that resolve based on you being in root: the default pileup 
 `scripts/L1Menus/<menu>.csv`.
 
 The `run.snip` file has a worked example of every conversion and summary command.
-For more details on the `publish` part of this repo, which handles the publishing of the
-produced data to `Zenodo` and `HuggingFace` is available in [publish/README.dm](publish/README.md).
+More details on the `publish` part of this repo, which uploads the produced data to
+`Zenodo` and `HuggingFace`, are available in [`publish/README.md`](publish/README.md).
 
 
-## The scripts
+## Scripts
 
 | Script | What it does |
 | --- | --- |
@@ -32,9 +32,9 @@ The latter also takes `--ncores`.
 The scripts expect the emulated trees by default, `l1UpgradeEmuTree/L1UpgradeTree` and
 `l1uGTEmuTree/L1uGTTree`.
 The unpacked trees do not have `Emu` and have no calo summary.
-Therefore, `--calosumm_tree_name` defaults to nothing skips the CICADA object.
-The `--mc` flag is used when wanting to convert Monte Carlo simulation data: it skips the
-brilcalc pileup join and leaves `nPV_True` as it was originally wrote it.
+Therefore, `--calosumm_tree_name` defaults to nothing, which skips the CICADA object.
+The `--mc` flag is used when converting Monte Carlo simulation data: it skips the
+brilcalc pileup join and leaves `nPV_True` as it was originally written.
 This is because brilcalc adds pileup information to real data, while for simulated data
 this information is readily available.
 
@@ -79,28 +79,30 @@ An experiment config is applied with `+experiment=<name>`.
 
 The menus in `L1Menus/` pertain to configurations of each trigger run: they describe
 which algorithms were active during that run and how their output is scaled.
-A menu is a csv with one row per algorithm; column 6, counting from zero, has the prescale at
-nominal luminosity, and `1` there means unprescaled.
-Everything else is dropped, mostly algorithms disabled at this luminosity and marked `0`,
-the rest genuinely prescaled.
+A menu is a csv with one row per algorithm.
+Column 6 (counting from 0) in the menu csv files, correspons to the prescale of the algorithm
+at nominal luminosity.
+Every algorithm that has `1` in the menu csv is called unprescaled.
+The converter keeps only unprescaled algorithms.
+Additionally, the anomaly-trigger algorithms, `L1_AXO_*` and `L1_CICADA_*`, are also dropped even where unprescaled.
 The header of column 6 is the luminosity and changes with the menu generation.
 The code identifies the column by position and reports the header it found.
 
-| Menu | Nominal luminosity column | Unprescaled algorithms | Used by |
-| --- | --- | --- | --- |
-| `Prescale_2022_v0_1_1.csv` | `1.5E+34` | 150 | |
-| `L1Menu_Collisions2023_v1_1_0.csv` | `2p1E34` | 168 | |
-| `L1Menu_Collisions2023_v1_2_0.csv` | `2p1E34` | 175 | Winter24 |
-| `L1Menu_Collisions2024_v1_1_0.csv` | `2p0E34` | 161 | 2024E |
-| `L1Menu_Collisions2024_v1_2_1.csv` | `2p0E34` | 170 | |
-| `L1Menu_Collisions2024_v1_3_0_last.csv` | `2p0E34+ZeroBias+HLTPhysics` | 164 | Winter25 |
-| `L1Menu_Collisions2025_v1_1_1.csv` | `1p95E34` | 187 | 2025B |
-| `L1Menu_Collisions2025_v1_1_1_original.csv` | `1p95E34` | 190 | |
-| `L1Menu_Collisions2025_v1_3_0.csv` | `1p95E34` | 190 | 2025E, 2025G |
+| Menu | Nominal luminosity column | Unprescaled | Kept | Used by |
+| --- | --- | --- | --- | --- |
+| `Prescale_2022_v0_1_1.csv` | `1.5E+34` | 150 | 150 | |
+| `L1Menu_Collisions2023_v1_1_0.csv` | `2p1E34` | 168 | 168 | |
+| `L1Menu_Collisions2023_v1_2_0.csv` | `2p1E34` | 175 | 175 | Winter24 |
+| `L1Menu_Collisions2024_v1_1_0.csv` | `2p0E34` | 161 | 161 | 2024E |
+| `L1Menu_Collisions2024_v1_2_1.csv` | `2p0E34` | 170 | 162 | |
+| `L1Menu_Collisions2024_v1_3_0_last.csv` | `2p0E34+ZeroBias+HLTPhysics` | 164 | 158 | Winter25 |
+| `L1Menu_Collisions2025_v1_1_1.csv` | `1p95E34` | 187 | 176 | 2025B |
+| `L1Menu_Collisions2025_v1_1_1_original.csv` | `1p95E34` | 190 | 179 | |
+| `L1Menu_Collisions2025_v1_3_0.csv` | `1p95E34` | 190 | 178 | 2025E, 2025G |
 
-The two 2025 v1.1.1 files differ in three rows: the edited one renames three
-`L1_DoubleTau_Iso*` seeds and thereby names three algorithms twice, so it selects 190
-rows but only 187 distinct algorithms.
+The counts are distinct names; `tests/test_l1_seeds.py` pins the kept ones per menu.
+The two 2025 v1.1.1 files differ in three rows: the edited one has a different name for the three
+`L1_DoubleTau_Iso*` algorithms and therefore describes three of the algorithms twice.
 Duplicates are collapsed when the names are matched against the trigger tree.
 
 ## Pileup files

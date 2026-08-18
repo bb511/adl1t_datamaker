@@ -1,6 +1,10 @@
-# Comparing two measured data sets, which is how a reconversion gets validated: the
-# original and the redo are summarised, then every shared column's statistics and every
-# seed's firing fraction are set side by side.
+# Comparing two measured data sets, which is how a reconversion gets validated.
+#
+# Both data sets arrive already measured, as the summary dicts core.py assembles, so
+# nothing here opens a parquet file. Only what both sides carry is compared, column
+# statistics and seed firing fractions alike; a column one side lacks is reported as a
+# schema difference and nothing more. Every statistic quoted stays in the trigger's own
+# hardware codes, unscaled, as the summaries hold them.
 
 from pathlib import Path
 
@@ -21,6 +25,11 @@ def summarise_comparison(
     generated_at: str | None = None,
 ) -> dict:
     """Compare two measured data sets and write COMPARISON.md beside the overlays.
+
+    `first` and `second` are summaries, as measure_folder returns them or as a
+    summary.json holds them. COMPARISON.md, comparison.json and a figures subdirectory
+    land in `outdir`; what is already there is overwritten but never removed, so figures
+    an earlier schema drew stay behind.
 
     :param labels: Names the report gives the two data sets, defaulting to their folder
         names.
@@ -80,7 +89,10 @@ def _column_names(summary: dict) -> set:
 
 
 def _feature_deltas(first: dict, second: dict) -> list[dict]:
-    """Every shared feature, by how much its mean moved, largest relative shift first."""
+    """Every shared feature, by how much its mean moved, largest relative shift first.
+
+    A row with no relative shift to quote counts as zero and so sorts to the bottom.
+    """
     shared = sorted(_column_names(first) & _column_names(second))
     deltas = [_delta(first, second, column) for column in shared]
 
@@ -88,6 +100,13 @@ def _feature_deltas(first: dict, second: dict) -> list[dict]:
 
 
 def _delta(first: dict, second: dict, column: str) -> dict:
+    """One row of the feature table, for a column named 'object.feature'.
+
+    The first data set is the reference: `difference` is second minus first, and
+    `relative` divides that by the first mean. Both are None where either data set has
+    no mean for the column, and `relative` is None as well where the reference mean is
+    zero.
+    """
     name, feature = column.split(".", 1)
     left = first["objects"][name]["features"][feature]["stats"]
     right = second["objects"][name]["features"][feature]["stats"]
@@ -108,8 +127,9 @@ def _quoted_stats(entry: dict) -> dict:
     """The three numbers the comparison table quotes for one column.
 
     The quantile keys are the str() of the levels in stats.QUANTILES, so the median is
-    "0.5" and not "0.50", and a key that misses gives None rather than an error. A column
-    too widely spread to count exactly carries no quantiles at all.
+    "0.5" and not "0.50". A column too widely spread to count exactly, as the
+    event_info identifiers of measure.COUNTER_COLUMNS are, carries no quantiles at all,
+    so its median and p99 come back None.
     """
     quantiles = entry.get("quantiles", {})
 
@@ -121,7 +141,12 @@ def _quoted_stats(entry: dict) -> dict:
 
 
 def _seed_deltas(first: dict, second: dict) -> list[dict]:
-    """Seeds by how much their firing fraction moved between the two data sets."""
+    """Seeds by how much their firing fraction moved, the largest move first.
+
+    A firing fraction is fired events over events in the data set, so the difference,
+    second minus first, runs -1 to 1. The overall level 1 accept is not among the seeds:
+    core.py leaves it out of the seed table it builds.
+    """
     rates = [
         {seed["name"]: seed["fraction"] for seed in entry["trigger"].get("seeds", [])}
         for entry in (first, second)

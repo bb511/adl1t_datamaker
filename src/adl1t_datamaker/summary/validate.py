@@ -5,8 +5,8 @@
 #
 # PASS means the invariant holds, FAIL means the data is wrong, WARN means a finding
 # worth a sentence in the data descriptor rather than a fix, and SKIP means the check
-# could not be made. Nothing here raises: a report that refuses to be written is no use
-# when the question being asked is what is wrong with the data.
+# could not be made. A broken invariant is recorded, never raised: a report is most
+# needed exactly when something is wrong with the data.
 
 from adl1t_datamaker import schema
 
@@ -15,9 +15,12 @@ PASS, WARN, FAIL, SKIP = "PASS", "WARN", "FAIL", "SKIP"
 # The converter writes one entry per event for these objects, so multiplicity must be 1.
 SINGLETONS = ("seeds", "event_info", "ET", "HT", "MET", "MHT", "FET", "FHT")
 
-# The seeds are one boolean column per trigger algorithm, and there are hundreds of them:
-# a seed that never fires is normal and docs/README.md names no individual seed, so the
-# column-level checks would report only noise. The trigger section covers the seeds.
+# One boolean column per kept trigger algorithm, of which the menus in scripts/L1Menus
+# leave 150 to 178 (data sets converted before the anomaly-seed exclusion of 2026-08-18
+# carry up to 190). A seed that never fires is normal, and
+# docs/README.md holds no feature table for the seeds section, so every seed column
+# would read as undocumented as well: the column-level checks would report noise alone.
+# The trigger section covers them.
 COLUMN_CHECK_SKIP = ("seeds",)
 
 # check_pileup_present judges pileup instead: a missing (run, lumi) leaves nPV_True at
@@ -98,10 +101,11 @@ def check_no_empty_shards(summary: dict) -> dict:
 def check_singletons_hold_one_entry(summary: dict) -> dict:
     """The per-event objects must carry one entry each, never zero and never two.
 
-    seeds and event_info go through ak.singletons and can be nothing else, so the check
-    bites on the energy sums, which are selected by sumType at sumBx == 0: a zero means
-    the sum was absent from an event, a two that a neighbouring bunch crossing survived
-    the mask. Either way the column stops running one entry per event, hence a failure.
+    seeds and event_info are wrapped in ak.singletons at conversion and can be nothing
+    else, so only the energy sums can fail here. Each sum is picked out of the single
+    sums branch by its sumType at sumBx == 0: a zero means the sum was absent from an
+    event, a two that the event held two entries of that sumType at the central bunch
+    crossing. Either way the column stops running one entry per event, hence a failure.
     """
     odd = {
         name: [obj["multiplicity"]["stats"]["min"], obj["multiplicity"]["stats"]["max"]]
@@ -122,7 +126,9 @@ def check_no_duplicate_events(summary: dict) -> dict:
     """A repeated (run, lumi, event) means an input file was converted twice.
 
     In recorded data the triple is unique by construction, so a repeat can only come
-    from the conversion, and the check fails.
+    from the conversion, and the check fails. measure.py packs the triple into a single
+    63-bit key and answers None when a field overflows its slot, which is a check not
+    made rather than a pass.
     """
     duplicates = summary["event_coverage"].get("duplicate_identifiers")
     if duplicates is None:
@@ -151,8 +157,8 @@ def check_pileup_present(summary: dict) -> dict:
     if zero is None:
         return _skip("pileup is populated", "no nPV_True column")
 
-    # One per cent is a judgement: it tolerates the odd section outside stable beams,
-    # where a mapping that missed a run or a whole file zeroes far more than that.
+    # One per cent is a judgement: it tolerates the odd luminosity section outside
+    # stable beams, while a brilcalc file that missed a run zeroes far more than that.
     return _record(
         "pileup is populated",
         zero > 0.01,
@@ -219,7 +225,8 @@ def check_values_fit_documented_bits(summary: dict) -> dict:
     """A value wider than its documented field is a failure.
 
     It means docs/README.md and the converter have drifted apart, so one of the two is
-    wrong and the published widths cannot be trusted.
+    wrong and the published widths cannot be trusted. Only the fields documented as
+    unsigned are tested, for the reason _exceeds_documented_width gives.
     """
     over = _features_where(summary, _exceeds_documented_width)
 
@@ -237,7 +244,8 @@ def check_multiplicity_within_capacity(summary: dict) -> dict:
 
     The global trigger emits at most a fixed number of objects per collection, so a
     multiplicity above the cap docs/README.md states means the docs or the conversion is
-    wrong.
+    wrong. Only the four particle collections carry a documented cap, and an object
+    without one is skipped.
     """
     over = {
         name: obj["multiplicity"]["stats"]["max"]
@@ -273,10 +281,10 @@ def check_columns_are_documented(summary: dict) -> dict:
 def check_no_duplicate_columns(summary: dict) -> dict:
     """Two columns with identical distributions usually means one is mislabelled.
 
-    The filter on distinct values drops constants, which say nothing by matching one
-    another, and with them the columns too spread out to count exactly, which keep no
-    count map and would otherwise fingerprint alike. Identical distributions are strong
-    evidence of a duplicated source rather than proof of one, so the check warns.
+    Requiring more than one distinct value drops the constant columns, whose matching
+    says nothing, and with them the columns too spread out to count exactly: those keep
+    no count map, so all of them would fingerprint alike. Identical distributions are
+    strong evidence of a duplicated source rather than proof of one, so the check warns.
     """
     groups: dict = {}
     for column, entry in sorted(_columns(summary).items()):
@@ -295,11 +303,12 @@ def check_no_duplicate_columns(summary: dict) -> dict:
 
 
 def check_no_nonfinite_values(summary: dict) -> dict:
-    """NaN or infinity in a float column, which the accumulator counts and then drops.
+    """A non-finite value in a float column is a failure.
 
-    No quantity the trigger stores can be non-finite, so an entry that is means the
-    conversion went wrong. Being dropped, such entries also leave the mean, the quantiles
-    and the value counts describing the surviving entries alone, hence a failure.
+    No quantity the trigger stores can be NaN or infinite, so an entry that is means the
+    conversion went wrong. The accumulators in stats.py count such entries and then drop
+    them, so the mean, the quantiles and the value counts describe the surviving entries
+    alone.
     """
     dirty = _features_where(summary, lambda s: s.get("nonfinite", 0) > 0)
 

@@ -29,7 +29,7 @@ SPLITS = ("train", "valid", "test")
 # Directories a converted data set holds that are not object collections. PLOTS and
 # SUMMARY are the datamaker's own output about the data. cica is the CICADA score, which
 # is another anomaly trigger's verdict rather than detector input, and is excluded from
-# the release along with the L1_CICADA_* seed bits.
+# the release along with the L1_AXO_* and L1_CICADA_* seed bits.
 SKIP_OBJECTS = {"PLOTS", "SUMMARY", "cica"}
 
 # Fixed timestamp, stripped ownership. Repeating a pack then gives byte-identical
@@ -246,13 +246,18 @@ def write_split(
 
 
 def drop_excluded_columns(table: pa.Table) -> pa.Table:
-    """Remove the CICADA trigger bits from a table.
+    """Remove the anomaly-trigger seed columns from a table.
 
-    The menu carries L1_CICADA_* decisions at several working points. Those are another
-    anomaly trigger's output rather than detector input, so they leave the release along
-    with the CICADA score itself.
+    Conversions since 2026-08-18 write no L1_AXO_* or L1_CICADA_* columns, so this only
+    bites on data sets converted before then. Those decisions are another anomaly
+    trigger's output rather than detector input, so they leave the release along with
+    the CICADA score itself.
     """
-    keep = [n for n in table.schema.names if "cicada" not in n.lower()]
+    keep = [
+        n
+        for n in table.schema.names
+        if "cicada" not in n.lower() and not n.startswith("L1_AXO")
+    ]
     if len(keep) == len(table.schema.names):
         return table
 

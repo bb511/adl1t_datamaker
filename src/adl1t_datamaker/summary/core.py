@@ -3,8 +3,9 @@
 # The converter writes parquet and nothing else, so a data descriptor has to recover
 # everything about a produced folder from the files themselves. This module drives that
 # recovery: measure.py counts, validate.py judges, figures.py draws and report.py
-# renders. What lands beside the data is a REPORT.md for a reader and a summary.json,
-# raw value counts included, for a program.
+# renders. The output is a REPORT.md for a reader, a summary.json for a program, raw
+# value counts included, and the figures both of them list, written into a SUMMARY
+# directory inside the data folder unless the caller names another.
 
 import json
 import platform
@@ -45,15 +46,16 @@ def summarise_folder(
 
     :param outdir: Where the report, the figures and the JSON land. Without it they go
         into a SUMMARY directory inside the data folder itself.
-    :param batch_size: Events held in memory at once, which buys memory alone.
-    :param checksums: Whether to sha256 every shard, which reads each file in full and
-        is the slowest step of a summary.
+    :param batch_size: Events held in memory at once, which bounds what the streaming
+        pass allocates.
+    :param checksums: Whether to sha256 every shard, which reads each file in full
+        rather than its footer alone and is the slowest step of a summary.
     :param objects: Object folders to stream, or ``None`` for all of them. The file
         inventory covers the whole folder either way.
     :param figure_format: Suffix the figures are saved with, which is what picks the
         matplotlib writer. The scripts offer ``png`` and ``pdf``.
-    :param provenance: What the conversion config knows and the parquet cannot say. The
-        checks and the figures read ``mc`` from it to tell recorded data from
+    :param provenance: Facts from the conversion config that the parquet cannot carry.
+        The checks and the figures read ``mc`` from it to tell recorded data from
         simulation.
     :param generated_at: ISO timestamp replacing the current time, so a rerun on the
         same data reproduces the report byte for byte.
@@ -148,7 +150,9 @@ def git_commit() -> str:
     """The checked-out commit, or 'unknown' whenever git cannot answer.
 
     A summary written outside a work tree, as the Docker image is, has no commit to
-    quote, and that is a line missing from a report rather than a reason to stop.
+    quote, and that is a line missing from a report rather than a reason to stop. A git
+    that hangs counts as no answer too: the timeout raises, and the same handler catches
+    it.
     """
     try:
         head = subprocess.run(
@@ -193,6 +197,7 @@ def _assemble(folder: Path, measured: dict, inventory: dict, provenance: dict) -
     }
     summary["event_coverage"] = _event_coverage(measured.get("event_info"))
     summary["trigger"] = _trigger(measured.get("seeds"))
+    # run_checks indexes event_coverage and trigger, so validation comes last.
     summary["validation"] = validate.run_checks(summary)
 
     return summary
@@ -208,6 +213,12 @@ def _object(counts: measure.ObjectCounts) -> dict:
 
 
 def _feature(counts: measure.ObjectCounts, name: str) -> dict:
+    """One feature's documentation, statistics and count map.
+
+    The numbers stay in the hardware units the parquet stores: ``scale`` carries the
+    factor and label that convert them to GeV, radians or eta, and nothing here applies
+    it.
+    """
     doc = counts.documented.get(name, {})
     store = counts.features[name]
 
@@ -241,6 +252,13 @@ def _totals(inventory: dict) -> dict:
 
 
 def _event_coverage(counts: measure.ObjectCounts | None) -> dict:
+    """Which events the data set covers, or ``{}`` without an event_info folder.
+
+    The runs are read off the keys of an exact count map, which orbit and time do not
+    have: measure.py accumulates those two through their extremes alone. The ``time``
+    extent is therefore in the packed units of the column, and ``wall_clock`` is the
+    decoded pair.
+    """
     if counts is None:
         return {}
     features = counts.features
@@ -261,10 +279,11 @@ def _wall_clock(store) -> dict | None:
 
     docs/README.md gives the packing: Unix seconds shifted left by 32 bits, with the
     microseconds in the low word. The seconds sit above the microseconds, so the packed
-    integers order as the times do and the extremes of the count map are the first and
-    last event; the microseconds are dropped with the shift. A field the converter never
-    filled is zero and decodes to 1970, which is what PLAUSIBLE_EPOCH exists to catch:
-    outside it the answer is no wall clock rather than a date.
+    integers order as the times do and the extremes measure.py keeps are the first and
+    last event; the microseconds are dropped with the shift. Simulation records no time,
+    and an unfilled field is zero, which decodes to 1970 and so sits below the lower
+    bound of PLAUSIBLE_EPOCH: a decoded time outside that window gives no wall clock
+    rather than a date.
     """
     if store is None or store.low is None:
         return None
@@ -308,6 +327,15 @@ def _run_sections(sections: dict) -> dict:
 
 
 def _pileup(store, rows: int) -> dict:
+    """The pileup summary, and the share of events sitting at zero pileup.
+
+    That share is taken over events, unlike the ``zero_fraction`` inside the summary,
+    which stats.summarise takes over the finite entries counted. A non-finite nPV_True
+    never reaches the count map, so such an event counts in the denominator here and
+    never in the numerator, leaving the share a lower bound. The 0.0 key finds an
+    integer zero as well, which it has to: the column is float32 in recorded data and
+    int32 in simulation.
+    """
     if store is None:
         return {"pileup": None, "zero_pileup_fraction": None}
     summary = stats.summarise(store)
@@ -364,6 +392,11 @@ def _ranked_seeds(fired: dict, rows: int) -> list[dict]:
 
 
 def _pairs_to_json(pairs: dict) -> list:
+    """Pair-keyed counts as ``[first, second, count]`` rows, JSON having no tuple key.
+
+    The pairs are (eta, phi) hardware codes for an occupancy map and (run, lumi) for
+    event coverage, in the order measure.py counted them.
+    """
     return [[first, second, count] for (first, second), count in sorted(pairs.items())]
 
 

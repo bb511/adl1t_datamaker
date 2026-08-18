@@ -4,7 +4,7 @@
 # the last one stopped:
 #
 #   extraction      the published tables -> one file per object collection
-#   processing      the study's saturation cuts
+#   processing      the saturation cuts, per event and per object
 #   mlready         select the training features, normalise, pad to a common schema
 #   awkward2torch   stack the collections into one (events, constituents, features) tensor
 #

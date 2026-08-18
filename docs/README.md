@@ -2,8 +2,8 @@
 
 The conversion code in this repository constructs parquet files that contain information on what the global trigger (uGT) records during a run,
 along with metadata corresponding to each event.
-The input to these scripts are L1Ntuples, which are in CERN ROOT tree data format.
-The code in thie repository only keeps a subset of the data available in the L1TNtuples;
+The inputs to these scripts are L1Ntuples, which are in CERN ROOT tree data format.
+The code in this repository only keeps a subset of the data available in the L1TNtuples;
 the rest are dropped: float reconstructions, detector-level branches that never reach the trigger boards, and the objects of neighbouring bunch crossings.
 The tables below describe every feature that reaches the parquet files.
 
@@ -28,11 +28,11 @@ If a description says a quantity is not yet defined, that reports the state of t
 
 An `I` in a feature name abbreviates `Integer` and marks a quantity taken straight from hardware.
 The absence of `I` does not signify float values: for example, `muonQual`, `muonChg`, `muonTfMuonIdx`, `jetHwQual`, `jetRawEt`, `egIso`, and `tauIso` are hardware integers too.
-Every value keeps its hardware units, if you want GeV or radians, apply the `Step` column.
+Every value is in hardware units.
+If you want GeV or radians, apply the `Step` column.
 
-Each event carries objects from five bunch crossings, ±2 around the one that fired.
-The conversion keeps crossing 0 alone, selected through each particle collection's `Bx` branch and through `sumBx` for the energy sums, and drops the `Bx` column itself, so the parquet cannot say which crossing an object came from.
-No event is lost, only the objects of the other crossings; the CICADA score, one number per event, has no crossing to select.
+Each event contains objects from five bunch crossings, ±2 around the one that fired.
+The conversion keeps only crossing 0, selected through each particle collection's `Bx` branch and through `sumBx` for the energy sums, and drops the `Bx` column itself.
 
 Each object is stored in its own folder, holding one parquet file per input L1Ntuple.
 Row $i$ of every folder is the same event, so the folders can be read separately and joined by position.
@@ -48,19 +48,19 @@ None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| `muonIPhiAtVtx` $\varphi\mathrm{\,\,(extrapolated)}$  |  2 π  | 2π/576 ~ 0.011 | 10 | Muon azimuthal angle extrapolated to the centre of the detector. Layer 2 of the global trigger system is performing the extrapolation in a rudimentary way; if latency allows, a more sophisticated extrapolation, e.g., using an ML method, is preferable. | :heavy_check_mark: |
-| `muonIEt` $p_t$  |  0..256 GeV  | 0.5 | 9 | The muon transverse momentum (a proxy for its transverse energy). | :heavy_check_mark: |
-| `muonQual` quality  |  -  | - | 4 | The muon quality is represented by 4 bits. A hit in each of the muon stations flips its corresponding bit to 1. The three muon track finding systems assign quality differently: the BMTF covers the barrel, $\lvert\eta\rvert \lesssim 0.83$, the OMTF the overlap, $0.83 \lesssim \lvert\eta\rvert \lesssim 1.24$, and the EMTF the endcaps beyond that. Each requires a quality higher than 12, i.e., the first two bits are 1, but how that quality is arrived at is peculiar to each system. | :heavy_check_mark: |
-| `muonIEtaAtVtx` $\eta \mathrm{\,\,(extrapolated)}$  |  2π  | 0.0870/8=0.010875 | 8+1 | Muon polar angle extrapolated to the centre of the detector. The explanation is the same as for $\phi$. | :heavy_check_mark: |
+| `muonIPhiAtVtx` $\varphi\mathrm{\,\,(extrapolated)}$  |  2 π  | 2π/576 ~ 0.011 | 10 | Muon azimuthal angle extrapolated to the centre of the detector. The global muon trigger (uGMT) performs the extrapolation in a rudimentary way and forwards it to the global trigger system. | :heavy_check_mark: |
+| `muonIEt` $p_t$  |  0..256 GeV  | 0.5 | 9 | The muon transverse momentum (a proxy for its transverse energy). Hardware index `0` means invalid muon. Hence, to convert to GeV, subtract `1` from the hardware value before conversion. | :heavy_check_mark: |
+| `muonQual` quality  |  -  | - | 4 | The muon quality is represented by 4 bits. These 4 bits represent a quality class assigned by each track finder. The quality classes are derived by each system through LUTs based on the station's hit pattern and associated attributes, like angular distribution. The three muon track finding systems each cover a different detector area: the BMTF covers the barrel, $\lvert\eta\rvert \lesssim 0.83$, the OMTF the overlap, $0.83 \lesssim \lvert\eta\rvert \lesssim 1.24$, and the EMTF the endcaps beyond that. The single muon triggers apply a quality cut of at least 12. For example, a `muonQual` of 12-15 means that the two most significant bits are set. | :heavy_check_mark: |
+| `muonIEtaAtVtx` $\eta \mathrm{\,\,(extrapolated)}$  |  -2.45..2.45  | 0.0870/8=0.010875 | 8+1 | Muon pseudorapidity extrapolated to the centre of the detector. The explanation is the same as for $\phi$. | :heavy_check_mark: |
 | `muonIso` iso  |  -  | - | 2 | Muon isolation. The isolation is stored in two bits, corresponding to two types of isolation. However, the meaning of this isolation is not defined yet in the uGMT system: the uGMT has the capability to create an isolation variable but the calorimeter links were never commissioned. | :x: |
-| `muonChg` charge sign  |  -  | - | 1 | Muon charge determined from the muon bending trajectory. `-1` is negative charge while `1` is positive charge. | :heavy_check_mark: |
+| `muonChg` charge sign  |  -  | - | 1 | Muon charge determined from the muon bending trajectory. `-1` is negative charge while `1` is positive charge. `0` means the charge-valid bit is unset. | :heavy_check_mark: |
 | charge valid  |  -  | - | 1 | This is set to `0` whenever one cannot determine the charge. This can happen when the track is too straight, e.g., in the case of very high momentum muons. | :x: |
 | `muonTfMuonIdx` index bits |  -  | - | 7 | Seven index bits are enough to number the 108 muon slots the track finders deliver to the global trigger, and the position within that ordering says which subsystem a muon came from. The first 18 slots come from the EMTF, the next 18 from the OMTF, the next 36 from the BMTF, then a further 18 from the OMTF, and the last 18 again from the EMTF. | :heavy_check_mark: |
 | `muonIPhi` $\varphi$ (out)  |  2π  | 2π/576 ~ 0.011 | 10 | This is just the raw version of the extrapolated azimuthal angle mentioned above. One can use this to obtain more refined versions of the phi at vertex. | :heavy_check_mark: |
-| `muonIEta` $\eta$ (out)  |  2π  | 0.0870/8=0.010875 | 8+1 | This is just the raw version of the extrapolated polar angle mentioned above. One can use this to obtain more refined versions of the eta at vertex. | :heavy_check_mark: |
-| `muonIEtUnconstrained` unconstrained $p_t$  |  0..256 GeV  | 1 | 8 | The transverse momentum not constrained to the vertex. Lower resolution when compared with the momentum defined above, but useful in the case of offset muons, since it can be more precise than its constrained counterpart. | :heavy_check_mark: |
+| `muonIEta` $\eta$ (out)  |  -2.45..2.45  | 0.0870/8=0.010875 | 8+1 | This is just the raw version of the extrapolated pseudorapidity mentioned above. One can use this to obtain more refined versions of the eta at vertex. | :heavy_check_mark: |
+| `muonIEtUnconstrained` unconstrained $p_t$  |  0..256 GeV  | 1 | 8 | The transverse momentum not constrained to the vertex. Hardware index `0` means invalid muon. Hence, to convert to GeV, subtract `1` from the hardware value before conversion. Lower resolution when compared with the momentum defined above, but useful in the case of offset muons, since it can be more precise than its constrained counterpart. | :heavy_check_mark: |
 | hadronic shower trigger |  -  | - | 1 | Whether one observes a hadronic shower in the muon detectors. Very experimental feature and not useful for training the anomaly detector. | :x: |
-| `muonDxy` impact parameter  |  -  | - | 2 | Displacement with respect to primary vertex. Not defined yet. | :x: |
+| `muonDxy` impact parameter  |  -  | - | 2 | Displacement with respect to primary vertex. Not used yet, seeds that contain this are disabled. | :x: |
 
 
 ## Jet Objects
@@ -74,41 +74,42 @@ None of these reaches the global trigger, so none is converted.
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
 | `jetIEt` $E_t$  |  0..1024 GeV  | 0.5 | 11 | Jet transverse energy. | :heavy_check_mark: |
-| `jetIEta` $\eta$ |  -5..5  | 0.0870/2=0.0435 | 7+1 = 8 | The polar angle of the jet from the centre of the detector. | :heavy_check_mark: |
+| `jetIEta` $\eta$ |  -5..5  | 0.0870/2=0.0435 | 7+1 = 8 | The pseudorapidity of the jet from the centre of the detector. | :heavy_check_mark: |
 | `jetIPhi` $\varphi$  |  2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the jet from the centre of the detector. | :heavy_check_mark: |
-| DISP |  -  | - | 1 | This bit is used to flag a jet as delayed/displaced based on HCAL timing and depth profiles that are indicative of a “long lived particle” decay. If this bit is set to 1, then the jet is tagged as an LLP. | :x: |
-| `jetHwQual` quality flags  |  -  | - | 1 | Based on ECAL/HCAL energy ratio. If this ratio is higher, that means the jet is more likely to not be hadronic, but faked by a high energy lepton or photon. Either tight (2), medium (1), or loose (0). In reality, most jets are 0, with a few having quality 1. | :heavy_check_mark: |
-| `jetRawEt` |  -  | - | - | What "raw" means here is undetermined: the branch is present in the L1TNtuple and in the converted parquet, but the `scales` pdf does not define it, and it has no `I` counterpart, the L1TNtuple carrying `jetRawEt` alone. The data ntuples leave it unfilled, so it is identically zero in every converted zero-bias run and only simulation gives it values. | :heavy_check_mark: |
+| `jetHwQual` quality flags  |  -  | - | 1 | This bit is set to `1` when a jet contains two or more HCAL-delayed towers. There is an unused 2-bit quality-adjacent field based on ECAL/HCAL energy ratio, either tight (2), medium (1), or loose (0). If this ratio is higher, that means the jet is more likely to not be hadronic, but faked by a high energy lepton or photon. | :heavy_check_mark: |
+| `jetRawEt` |  -  | - | - | Raw is the tower sum before pile-up subtraction and calibration. The unpacker never fills this. It is `0` throughout for the ZB data and filled for the `Winter25` simulation. | :heavy_check_mark: |
+
 
 ## Egamma Objects
 
 > [!NOTE]
 > There are 12 egamma objects at most, the global trigger's capacity per event.
 
-The L1TNtuple also carries `nEGs`, `egTowerIPhi`, `egTowerIEta`, `egRawEt`, `egIsoEt`, `egFootprintEt`, `egNTT`, `egShape`, `egTowerHoE`, `egHwQual`, and float versions of `egIEt`, `egIEta`, `egIPhi`, and `egIRawEt` (the same names without `I`).
+The L1TNtuple also carries `nEGs`, `egTowerIPhi`, `egTowerIEta`, `egRawEt`, `egIsoEt`, `egFootprintEt`, `egNTT`, `egShape`, `egTowerHoE`, `egHwQual`, and float versions of `egIEt`, `egIEta`, and `egIPhi` (the same names without `I`).
 None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
 | `egIEt` $E_t$  |  0..256 GeV  | 0.5 | 9 | Transverse energy of the electron or photon. | :heavy_check_mark: |
-| `egIEta` $\eta$ |  -5..5  | 0.0870/2=0.0435 | 7+1 = 8 | The polar angle of the electron or photon from the centre of the detector. | :heavy_check_mark: |
+| `egIEta` $\eta$ |  -5..5  | 0.0870/2=0.0435 | 7+1 = 8 | The pseudorapidity of the electron or photon from the centre of the detector. | :heavy_check_mark: |
 | `egIPhi` $\varphi$  |  2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the electron or photon from the centre of the detector. | :heavy_check_mark: |
-| `egIso` iso  |  -  | - | 2 | Little activity around the cluster of energy representing the electron/photon means higher isolation: less likely to be a jet. The lowest bit is defined as `isolated` while the highest bit is named `undefined`. Three degrees of isolation are possible, but only two are used, i.e., the `isolated` bit is set and the other is optional, or vice versa. Thus, it's either these two options, or `no isolation`, when all bits are 0. Whatever quality is larger than 0 is treated as the same degree of isolation. Still unclear how these bits are set, i.e., based on exactly what parameters. | :heavy_check_mark: |
+| `egIso` iso  |  -  | - | 2 | This entry is based on two lookup tables (LUTs). Bit 0 is the pass flag of egIsolationLUT and bit 1 is the pass flag of egIsolationLUT2. These represent two independent isolation working points, both computed from the energy of the towers, a threshold depending on eta and pt, and tower count. The bit set to 0 is the "Iso" flag and set to 1 is the "LooseIso" flag in the menu. | :heavy_check_mark: |
+
 
 ## Tau Objects
 
 > [!NOTE]
 > There are 12 tau objects at most, the global trigger's capacity per event.
 
-The L1TNtuple also carries `nTaus`, `tauTowerIPhi`, `tauTowerIEta`, `tauRawEt`, `tauRawIEt`, `tauIsoEt`, `tauNTT`, `tauHasEM`, `tauIsMerged`, `tauHwQual`, and float versions of `tauIEt`, `tauIEta`, and `tauIPhi` (the same names without `I`).
+The L1TNtuple also carries `nTaus`, `tauTowerIPhi`, `tauTowerIEta`, `tauRawEt`, `tauIsoEt`, `tauNTT`, `tauHasEM`, `tauIsMerged`, `tauHwQual`, and float versions of `tauIEt`, `tauIEta`, and `tauIPhi` (the same names without `I`).
 None of these reaches the global trigger, so none is converted.
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
 | `tauIEt` $E_t$  |  0..256 GeV  | 0.5 | 9 | Transverse energy of the tau candidate. | :heavy_check_mark: |
-| `tauIEta` $\eta$ |  -5..5  | 0.0870/2=0.0435 | 7+1 = 8 | The polar angle of the tau candidate from the centre of the detector. | :heavy_check_mark: |
+| `tauIEta` $\eta$ |  -5..5  | 0.0870/2=0.0435 | 7+1 = 8 | The pseudorapidity of the tau candidate from the centre of the detector. | :heavy_check_mark: |
 | `tauIPhi` $\varphi$  |  2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the tau candidate from the centre of the detector. | :heavy_check_mark: |
-| `tauIso` iso  |  -  | - | 2 | Little activity around the cluster of energy representing the tau means higher isolation: less likely to be a jet. The lowest bit is defined as `isolated` while the highest bit is named `undefined`. Three degrees of isolation are possible, but only one is used: at least one of the bits needs to be set. Thus, it's either this or `no isolation`, when the bits are all 0. Whatever quality is larger than 0 is treated as the same degree of isolation. Still unclear how these bits are set, i.e., based on what parameters exactly. | :heavy_check_mark: |
+| `tauIso` iso  |  -  | - | 2 | Only the first bit is ever set. The second bit is commented out in the emulator. Little activity around the cluster of energy representing the tau means higher isolation: less likely to be a jet. The available bit is set when the isolation energy (tower sum around the cluster minus the tau footprint) passes an eta-, pt- and tower-count-dependent LUT threshold. | :heavy_check_mark: |
 
 
 ## Cicada Objects
@@ -121,14 +122,28 @@ The score lives in the calorimeter summary tree, so a conversion given no such t
 
 | Feature       |     Range     |      Step     |      Bits     |  Explanation  |      in       |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| `CICADAScore` |  -  | - | 4 | Anomaly score generated using calorimeter tower data. | :heavy_check_mark: |
+| `CICADAScore` |  0..256  | 1/256 | 16 | Anomaly score generated using calorimeter tower data. The precision is `ap_ufixed<16,8>`, i.e., 8 integer bits and 8 fractional bits. | :heavy_check_mark: |
+
 
 ## Energy Objects
 
 The level 1 tree gives the six sums one collection rather than a branch each, holding an entry per pair of sum type and bunch crossing, read through the branches `sumType`, `sumBx`, `sumIEt`, and `sumIPhi`.
 Each column below is recovered by its `sumType` flag together with `sumBx == 0`, taking its value from `sumIPhi` when the column is a `phi` and from `sumIEt` otherwise, which is why `tower_count` is read from `sumIEt` despite not being an energy.
-The flags are 0 for `ET` and 16 for its ECAL part, 1 for `HT` and 21 for its tower count, 2 for `MET`, 3 for `MHT`, 8 for `FET`, and 20 for `FHT`.
+The flags are the values of the CMSSW `EtSum::EtSumType` enumeration (`DataFormats/L1Trigger/interface/EtSum.h`), which the L1TNtuple stores verbatim:
+
+| Folder | Column(s)      | `sumType` flag | CMSSW enum name |
+| ------ | -------------- | -------------- | --------------- |
+| `ET`   | `Et`           | 0              | `kTotalEt`      |
+| `ET`   | `ETTEM`        | 16             | `kTotalEtEm`    |
+| `HT`   | `Et`           | 1              | `kTotalHt`      |
+| `HT`   | `tower_count`  | 21             | `kTowerCount`   |
+| `MET`  | `Et`, `phi`    | 2              | `kMissingEt`    |
+| `MHT`  | `Et`, `phi`    | 3              | `kMissingHt`    |
+| `FET`  | `Et`, `phi`    | 8              | `kMissingEtHF`  |
+| `FHT`  | `Et`, `phi`    | 20             | `kMissingHtHF`  |
+
 `_store_energies` in `src/adl1t_datamaker/root2parquet.py` applies them and `tests/test_sum_types.py` pins them, because a wrong flag yields a plausible column rather than an error: an earlier map read `ETTEM` with the `HT` flag, so every data set produced before the reconversion of 2026-08-08 carries a copy of `HT.Et` in `ET.ETTEM`.
+
 
 > [!NOTE]
 > There are 6 energy objects, one folder each.
@@ -141,7 +156,7 @@ The transverse energy object.
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
 | `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | Transverse energy of the whole event. | :heavy_check_mark: |
 | `ETTEM` $E_t$ (ECAL) | 0..2048 GeV  | 0.5 | 12 | Transverse energy in the ECAL of the whole event. | :heavy_check_mark: |
-| minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
+| minimum bias HF  |  0..15  | - | 4 | *Present in the L1Ntuple as a sum type but not converted.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### HT
 The scalar sum of the jet transverse energies of the event, over ECAL and HCAL. The vectorial counterpart is `MHT`.
@@ -150,7 +165,7 @@ The scalar sum of the jet transverse energies of the event, over ECAL and HCAL. 
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
 | `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | Scalar sum of the jet transverse energies of the event. | :heavy_check_mark: |
 | `tower_count` TOWERCOUNT | 0..8191 | 1 | 13 | Number of "towers" (experimental signatures left by hadrons in the calorimeter) measured in the HCAL. | :heavy_check_mark: |
-| minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
+| minimum bias HF  |  0..15  | - | 4 | *Present in the L1Ntuple as a sum type but not converted.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### MET ($ET_\mathrm{miss}$)
 The missing transverse energy object.
@@ -160,7 +175,7 @@ The missing transverse energy object.
 | `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | The missing transverse energy magnitude. | :heavy_check_mark: |
 | `phi` $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the missing transverse energy vector. | :heavy_check_mark: |
 | ASYMET | 0..255 | 1 | 8 | The asymmetry in the missing transverse energy vector. A measure of the energy imbalance in the Hadronic Calorimeter.  **Only used for heavy ion runs and thus ignored for the current parquet generation.** | :x: |
-| minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
+| minimum bias HF  |  0..15  | - | 4 | *Present in the L1Ntuple as a sum type but not converted.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### MHT ($HT_\mathrm{miss}$)
 The missing transverse hadronic energy object.
@@ -170,7 +185,7 @@ The missing transverse hadronic energy object.
 | `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | The hadronic missing transverse energy magnitude. | :heavy_check_mark: |
 | `phi` $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the hadronic missing transverse energy vector. | :heavy_check_mark: |
 | ASYMHT | 0..255 | 1 | 8 | The asymmetry in the missing hadronic transverse energy vector.  A measure of the energy imbalance in the Hadronic Calorimeter. **Only used for heavy ion runs and thus ignored for the current parquet generation.** | :x: |
-| minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
+| minimum bias HF  |  0..15  | - | 4 | *Present in the L1Ntuple as a sum type but not converted.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### FET ($ET^\mathrm{HF}_\mathrm{miss}$)
 The missing transverse energy object including data from the forward hadronic calorimeter object.
@@ -181,7 +196,6 @@ The missing transverse energy object including data from the forward hadronic ca
 | `phi` $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the missing transverse energy vector including information from the forward hadronic calorimeter. | :heavy_check_mark: |
 | ASYMETHF | 0..255 | 1 | 8 | The asymmetry in the forward missing transverse energy object.  A measure of the energy imbalance in the Hadronic Forward Calorimeter. **Only used for heavy ion runs and thus ignored for the current parquet generation.** | :x: |
 | CENT[3:0] | - | - | 4 | The centrality of the missing transverse energy vector, defined by the first 4 bits. It specifies the degree of overlap between colliding ions. **Only used for heavy ion runs and thus ignored for the current parquet generation.**  | :x: |
-| minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ### FHT ($HT^\mathrm{HF}_\mathrm{miss}$)
 The missing hadronic transverse energy object including data from the forward hadronic calorimeter object.
@@ -190,9 +204,8 @@ The missing hadronic transverse energy object including data from the forward ha
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
 | `Et` $E_t$ |  0..2048 GeV  | 0.5 | 12 | The hadronic missing transverse energy magnitude including the missing transverse energy from the forward hadronic calorimeter. | :heavy_check_mark: |
 | `phi` $\varphi$ | 2π  | 2π/144 ~ 0.044 | 8 | The azimuthal angle of the hadronic missing transverse energy vector including information from the forward hadronic calorimeter. | :heavy_check_mark: |
-| ASYMETHF | 0..255 | 1 | 8 | The asymmetry in the forward hadronic missing transverse energy object.  A measure of the energy imbalance in the Hadronic Forward Calorimeter. **Only used for heavy ion runs and thus ignored for the current parquet generation.** | :x: |
+| ASYMHTHF | 0..255 | 1 | 8 | The asymmetry in the forward hadronic missing transverse energy object.  A measure of the energy imbalance in the Hadronic Forward Calorimeter. **Only used for heavy ion runs and thus ignored for the current parquet generation.** | :x: |
 | CENT[7:4] | - | - | 4 | The centrality of the missing transverse energy vector, defined by the last 4 bits. It specifies the degree of overlap between colliding ions. **Only used for heavy ion runs and thus ignored for the current parquet generation.**  | :x: |
-| minimum bias HF  |  0..15  | - | 4 | *Not in the L1Ntuple.* Based on the Hadronic Forward Calorimeter fine grain bits. The algorithm foresees a trigger when one of the HF tower on at least one side of HF (OR) or one tower on each side (AND) is above a defined ADC threshold. | :x: |
 
 ## Event Information
 
@@ -210,17 +223,18 @@ All the following features are integers, apart from `nPV_True` in recorded data.
 
 ## Level 1 Seeds
 
-The `seeds` folder holds one boolean column per trigger algorithm: the final decision the global trigger reached for that algorithm on that event.
+The `seeds` folder contains one boolean column per trigger algorithm: the final decision the global trigger reached for that algorithm on that event.
 The columns are named after the algorithms, e.g. `L1_SingleMu22`, and each is a length-1 list per event.
 
-Only the unprescaled algorithms are kept.
-A prescaled algorithm records one accept in every `n`, so its column would measure the prescale rather than the physics; `unprescaled_names` in `src/adl1t_datamaker/components/l1_seeds.py` reads the menu CSV and keeps the algorithms whose prescale is 1.
-Which algorithms survive therefore depends on the menu: runs 396102 and 398183 (`L1Menu_Collisions2025_v1_3_0`) leave 190 unprescaled, the Winter25 simulation (`L1Menu_Collisions2024_v1_3_0_last`) 164, and only 150 names are common to the two.
-The columns are not in the same order either, so select by name, never by position.
-The published release quotes 183, 161, and 147 for the same three numbers, because it drops the `L1_CICADA_*` columns as another anomaly trigger's output rather than detector input.
+The global trigger makes an accept decision in three stages.
+First, for every algorithm and every bunch crossing, the global trigger computes an initial decision: whether the algorithm's condition is met.
+Second, a prescale is applied to every algorithm, which keeps every $n$-th accept; a prescale of $0$ disables the algorithm and a prescale of $1$ passes everything.
+Third, a per-algorithm trigger mask is applied, giving the final decision.
+Both the initial and the final decisions are stored per algorithm in the L1TNtuple, which correspond to after the first decision is applied and after all three steps are applied, respectively.
 
-The conversion also writes one synthesised column, `L1bit`, the logical OR of every algorithm kept.
-It appears in no menu, and it is computed at conversion time, so a downstream step that drops columns leaves `L1bit` describing the wider set it was built from.
-
-The decision stored is the final one rather than the initial one: an algorithm that accepted an event can still read 0, because the trigger rules cap how often accepts may follow one another.
-`get_initial_decision` and `get_final_decision` in the same module expose both.
+The workflow here keeps only the unprescaled trigger algorithms in the menu, with $n=1$; additionally, we remove all the anomaly-related seeds `L1_AXO_*` and `L1_CICADA_*`.
+This is done to keep the physics-based accepts of all enabled trigger algorithms for the studied runs/simulations, except the anomaly ones (which would be circular to include).
+Then, the conversion reads the final decisions, branch `m_algoDecisionFinal` of the uGT tree, matches each algorithm name to its bit through the tree's aliases, and writes one boolean column per kept algorithm.
+The `L1bit` column is produced by the converter and is the logical OR of the final decisions given by the kept trigger algorithms.
+`L1bit` does not appear in any menu; it exists only in the parquet generated here.
+Look at `get_initial_decision` and `get_final_decision` in `src/adl1t_datamaker/components/l1_seeds.py` for the code that precisely handles the seeds and the prescale filtering.

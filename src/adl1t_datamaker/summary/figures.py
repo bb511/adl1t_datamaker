@@ -1,7 +1,10 @@
-# Every figure in a summary, drawn from the accumulated counts.
+# Every figure in a summary or a comparison, drawn from the accumulated counts.
 #
 # Because stats.py counts exactly, a spectrum is a weighted histogram over the counted
-# values.
+# values. No value axis is converted: it is labelled in hardware units, so a bar spans
+# whole codes. A spectrum also quotes the factor to GeV, radians or eta in that label
+# wherever the schema documents one; the comparison overlays quote no factor.
+#
 # Guessed bin widths ('doane' and its relatives) suit bounded integers badly: fractional
 # edges across a flag such as `egIso`, whose two bits hold four codes, give bars that no
 # longer stand for the codes.
@@ -13,11 +16,15 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
 
+# The most bars a spectrum draws: a wider integer range is coarsened by a whole factor,
+# so a bin still spans whole codes.
 MAX_BINS = 256
+# The most bars the ranked seed chart draws; the report tabulates the whole menu anyway.
 TOP_SEEDS = 40
 DPI = 150
 
-# Whether the data set was recorded or simulated, which is all the CMS label needs.
+# Whether the data set was recorded or simulated: a module-level default that
+# use_cms_style overwrites for the rest of the process.
 STYLE = {"data": False}
 
 
@@ -25,7 +32,8 @@ def use_cms_style(data: bool = False) -> None:
     """Adopt the CMS plotting style.
 
     A function rather than an import side effect: importing a module should not
-    reconfigure matplotlib for the rest of the process.
+    reconfigure matplotlib for the rest of the process. Any rcParams the caller had set
+    are discarded, since the defaults are restored before the CMS style is applied.
 
     :param data: False labels every figure drawn afterwards as simulation.
     """
@@ -38,6 +46,9 @@ def draw_all(
     summary: dict, outdir: Path, fmt: str = "png", clean: bool = False
 ) -> list:
     """Every figure for one data set.
+
+    Sets the CMS style for the rest of the process, labelling the figures as simulation
+    when ``provenance["mc"]`` is true and as recorded data when it is false or absent.
 
     :param clean: Delete every file under ``outdir`` this run did not draw, so no figure
         of an earlier schema survives beside the new ones.
@@ -58,6 +69,9 @@ def draw_comparison(
     first: dict, second: dict, labels: list, outdir: Path, fmt: str, fractions: bool
 ) -> list:
     """Overlays of every shared feature except the seeds, which the report tabulates.
+
+    The CMS style is taken with its default, so every overlay carries the simulation
+    label whatever the two summaries say about ``mc``.
 
     :param labels: The two legend names, in the order (first, second).
     :param fractions: Divide each series by its own entry count, so two data sets of
@@ -163,9 +177,12 @@ def spectrum(values, weights, label: str, path: Path, scale=None) -> None:
 def bin_edges(values: np.ndarray) -> np.ndarray:
     """One bin per integer value, coarsened by a whole factor when there are too many.
 
-    Even bins take over for floats, and for integers so large that float64 cannot hold
-    an edge half a step away from a value: the packed time field sits near 7e18, where
-    consecutive doubles are already about a thousand apart.
+    The integer edges fall on half-integers, so a bin covers whole codes instead of
+    splitting one. Evenly spaced edges are used instead for floats, and for integers so
+    large that float64 cannot hold an edge half a step away from a value. Nothing drawn
+    comes near that second case: the wide identifiers, such as the packed time field near
+    7e18 where consecutive doubles are about a thousand apart, go through stats.Extremes
+    and carry no counts to bin.
 
     :returns: At least two strictly increasing edges for any input, empty or constant
         included, since np.histogram accepts nothing less.
@@ -183,7 +200,9 @@ def bin_edges(values: np.ndarray) -> np.ndarray:
 def _even_edges(low: float, high: float) -> np.ndarray:
     """Evenly spaced edges, cut back to the number float64 can keep apart.
 
-    A span narrower than the spacing between doubles collapses to a single edge, which
+    The pad is the larger of half a unit, which leaves a constant input spanning one bin,
+    and twice the spacing between doubles, which keeps the padded ends distinct from the
+    data. A span narrower than that spacing collapses to a single edge, which
     np.histogram cannot use; the fallback is one bin a single representable step wide.
     """
     pad = max(0.5, np.spacing(max(abs(low), abs(high))) * 2)
@@ -234,7 +253,12 @@ def _multiplicity_figure(name: str, obj: dict, outdir: Path, fmt: str) -> dict |
 
 
 def _occupancy_figure(name: str, obj: dict, outdir: Path, fmt: str) -> dict | None:
-    """The eta-phi map, which is where masked regions and detector gaps show up."""
+    """The eta-phi map, which is where masked regions and detector gaps show up.
+
+    The occupancy pairs are keyed (eta, phi) in that order, since measure.py counts them
+    over schema.OCCUPANCY_COLUMNS; transposing the grid puts eta along x. Both axes are
+    hardware codes, whose step differs between the muon and the calorimeter objects.
+    """
     if not obj.get("occupancy"):
         return None
     path = outdir / f"occupancy.{fmt}"
@@ -257,7 +281,7 @@ def _occupancy_figure(name: str, obj: dict, outdir: Path, fmt: str) -> dict | No
 
 def _seed_figures(trigger: dict, outdir: Path, fmt: str) -> list:
     outdir.mkdir(parents=True, exist_ok=True)
-    # summary.py ranks the seeds by firing fraction, so the head of the list is the top.
+    # core.py ranks the seeds by firing fraction, so the head of the list is the top.
     top = [seed for seed in trigger["seeds"] if seed["fired"]][:TOP_SEEDS]
     rates = outdir / f"firing_rates.{fmt}"
     _seed_rate_chart(top, rates)
@@ -272,10 +296,14 @@ def _seed_figures(trigger: dict, outdir: Path, fmt: str) -> list:
 
 
 def _seed_rate_chart(top: list, path: Path) -> None:
+    # Just over a quarter inch of figure height per seed, so a long list stretches the
+    # figure rather than crowding the seed names.
     fig, axes = plt.subplots(figsize=(10, max(4.0, 0.28 * len(top) + 2)))
     positions = np.arange(len(top))
     axes.barh(positions, [seed["fraction"] for seed in top], color="C0")
     axes.set_yticks(positions, [seed["name"] for seed in top], fontsize=7)
+    # barh numbers positions upwards, so the axis is flipped to leave the most frequent
+    # seed at the top.
     axes.invert_yaxis()
     axes.set_xscale("log")
     _label(axes, "Fraction of events firing", "")
@@ -295,9 +323,11 @@ def _event_figures(summary: dict, outdir: Path, fmt: str) -> list:
 
 
 def _lumi_profile(profile: list, path: Path) -> None:
+    """One line per run, from the ``[run, lumi, events]`` rows core.py writes out."""
     fig, axes = plt.subplots()
     for index, run in enumerate(sorted({entry[0] for entry in profile})):
         points = sorted((entry[1], entry[2]) for entry in profile if entry[0] == run)
+        # The CN colour spec takes a single digit, so an eleventh run reuses C0.
         axes.plot(
             *zip(*points), label=f"run {run}", color=f"C{index % 10}", linewidth=1
         )
@@ -316,7 +346,7 @@ def _finish_axes(axes, counts: np.ndarray, label: str, entries: float, scale) ->
 
 
 def _units(scale) -> str:
-    """The conversion rides in the axis label: a secondary axis overlaps the CMS label."""
+    """The conversion goes in the axis label: a secondary axis overlaps the CMS label."""
     if not scale:
         return "[hardware units]"
 
@@ -331,9 +361,9 @@ def _label(axes, xlabel: str, ylabel: str) -> None:
 
 
 def _save(fig, path: Path) -> None:
-    """Written without the version string matplotlib stamps into a figure.
+    """Write one figure, without the version string matplotlib stamps into it.
 
-    The stamp would move the bytes on an upgrade, for a figure whose content is the same.
+    That stamp would change the bytes of an unchanged figure on every upgrade.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=DPI, bbox_inches="tight", metadata=_metadata(path))
@@ -341,6 +371,10 @@ def _save(fig, path: Path) -> None:
 
 
 def _metadata(path: Path) -> dict:
+    """The metadata key each writer stamps the matplotlib version into.
+
+    PNG carries it under 'Software' and PDF under 'Creator'; None drops the entry.
+    """
     return {"Software": None} if path.suffix == ".png" else {"Creator": None}
 
 
@@ -358,9 +392,11 @@ def _arrays(counts: dict) -> tuple[np.ndarray, np.ndarray]:
 def _grid(triples: list) -> tuple[np.ndarray, list]:
     """A sparse list of (x, y, count) as a dense array indexed (x, y), with its extent.
 
-    Each pair occurs once in the list, so a cell is assigned rather than accumulated.
-    The extent reaches half a unit past the extreme keys, which centres every cell on
-    its integer pair; callers transpose, because imshow indexes (row, column).
+    The keys are integers and each pair occurs once, so a cell is assigned rather than
+    accumulated, and a cell nothing landed in stays zero. The extent is imshow's
+    [left, right, bottom, top], reaching half a unit past the extreme keys, which centres
+    every cell on its integer pair; callers transpose, because imshow indexes
+    (row, column).
     """
     first, second, weights = (np.array([row[i] for row in triples]) for i in range(3))
     lows, highs = (first.min(), second.min()), (first.max(), second.max())
@@ -389,7 +425,11 @@ def _is_integral(values: np.ndarray) -> bool:
 
 
 def _prune(outdir: Path, keep: set) -> None:
-    """Delete figures this run did not produce, so none from an old schema survives."""
+    """Delete every file under ``outdir`` this run did not draw.
+
+    ``keep`` holds paths as ``str(Path)`` and is matched literally, so it has to be built
+    from the same ``outdir``.
+    """
     for stale in sorted(outdir.rglob("*")):
         if stale.is_file() and str(stale) not in keep:
             stale.unlink()

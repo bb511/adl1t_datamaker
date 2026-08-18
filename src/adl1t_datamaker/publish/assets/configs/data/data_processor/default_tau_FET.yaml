@@ -9,16 +9,19 @@ extracted_folder: ${data.data_extractor.cache_root_dir}/extracted/${data.data_ex
 event_filters:
   ET: 'Et < 4095'
 
-# Mask objects with energies above certain saturation thresholds. The 511 is the
-# all-ones code of the 9-bit muon, e-gamma and tau Et. Jet Et is 11 bits wide and
-# saturates at 2047, so the cut on jets is the study's own threshold rather than a
-# hardware limit.
+# Remove saturated objects, each threshold the all-ones code of the object's own Et
+# width: 9 bits for muons, e-gammas and taus, 11 for jets, 12 for FET. The thresholds
+# match the axol1tl training code (l1_anomaly_ae, axo/data_util/_saturation.py), which
+# zeroes the objects in place; here they are removed, so a saturated object does not
+# count towards the multiplicity.
 object_filters:
   muons: 'Et < 511'
   egammas: 'Et < 511'
-  jets: 'Et < 511'
+  jets: 'Et < 2047'
   taus: 'Et < 511'
   FET: 'Et < 4095'
 
 cache_root_dir: ${paths.data_dir}
+# The cache is reused whenever a file of this name exists, whatever is inside it, so a
+# changed filter above needs either a new name here or the old cache deleted.
 name: e${data.data_extractor.name}_pdefaultTauFET

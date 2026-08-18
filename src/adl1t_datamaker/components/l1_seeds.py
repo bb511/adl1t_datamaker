@@ -15,13 +15,21 @@ from pathlib import Path
 PRESCALE_COLUMN = 6
 NAME_COLUMN = 1
 
+# Outputs of the anomaly triggers rather than physics algorithms. unprescaled_names
+# drops them even where a menu leaves them unprescaled, which keeps them out of the
+# seed columns, the L1bit OR, and menu identification: they are another anomaly
+# trigger's output rather than detector input, and pure-rate studies subtract the
+# L1bit-accepted events from an anomaly trigger's accepts, which must not subtract
+# what an anomaly trigger itself accepted.
+ANOMALY_SEED_PREFIXES = ("L1_AXO", "L1_CICADA")
+
 
 def get_initial_decision(global_trigger_tree: uproot.TTree) -> np.ndarray:
     """Extracts the initial decision bits from the global trigger tree in the root file.
 
     These initial decision bits are what each of the algorithms in the L1 trigger return
-    after processing the events: either accept (1) or reject (0), before the global
-    trigger rules apply.
+    after processing the events: either accept (1) or reject (0), before the trigger's
+    prescalers and masks apply.
 
     :returns: Shape (events, algorithms), the column index being the decision bit
         number that get_algo_map reports for an algorithm.
@@ -35,9 +43,10 @@ def get_initial_decision(global_trigger_tree: uproot.TTree) -> np.ndarray:
 def get_final_decision(global_trigger_tree: uproot.TTree) -> np.ndarray[bool]:
     """Extracts the final decision bits from the global trigger tree in the root file.
 
-    These final decision bits are the initial ones after the global trigger rules have
-    been applied, so an algorithm that accepted an event can still read 0 here: a
-    trigger rule caps how often accepts may follow one another.
+    These final decision bits are the initial ones after the trigger's prescalers and
+    masks. For a seed the menu's nominal column leaves unprescaled, the two differ only
+    while a higher-luminosity prescale column is active, which can prescale or disable
+    the seed early in a fill.
 
     :returns: Shape (events, algorithms), columns indexed as in get_initial_decision.
     """
@@ -69,10 +78,11 @@ def get_algo_map(global_trigger_tree: uproot.TTree) -> dict:
 def unprescaled_names(prescale_file_path: Path) -> list[str]:
     """Names of the seeds a menu leaves unprescaled, in menu order.
 
-    The menu alone gives these names, with no root file involved, so the seed columns of
-    an already converted data set can be checked against the menu that supposedly
-    produced them. Duplicates survive: L1Menu_Collisions2025_v1_1_1 lists three tau
-    seeds twice, and collapsing them is the caller's business.
+    Seeds matching ANOMALY_SEED_PREFIXES are dropped even where unprescaled. The menu
+    alone gives these names, with no root file involved, so the seed columns of an
+    already converted data set can be checked against the menu that supposedly produced
+    them. Duplicates survive: L1Menu_Collisions2025_v1_1_1 lists three tau seeds twice,
+    and collapsing them is the caller's business.
     """
     with open(prescale_file_path, newline="") as prescale_file:
         rows = csv.reader(prescale_file)
@@ -80,7 +90,9 @@ def unprescaled_names(prescale_file_path: Path) -> list[str]:
         names = [
             row[NAME_COLUMN]
             for row in rows
-            if len(row) > PRESCALE_COLUMN and row[PRESCALE_COLUMN] == "1"
+            if len(row) > PRESCALE_COLUMN
+            and row[PRESCALE_COLUMN] == "1"
+            and not row[NAME_COLUMN].startswith(ANOMALY_SEED_PREFIXES)
         ]
 
     if not names:
@@ -94,7 +106,7 @@ def unprescaled_names(prescale_file_path: Path) -> list[str]:
 
 
 def filter_algo_map(prescale_file_path: Path, algo_map: dict) -> dict:
-    """The unprescaled seeds of a menu, with the decision bit number of each.
+    """The unprescaled physics seeds of a menu, with the decision bit number of each.
 
     Returning a dict collapses the seeds a menu happens to list twice.
 

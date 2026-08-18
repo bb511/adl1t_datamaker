@@ -15,13 +15,15 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class L1DataProcessor:
-    """Drop the events and mask the objects the trigger saturated.
+    """Drop the events and remove the objects the trigger saturated.
 
     :param extracted_folder: The extract stage's output, ``.../extracted/<name>``.
     :param event_filters: ``{object: expression}``. An event survives when every one of
         its entries in that object passes, e.g. ``ET: 'Et < 4095'``.
     :param object_filters: ``{object: expression}``, applied per object instead of per
-        event, so one saturated jet leaves the rest of its event intact.
+        event, so one saturated jet leaves the rest of its event intact. A failing
+        object is taken out of its collection rather than zeroed, so it does not count
+        towards the multiplicity.
     :param name: Names this processing; the ml-ready cache inherits it.
     """
 

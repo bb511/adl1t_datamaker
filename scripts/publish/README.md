@@ -42,7 +42,7 @@ publish/                README.md LICENSE {train,valid,test}.tar sha256sums.txt
   _splitmap/            the frozen input, never uploaded
 publish_work/
   consolidated/         one file per object per data set
-  adl1t-l1ad-v2/        the exported tree the archives are built from
+  adl1t-l1ad-v1/        the exported tree the archives are built from
 ```
 
 **You can delete the `publish_work` repository after running the `export_hf` script.**
@@ -52,7 +52,7 @@ a new release.
 `SKIP_OBJECTS` in `adl1t_datamaker.publish.export` contains the directories that are not
 object collections: `PLOTS` and `SUMMARY`, which this repository writes about the data,
 and `cica`, another anomaly trigger's output rather than detector input,
-excluded from the release along with the `L1_CICADA_*` seed bits.
+excluded from the release along with the `L1_AXO_*` and `L1_CICADA_*` seed bits.
 
 ## Scripts
 

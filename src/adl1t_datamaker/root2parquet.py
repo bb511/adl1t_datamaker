@@ -247,10 +247,11 @@ class Root2Parquet(object):
     def _store_seeds(self):
         """Store the level 1 global trigger seeds to a given parquet file.
 
-        One boolean column per seed the prescale menu leaves unprescaled, True where the
-        event passed that algorithm, plus the L1bit column that get_level1_seeds adds as
-        the OR over all of them. The final decision bits are used, so the global trigger
-        rules that veto an otherwise accepted event are already folded in.
+        One boolean column per seed the prescale menu leaves unprescaled, the anomaly
+        seeds of ANOMALY_SEED_PREFIXES excluded, True where the event passed that
+        algorithm, plus the L1bit column that get_level1_seeds adds as the OR over all
+        of them. The final decision bits are used, so the trigger's prescalers and
+        masks are already folded in.
         """
         seeds_directory = self.output_path / "seeds"
         seeds_directory.mkdir(parents=True, exist_ok=True)

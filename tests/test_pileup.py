@@ -13,27 +13,16 @@ RUNS = [381148, 381149, 386554, 386593, 392642, 396102, 398183]
 def test_every_checked_in_run_is_readable(pileup_files, run):
     """Each brilcalc file parses and yields pileup keyed by (run, luminosity section).
 
-    Values are only required to be non-negative, because the checked-in files record
-    avgpu 0 for some sections themselves, mostly ones taken outside stable beams.
+    The sections come from the file itself, restricted to ones recording pileup, so
+    every recovered value must be positive: the checked-in files record avgpu 0 for
+    sections taken outside stable beams, and those are skipped here.
     """
-    sections = _first_lumi_sections(pileup_files, run)
+    sections = _first_lumi_sections(pileup_files, run, only_with_pileup=True)
     pileup_map = pileup.get_pileup_map(pileup_files, run, sections)
 
     assert pileup_map, f"no pileup recovered for run {run}"
     assert all(key[0] == run for key in pileup_map)
-    assert all(value >= 0 for value in pileup_map.values())
-
-
-@pytest.mark.parametrize("run", RUNS)
-def test_stable_beam_sections_have_real_pileup(pileup_files, run):
-    """Somewhere in every run there must be genuine, non-zero pileup."""
-    import pandas as pd
-
-    path = next(pileup_files.glob(f"run{run}*"))
-    # brilcalc writes a tag line above the header and a three-line summary below the
-    # data, and pandas would otherwise read that summary as three luminosity sections.
-    frame = pd.read_csv(path, skiprows=1)[:-3]
-    assert (frame["avgpu"] > 0).any(), f"run {run} has no lumi section with pileup"
+    assert all(value > 0 for value in pileup_map.values()), f"run {run} lost pileup"
 
 
 def _first_lumi_sections(folder, run, n=5, only_with_pileup=False):

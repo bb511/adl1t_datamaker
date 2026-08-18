@@ -25,6 +25,8 @@ feature, with its bit width, hardware unit, and physical range.
 
 The produced data sets are meant to be used in the context of anomaly detection for new physics discovery.
 A data release is published at [10.5281/zenodo.21787779](https://doi.org/10.5281/zenodo.21787779) under CC0.
+A mirror of this data realease is available on HuggingFace at [podagiu/
+anomaly_detection_cmsl1t](https://huggingface.co/datasets/podagiu/anomaly_detection_cmsl1t).
 
 
 ## Data Structure
@@ -39,13 +41,12 @@ The folders can be read separately and joined by position.
   muons/  jets/  egammas/  taus/    jagged: one entry per in-time object, nothing padded
   ET/  HT/  MET/  MHT/  FET/  FHT/  one entry per event, stored as a length-1 list
   event_info/                       run, lumi, event, bx, orbit, time, nPV_True
-  seeds/                            one boolean column per unprescaled algorithm, and L1bit
+  seeds/                            one boolean column per unprescaled physics algorithm, and L1bit
   cica/                             the CICADA anomaly score, flat, where available
 ```
 
-`L1bit` is synthesised as the logical OR of the algorithm columns beside it.
-The `cica` folder appears only where a calorimeter summary tree was configured;
-for example, unpacked 2025 zero-bias ntuples lack this tree.
+For more details about each object, see [docs/README.md](docs/README.md).
+
 
 ## Setup
 
@@ -78,8 +79,8 @@ poetry run pytest
 ### Docker
 
 The `Dockerfile` builds on `alma9-base` with the EOS and xrootd clients.
-You still need a kerberos ticket to read files from CERN EOS. The default target,
-`production` has only the package.
+You still need a kerberos ticket to read files from CERN EOS.
+The default target, `production` has only the package.
 The `development` target adds `tests/`, `docs/`, and the dev group.
 Images are only published on CERN internal repos. Build locally.
 
@@ -114,9 +115,8 @@ You can use `select_feats={"muons": ["muonIEt"], "seeds": None}` to only read ce
 features per object: `None` keeps every column of that object, and an object left out is not read.
 The loader takes local paths only.
 
-Only the `cica` object is flat; every other column carries a list
-layer.
+Only the `cica` object is flat; every other column is a list.
 For example, a seed is read as `data["seeds"].L1bit[:, 0]` and a sum as
 `data["ET"].Et[:, 0]`.
-Batches from two folders are not aligned, so join folders shard by shard
+Batches from two folders are not aligned, so make sure you join folders shard by shard
 rather than by zipping streams.
