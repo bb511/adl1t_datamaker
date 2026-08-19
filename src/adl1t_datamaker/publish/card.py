@@ -75,6 +75,7 @@ The data is published pre-partitioned into training, validation and test splits:
 All the feature values are in the trigger-native format of hardware integers.
 
 Specific technical data can be found in the github repo that was used to produce this data: https://github.com/bb511/adl1t_datamaker
+The data were produced at commit `bca1cbf750555d3ca8fc392d194d5df0155e88e5` of that repository.
 
 ## Layout
 
@@ -189,6 +190,10 @@ Citation by DOI is requested as a courtesy, not required.
 ## Contact
 
 Questions and problems are welcome as a discussion on the HuggingFace dataset page, or as an issue on the repository that produced it: https://github.com/bb511/adl1t_datamaker.
+
+## Release approval
+
+The public release of this data set was approved at the CMS Collaboration Board meeting of 15 May 2026: https://indico.cern.ch/event/1683535/
 """
 
 
@@ -218,6 +223,7 @@ The data is published pre-partitioned into training, validation and test splits:
 All the feature values are in the trigger-native format of hardware integers.
 
 Specific technical data can be found in the github repo that was used to produce this data: https://github.com/bb511/adl1t_datamaker
+The data were produced at commit `bca1cbf750555d3ca8fc392d194d5df0155e88e5` of that repository.
 
 ## Comparison with other trigger algorithms
 
@@ -394,6 +400,10 @@ Citation by DOI is requested as a courtesy, not required.
 ## Contact
 
 Questions and problems are welcome as a discussion on this dataset's page, or as an issue on the repository that produced it: https://github.com/bb511/adl1t_datamaker.
+
+## Release approval
+
+The public release of this data set was approved at the CMS Collaboration Board meeting of 15 May 2026: https://indico.cern.ch/event/1683535/
 """
 
 

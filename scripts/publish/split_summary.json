@@ -1,5 +1,4 @@
 {
-  "config_sha256": "25e67f3dbdfa6d8165fc4b6e095ec1366a23fcf2b1b4ee7b8b283a1c5c9e796d",
   "dataset_version": "adl1t-l1ad-v1",
   "datasets": {
     "GluGluHTo2B_Par-MH-125": {
