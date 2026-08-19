@@ -22,6 +22,72 @@ def render_report(summary: dict) -> str:
     )
 
 
+def render_campaign(campaign: dict) -> str:
+    """The aggregate report for one conversion campaign."""
+    return (
+        "\n\n".join(
+            [f"# Conversion campaign: {campaign['experiment']}"]
+            + [section(campaign) for section in CAMPAIGN_SECTIONS]
+        ).rstrip()
+        + "\n"
+    )
+
+
+def campaign_overview(campaign: dict) -> str:
+    """One row per data set, which is the table a Data Records section prints."""
+    rows = [_campaign_row(entry) for entry in campaign["datasets"]]
+    header = ["Sample", "Events", "Seeds", "L1 accept", "Never fired", "Mean fired"]
+
+    return "## Data sets\n\n" + markdown_table(header, rows)
+
+
+def _campaign_row(entry: dict) -> list:
+    trigger = entry.get("trigger", {})
+    events = entry["totals"]["events"]
+    accepted = trigger.get("l1bit_accepted")
+
+    return [
+        f"`{entry['dataset']}`",
+        f"{events:,}",
+        fmt(trigger.get("n_seeds")),
+        _percent(accepted / events if accepted is not None and events else None),
+        fmt(len(trigger.get("never_fired", []))),
+        fmt(trigger.get("multiplicity", {}).get("stats", {}).get("mean"), 3),
+    ]
+
+
+def campaign_consistency(campaign: dict) -> str:
+    """Whether the samples agree on objects, seed columns and prescale menu."""
+    consistency = campaign["consistency"]
+    rows = [
+        ["Object sets", _odd_note(consistency["object_sets"])],
+        ["Seed sets", _odd_note(consistency["seed_sets"])],
+        ["Menus", ", ".join(f"`{menu}`" for menu in consistency["menus"]) or "-"],
+    ]
+
+    return "## Consistency\n\n" + markdown_table(["Check", "Outcome"], rows)
+
+
+def _odd_note(odd: dict) -> str:
+    """The data sets that differ from the largest set, or a note that none does."""
+    if not odd:
+        return "all samples agree"
+
+    return ", ".join(f"`{name}` differs by {count}" for name, count in sorted(odd.items()))
+
+
+def campaign_reproducibility(campaign: dict) -> str:
+    """What produced this aggregate."""
+    generated = campaign["generated"]
+    rows = [
+        ["Generated", generated["at"]],
+        ["Commit", f"`{generated['commit']}`"],
+        ["Python", generated["python"]],
+    ]
+
+    return "## Reproducibility\n\n" + markdown_table(["Item", "Value"], rows)
+
+
 def render_comparison(comparison: dict) -> str:
     """COMPARISON.md for two data sets, which is how a reproduction gets validated."""
     first, second = comparison["labels"]
@@ -433,6 +499,13 @@ SECTIONS = (
     section_validation,
     section_figures,
     section_usage,
+)
+
+CAMPAIGN_SECTIONS = (
+    campaign_overview,
+    campaign_consistency,
+    section_figures,
+    campaign_reproducibility,
 )
 
 COMPARISON_SECTIONS = (

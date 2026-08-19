@@ -4,6 +4,7 @@
 # Ignore sublime text editor configuration.
 .sublime
 sftp-config.json
+tol_vibrant.ase
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

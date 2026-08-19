@@ -7,6 +7,7 @@
 # value counts included, and the figures both of them list, written into a SUMMARY
 # directory inside the data folder unless the caller names another.
 
+import csv
 import json
 import platform
 import subprocess
@@ -24,6 +25,10 @@ from adl1t_datamaker.terminal_colors import tcols
 
 SUMMARY_DIR = "SUMMARY"
 MENU_FOLDER = Path(__file__).resolve().parents[3] / "scripts" / "L1Menus"
+
+# What a campaign report drops from its own JSON, because each data set's summary.json
+# already carries it: the value counts and the per-shard file lists.
+PER_DATASET_ONLY = ("objects", "inventory")
 
 # Unix seconds at 2000-01-01 and 2100-01-01, the open window a decoded event time must
 # fall in to count as a wall clock.
@@ -119,6 +124,114 @@ def write_summary(summary: dict, outdir: Path, figure_format: str, clean: bool) 
 def write_json(payload: dict, path: Path) -> None:
     """Sorted keys and a trailing newline, so one payload always gives the same bytes."""
     path.write_text(json.dumps(payload, sort_keys=True, indent=2, default=float) + "\n")
+
+
+def summarise_campaign(
+    summaries: list[dict],
+    outdir: str | Path,
+    *,
+    config: str = "",
+    experiment: str = "campaign",
+    figure_format: str = "png",
+    generated_at: str | None = None,
+    clean: bool = False,
+) -> dict:
+    """Aggregate several per-folder summaries, reading no parquet at all.
+
+    Everything drawn and tabulated here is already in the summaries, so a campaign can
+    be rebuilt from the summary.json files alone, long after the measurement.
+
+    :param config: The resolved campaign config, quoted verbatim in the report.
+    :param experiment: Name of the campaign, which titles the report.
+    :param figure_format: Suffix the figures are saved with, which is what picks the
+        matplotlib writer. The scripts offer ``png`` and ``pdf``.
+    :param generated_at: ISO timestamp replacing the current time, so a rerun on the
+        same summaries reproduces the report byte for byte.
+    :param clean: Delete figures an earlier campaign left in the same directory.
+    :returns: The whole aggregate, value counts included, where campaign_summary.json
+        keeps only what no per-data-set summary already holds.
+    """
+    outdir = Path(outdir)
+    campaign = _assemble_campaign(summaries, config, experiment, generated_at)
+    outdir.mkdir(parents=True, exist_ok=True)
+    _write_seed_fractions(campaign["datasets"], outdir / "figures")
+    campaign["figures"] = figures.draw_campaign(
+        campaign, outdir / "figures", figure_format, clean
+    )
+    (outdir / "REPORT.md").write_text(report.render_campaign(campaign))
+    write_json(_slim_campaign(campaign), outdir / "campaign_summary.json")
+    print(tcols.OKGREEN + "Campaign report written: " + tcols.ENDC + str(outdir))
+
+    return campaign
+
+
+def _assemble_campaign(summaries: list, config: str, experiment: str, at) -> dict:
+    campaign = {
+        "experiment": experiment,
+        "config": config,
+        "generated": generated_block(at),
+        "datasets": sorted(summaries, key=lambda entry: entry["dataset"]),
+    }
+    campaign["consistency"] = _campaign_consistency(campaign["datasets"])
+
+    return campaign
+
+
+def _write_seed_fractions(datasets: list, outdir: Path) -> None:
+    """Every seed against every sample, which the heatmap shows only the head of."""
+    names, samples, matrix = figures.seed_matrix(datasets)
+    outdir.mkdir(parents=True, exist_ok=True)
+    with open(outdir / figures.SEED_TABLE, "w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["seed", *samples])
+        for name, row in zip(names, matrix):
+            writer.writerow([name, *(f"{value:.6g}" for value in row)])
+
+
+def _campaign_consistency(datasets: list[dict]) -> dict:
+    """What differs between the data sets of one campaign, which should be nothing.
+
+    Samples of one campaign run one menu over one converter, so a disagreement here
+    usually means a conversion went wrong, and nothing else in the report would show it.
+    """
+    objects = {entry["dataset"]: set(entry["totals"]["objects"]) for entry in datasets}
+    seeds = {
+        entry["dataset"]: {seed["name"] for seed in entry["trigger"].get("seeds", [])}
+        for entry in datasets
+    }
+
+    return {
+        "object_sets": _odd_ones_out(objects),
+        "seed_sets": _odd_ones_out(seeds),
+        "menus": sorted({entry["trigger"].get("menu") for entry in datasets} - {None}),
+    }
+
+
+def _odd_ones_out(per_dataset: dict) -> dict:
+    """Data sets whose set differs from the largest one, and by how many names."""
+    if not per_dataset:
+        return {}
+    common = max(per_dataset.values(), key=len)
+
+    return {
+        name: len(common ^ items)
+        for name, items in per_dataset.items()
+        if items != common
+    }
+
+
+def _slim_campaign(campaign: dict) -> dict:
+    """The campaign JSON without what each data set's own summary.json already holds.
+
+    The value counts and the per-shard file lists are most of a summary's bulk, so
+    repeating them once per data set would dominate the campaign file for no gain.
+    """
+    return campaign | {
+        "datasets": [
+            {key: value for key, value in entry.items() if key not in PER_DATASET_ONLY}
+            for entry in campaign["datasets"]
+        ]
+    }
 
 
 def load_or_measure(folder: str | Path, **kwargs) -> dict:

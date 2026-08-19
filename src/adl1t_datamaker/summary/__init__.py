@@ -9,6 +9,7 @@ from adl1t_datamaker.summary.core import (
     generated_block,
     load_or_measure,
     measure_folder,
+    summarise_campaign,
     summarise_folder,
     write_json,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "generated_block",
     "load_or_measure",
     "measure_folder",
+    "summarise_campaign",
     "summarise_comparison",
     "summarise_folder",
     "write_json",

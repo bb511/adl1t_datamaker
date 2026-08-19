@@ -51,18 +51,51 @@ parser.add_argument(
     action='store_true',
     help="Delete figures left over from an earlier summary of the same folder."
 )
+parser.add_argument(
+    '--reuse',
+    action='store_true',
+    help="Read each folder's existing summary.json instead of measuring it again."
+)
+parser.add_argument(
+    '--campaign_report',
+    type=str,
+    default=None,
+    help="Also aggregate the folders into a campaign report written to this directory."
+)
 args = parser.parse_args()
 
 if args.outdir and len(args.folder) > 1:
     parser.error("--outdir takes one folder; drop it to write a SUMMARY into each one.")
 
+summaries = []
 for folder in sorted(args.folder):
-    summary.summarise_folder(
-        folder,
-        args.outdir,
-        batch_size=args.batch_size,
-        checksums=not args.no_checksums,
-        objects=args.objects,
+    if args.reuse:
+        # No figures and no report: reuse reads what an earlier summary already wrote.
+        summaries.append(
+            summary.load_or_measure(
+                folder,
+                batch_size=args.batch_size,
+                checksums=not args.no_checksums,
+                objects=args.objects,
+            )
+        )
+        continue
+    summaries.append(
+        summary.summarise_folder(
+            folder,
+            args.outdir,
+            batch_size=args.batch_size,
+            checksums=not args.no_checksums,
+            objects=args.objects,
+            figure_format=args.figure_format,
+            clean=args.clean,
+        )
+    )
+
+if args.campaign_report:
+    summary.summarise_campaign(
+        summaries,
+        args.campaign_report,
         figure_format=args.figure_format,
         clean=args.clean,
     )

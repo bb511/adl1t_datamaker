@@ -1,0 +1,241 @@
+#!/usr/bin/env python
+
+# Export the numbers behind the summary figures as CSV, for plotting elsewhere.
+#
+# Everything is read from the summary.json files a summary already wrote. Those carry
+# the exact value counts, so a plot built from these tables is the figure itself rather
+# than a resampling of it. comparison.json and campaign_summary.json are not read: the
+# first holds only the differences between two data sets and the second is slimmed of
+# its value counts, so both lack what a plot needs.
+import argparse
+import csv
+import json
+from pathlib import Path
+
+# Objects whose per-feature counts are two bars of a boolean and are exported through
+# the trigger table instead.
+SKIP_OBJECTS = ("seeds",)
+
+# The feature overlaid across the samples of a campaign, which is the shape a signal
+# separates from the background by.
+CAMPAIGN_OVERLAY = ("jets", "jetIEt")
+
+parser = argparse.ArgumentParser(
+    description="Write the plot data of one or more summaries as CSV.",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+)
+parser.add_argument(
+    '--summary',
+    type=Path,
+    nargs='+',
+    required=True,
+    help="One or more summary.json files, or the folders holding them."
+)
+parser.add_argument(
+    '--outdir', type=Path, required=True, help="Directory the CSV tables land in."
+)
+parser.add_argument(
+    '--overlay',
+    action='store_true',
+    help="Also write the shared-binning overlay of the first two summaries."
+)
+parser.add_argument(
+    '--campaign',
+    action='store_true',
+    help="Also write the cross-sample accept rates and overlay over every summary."
+)
+
+
+def load(path: Path) -> dict:
+    """One summary, whether the path names the file or a folder holding it."""
+    for candidate in (path, path / "summary.json", path / "SUMMARY" / "summary.json"):
+        if candidate.is_file():
+            return json.loads(candidate.read_text())
+
+    raise FileNotFoundError(f"No summary.json at or under {path}.")
+
+
+def write_csv(path: Path, header: list, rows, note: str = "") -> None:
+    """One table, with an optional note commented above the header."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="") as handle:
+        if note:
+            handle.write(f"# {note}\n")
+        writer = csv.writer(handle)
+        writer.writerow(header)
+        writer.writerows(rows)
+
+
+def pairs(counts: dict) -> list:
+    """The (value, occurrences) rows of one count map, in the stored order."""
+    return list(zip(counts.get("values", []), counts.get("counts", [])))
+
+
+def factor_of(entry: dict) -> float | None:
+    """The conversion to GeV, radians or eta, or None where the schema documents none."""
+    return (entry.get("scale") or [None])[0]
+
+
+def export_feature(name: str, feature: str, entry: dict, outdir: Path) -> int:
+    """One feature's spectrum, with the physical value beside the hardware code."""
+    rows = pairs(entry.get("counts", {}))
+    if not rows:
+        return 0
+    factor = factor_of(entry)
+    header = ["value", "count"] + (["physical"] if factor else [])
+    body = [list(row) + ([row[0] * factor] if factor else []) for row in rows]
+    write_csv(outdir / f"{feature}.csv", header, body, f"{name}.{feature}")
+
+    return 1
+
+
+def export_object(name: str, obj: dict, outdir: Path) -> int:
+    """Every panel one object folder contributes."""
+    written = sum(
+        export_feature(name, feature, entry, outdir)
+        for feature, entry in sorted(obj["features"].items())
+    )
+    written += export_multiplicity(name, obj, outdir)
+
+    return written + export_occupancy(name, obj, outdir)
+
+
+def export_multiplicity(name: str, obj: dict, outdir: Path) -> int:
+    rows = pairs(obj.get("multiplicity", {}).get("counts", {}))
+    if not rows:
+        return 0
+    cap = obj.get("capacity")
+    note = f"{name} per event" + (f"; documented cap {cap}" if cap else "")
+    write_csv(outdir / "multiplicity.csv", ["value", "count"], rows, note)
+
+    return 1
+
+
+def export_occupancy(name: str, obj: dict, outdir: Path) -> int:
+    if not obj.get("occupancy"):
+        return 0
+    note = f"{name} occupancy in hardware eta and phi"
+    write_csv(outdir / "occupancy.csv", ["eta", "phi", "count"], obj["occupancy"], note)
+
+    return 1
+
+
+def export_trigger(trigger: dict, outdir: Path) -> int:
+    """The ranked seed table and the seeds-per-event distribution."""
+    if not trigger.get("seeds"):
+        return 0
+    rows = [[s["name"], s["fired"], s["fraction"]] for s in trigger["seeds"]]
+    write_csv(outdir / "seeds.csv", ["name", "fired", "fraction"], rows)
+    multiplicity = pairs(trigger.get("multiplicity", {}).get("counts", {}))
+    write_csv(outdir / "seed_multiplicity.csv", ["value", "count"], multiplicity)
+
+    return 2
+
+
+def export_coverage(coverage: dict, outdir: Path) -> int:
+    """Events per luminosity section, which is the beam-conditions profile."""
+    profile = coverage.get("run_lumi")
+    if not profile:
+        return 0
+    write_csv(outdir / "lumi_profile.csv", ["run", "lumi", "events"], profile)
+
+    return 1
+
+
+def export_summary(summary: dict, outdir: Path) -> int:
+    """Every panel of one data set."""
+    written = sum(
+        export_object(name, obj, outdir / name)
+        for name, obj in sorted(summary["objects"].items())
+        if name not in SKIP_OBJECTS
+    )
+    written += export_trigger(summary.get("trigger", {}), outdir / "seeds")
+
+    return written + export_coverage(summary.get("event_coverage", {}), outdir)
+
+
+def overlay_rows(left: dict, right: dict) -> list:
+    """Both data sets on the union of their values, as counts and as fractions."""
+    maps = [dict(pairs(entry.get("counts", {}))) for entry in (left, right)]
+    totals = [sum(side.values()) or 1 for side in maps]
+
+    return [
+        [value, maps[0].get(value, 0), maps[1].get(value, 0)]
+        + [maps[side].get(value, 0) / totals[side] for side in (0, 1)]
+        for value in sorted(set(maps[0]) | set(maps[1]))
+    ]
+
+
+def export_overlay(first: dict, second: dict, outdir: Path) -> int:
+    """Every feature both data sets carry, on one set of values."""
+    written = 0
+    for name, obj in sorted(first["objects"].items()):
+        if name in SKIP_OBJECTS:
+            continue
+        other = second["objects"].get(name, {}).get("features", {})
+        note = f"a = {first['dataset']}, b = {second['dataset']}"
+        written += _overlay_object(obj, other, outdir / name, note)
+
+    return written
+
+
+def _overlay_object(obj: dict, other: dict, outdir: Path, note: str) -> int:
+    header = ["value", "count_a", "count_b", "fraction_a", "fraction_b"]
+    written = 0
+    for feature, entry in sorted(obj["features"].items()):
+        rows = overlay_rows(entry, other[feature]) if feature in other else []
+        if rows:
+            write_csv(outdir / f"{feature}.csv", header, rows, note)
+            written += 1
+
+    return written
+
+
+def export_campaign(summaries: list, outdir: Path) -> int:
+    """Accept rate per sample, and one feature's shape across every sample."""
+    rows = [_accept_row(entry) for entry in summaries]
+    write_csv(outdir / "l1bit_accept.csv", ["sample", "events", "accept"], rows)
+    obj, feature = CAMPAIGN_OVERLAY
+    long = [
+        [entry["dataset"], value, count]
+        for entry in summaries
+        for value, count in pairs(_counts_of(entry, obj, feature))
+    ]
+    write_csv(outdir / f"{obj}_{feature}.csv", ["sample", "value", "count"], long)
+
+    return 2
+
+
+def _accept_row(entry: dict) -> list:
+    events = entry["totals"]["events"]
+    accepted = entry.get("trigger", {}).get("l1bit_accepted")
+
+    return [
+        entry["dataset"],
+        events,
+        "" if accepted is None or not events else accepted / events,
+    ]
+
+
+def _counts_of(entry: dict, obj: str, feature: str) -> dict:
+    holder = entry["objects"].get(obj, {}).get("features", {}).get(feature, {})
+
+    return holder.get("counts", {})
+
+
+def main() -> None:
+    args = parser.parse_args()
+    summaries = [load(path) for path in args.summary]
+    written = sum(
+        export_summary(entry, args.outdir / entry["dataset"]) for entry in summaries
+    )
+    if args.overlay and len(summaries) > 1:
+        name = f"{summaries[0]['dataset']}_vs_{summaries[1]['dataset']}"
+        written += export_overlay(summaries[0], summaries[1], args.outdir / name)
+    if args.campaign:
+        written += export_campaign(summaries, args.outdir / "campaign")
+    print(f"Wrote {written} CSV tables into {args.outdir}.")
+
+
+if __name__ == "__main__":
+    main()

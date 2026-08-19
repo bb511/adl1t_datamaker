@@ -9,7 +9,8 @@ import json
 from pathlib import Path
 
 import hydra
-from omegaconf import DictConfig
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig, OmegaConf
 
 from adl1t_datamaker import summary
 from adl1t_datamaker import util
@@ -86,6 +87,18 @@ def main(cfg: DictConfig) -> None:
 
     if not summaries:
         raise ValueError(tcols.FAIL + "No converted folder was found." + tcols.ENDC)
+
+    # One output root usually holds several campaigns, so the aggregate is qualified by
+    # the experiment that produced it.
+    experiment = HydraConfig.get().runtime.choices.get("experiment", "campaign")
+    summary.summarise_campaign(
+        summaries,
+        Path(cfg["output_root_path"]) / summary.SUMMARY_DIR / experiment,
+        config=OmegaConf.to_yaml(cfg, resolve=True),
+        experiment=experiment,
+        figure_format=cfg["figure_format"],
+        clean=cfg["clean"],
+    )
 
 
 if __name__ == "__main__":
