@@ -492,7 +492,7 @@
         "test": 39958,
         "valid": 59942
       },
-      "events_passing_filter": 99730,
+      "events_passing_filter": 99728,
       "objects": [
         "ET",
         "FET",
@@ -535,6 +535,19 @@
   },
   "dropped_row_rule": "assigned the split of the nearest preceding kept event",
   "event_filter": "ET.Et < 4095 (rows failing it carry order = -1)",
+  "overlay": {
+    "haa-4b-ma15": {
+      "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/haa-4b-ma15-POWHEG",
+      "raw_fingerprint": "fc02d4b910ded60d7e2ec69fe7fcdc0fa4b8c7438c3bc1bec42db13a07942c67",
+      "runs": [
+        "ZB_run396102",
+        "ZB_run398183"
+      ],
+      "seed": 42,
+      "source": "zerobias",
+      "tree": "adl1t-l1ad-v1"
+    }
+  },
   "split_aux": 0.6,
   "split_fractions": {
     "test": "remainder",

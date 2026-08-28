@@ -1,7 +1,18 @@
 # Publishing the L1 trigger data
 
 The `publish` script compiles the data into a zenodo-ready record.
-The `export_hf` script prepares it for HuggingFace.
+The `export_hf` script prepares it for HuggingFace; its `--stage finish` rewrites the card,
+the loader, the configs and `requirements.txt` of a mirror that is already on disk, reading
+the configs back from the mirror's own data files instead of rebuilding them.
+
+The `overlay` script adds pile-up to a sample that was simulated without it: each event of
+the sample receives one zero-bias event of the same split, merged into it at the level of
+the trigger objects, before the sample is exported. It writes a converted-style directory
+and rewrites the sample's split map, `index.json` and `split_summary.json`, so that
+`publish` treats the overlaid result like any other converted data set. Consolidation
+reuses a file it already finds, so a sample whose `raw_dir` now points at the overlaid
+directory needs `publish_work/consolidated/<name>/` removed before `publish --only <name>`.
+
 When generating a new release, please run these from **the root of the repo**.
 
 ## Prerequisites
@@ -61,4 +72,5 @@ excluded from the release along with the `L1_AXO_*` and `L1_CICADA_*` seed bits.
 | `publish.export` | partition a data set by its frozen map, then archive and checksum it |
 | `publish.card` | the dataset card and the licence that ship inside the record |
 | `publish.huggingface` | the row-per-event mirror |
+| `publish.overlay` | merge a zero-bias event into each event of a sample simulated without pile-up |
 | `publish.assets` | the loading pipeline and its configs, which ship inside the HuggingFace mirror rather than run from here |

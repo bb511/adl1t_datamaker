@@ -121,6 +121,7 @@ dmypy.json
 # Outputs
 outputs/
 parquet_files/
+notebooks/plots/
 
 # Working notes for the data descriptor manuscript
 DATA_DESCRIPTOR.md

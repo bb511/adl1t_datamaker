@@ -79,6 +79,24 @@ def build(
     return written
 
 
+def written_from(hf_root: Path) -> dict:
+    """The configs a mirror on disk resolves to, read back from its data files.
+
+    A partial rebuild must not unpublish the configs it left alone, and the disk is the
+    only complete listing of what the mirror holds.
+    """
+    written = {}
+    # Trusted as it stands, so a leftover data/<old-name>/ directory becomes a config.
+    for shard in sorted((hf_root / "data").rglob("*.parquet")):
+        seeds = shard.parent.name == "seeds"
+        dataset = shard.parent.parent.name if seeds else shard.parent.name
+        split = shard.name.split("-")[0]
+        pattern = f"{shard.parent.relative_to(hf_root).as_posix()}/{split}-*.parquet"
+        written.setdefault(f"{dataset}-seeds" if seeds else dataset, {})[split] = pattern
+
+    return written
+
+
 def read_split(split_dir: Path) -> dict:
     """One split directory of the release tree, as ``{object: awkward array}``."""
     return {

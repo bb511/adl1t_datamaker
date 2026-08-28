@@ -8,12 +8,17 @@ from pathlib import Path
 
 from adl1t_datamaker.publish import huggingface
 
+STAGES = ("build", "finish")
+
 parser = argparse.ArgumentParser(
     description="Mirror the released tree as one row per event.",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
 )
 parser.add_argument(
-    '--tree', type=Path, required=True, help="Exported release tree to mirror."
+    '--tree',
+    type=Path,
+    default=None,
+    help="Exported release tree to mirror. Only the build stage reads it."
 )
 parser.add_argument(
     '--out', type=Path, required=True, help="Folder the mirror is written into."
@@ -31,16 +36,30 @@ parser.add_argument(
     default=None,
     help="Restrict the mirror to these data set names. Every data set by default."
 )
+parser.add_argument(
+    '--stage',
+    type=str,
+    nargs='+',
+    default=list(STAGES),
+    choices=STAGES,
+    help="Stages to run. Finishing alone reruns cheaply after a change to the card."
+)
 args = parser.parse_args()
+if 'build' in args.stage and args.tree is None:
+    parser.error("--tree is required to build the mirror")
 
 args.out.mkdir(parents=True, exist_ok=True)
 summary = huggingface.read_summary(args.summary)
-written = huggingface.build(args.tree, args.out, huggingface.labels_for(summary), args.only)
-print(f"  mirror written to {args.out} with {len(written)} configs")
 
-# The card's front matter is the list of configs a reader can load, so writing it from a
-# partial run would unpublish every data set the run left out.
-if args.only:
-    print("  --only: the card and the loader are left as they are, they describe the whole record")
-else:
-    huggingface.finish(args.out, written, summary)
+if 'build' in args.stage:
+    labels = huggingface.labels_for(summary)
+    written = huggingface.build(args.tree, args.out, labels, args.only)
+    print(f"  mirror written to {args.out} with {len(written)} configs")
+
+# The configs block is read back from the mirror rather than from what this run wrote, so
+# a partial rebuild cannot unpublish the configs it left alone. --stage finish on its own
+# regenerates the card, the loader, the configs and requirements.txt after a card change.
+if 'finish' in args.stage:
+    configs = huggingface.written_from(args.out)
+    huggingface.finish(args.out, configs, summary)
+    print(f"  card, licence, loader and {len(configs)} configs written to {args.out}")

@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+
+# Add pile-up to a sample that was simulated without it, by merging one recorded
+# zero-bias event into each of its events at the level of the trigger objects.
+# Run this from the root of the repository, before publish: it writes a converted-style
+# directory and repoints the frozen split map, index and summary at it.
+import argparse
+import json
+from pathlib import Path
+
+import numpy as np
+import pyarrow.parquet as pq
+
+from adl1t_datamaker.publish import overlay
+
+parser = argparse.ArgumentParser(
+    description="Overlay recorded zero-bias events onto a no-pile-up simulation.",
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+)
+parser.add_argument(
+    '--raw',
+    type=Path,
+    required=True,
+    help="Converted parquet of the sample simulated without pile-up. Named here rather "
+         "than read from index.json, which this run repoints at the overlaid result."
+)
+parser.add_argument(
+    '--tree',
+    type=Path,
+    required=True,
+    help="Exported release tree. Its zerobias/<run>/<split> folders supply the "
+         "partners, so the sample sees the same events the release already holds."
+)
+parser.add_argument(
+    '--out',
+    type=Path,
+    required=True,
+    help="Where the overlaid data set is written, laid out as a conversion is. Refused "
+         "if it already holds parquet."
+)
+parser.add_argument(
+    '--dataset',
+    type=str,
+    default="haa-4b-ma15",
+    help="Name of the data set to overlay, as the split map's index.json names it."
+)
+parser.add_argument(
+    '--zerobias',
+    type=str,
+    nargs='+',
+    default=list(overlay.ZEROBIAS),
+    help="Zero-bias data sets to draw partners from, in the order their splits are "
+         "concatenated into one pool. Must match the order the card quotes."
+)
+parser.add_argument(
+    '--seed',
+    type=int,
+    default=42,
+    help="Seed of the draw pairing each simulated event with a zero-bias event."
+)
+parser.add_argument(
+    '--splitmap',
+    type=Path,
+    default=Path("scripts/publish/splitmap"),
+    help="Folder of frozen (split, order) maps and their index.json. The checked-in "
+         "map is the published partition; point elsewhere only to test."
+)
+parser.add_argument(
+    '--summary',
+    type=Path,
+    default=Path("scripts/publish/split_summary.json"),
+    help="The frozen split summary: the seed, the fractions, and the counts the card "
+         "quotes. Checked in beside the split map."
+)
+args = parser.parse_args()
+
+result = overlay.run(
+    args.raw, args.tree, args.out, args.dataset,
+    tuple(args.zerobias), args.seed, args.splitmap, args.summary,
+)
+
+shards = sorted((args.out / "event_info").glob("*.parquet"))
+pileup = pq.read_table(shards, columns=["nPV_True"])["nPV_True"]
+mean_pileup = np.mean(pileup.combine_chunks().flatten().to_numpy(zero_copy_only=False))
+index = json.loads((args.splitmap / "index.json").read_text())
+map_path = args.splitmap / f"{index[args.dataset]['category']}__{args.dataset}.npz"
+
+print(f"  {args.dataset} overlaid into {args.out}")
+print(f"  rows per split: {result['rows']}")
+print(f"  dropped rows: {result['dropped_before']} before,"
+      f" {result['dropped_after']} after")
+print(f"  fingerprint: {result['fingerprint']}")
+print(f"  mean nPV_True: {mean_pileup:.2f}")
+print(f"  rewrote {map_path}")
+print(f"  rewrote {args.splitmap / 'index.json'} and {args.summary}")
+print(
+    f"  delete publish_work/consolidated/{args.dataset} before "
+    f"publish --only {args.dataset}: consolidation reuses a file it already finds."
+)

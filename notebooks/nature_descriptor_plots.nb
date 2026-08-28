@@ -1,0 +1,1550 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Wolfram 14.1' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       154,          7]
+NotebookDataLength[     75885,       1530]
+NotebookOptionsPosition[     70700,       1429]
+NotebookOutlinePosition[     71095,       1445]
+CellTagsIndexPosition[     71052,       1442]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["Nature Scientific Data Descriptor Figures", "Title",ExpressionUUID->"265a2805-bf93-4eb2-b156-c2f3eaaea949"],
+
+Cell[CellGroupData[{
+
+Cell["Setup", "Chapter",ExpressionUUID->"db503860-8c1c-43b8-a2c6-cab11af6b999"],
+
+Cell["\<\
+dataDir = \
+FileNameJoin[{ParentDirectory[ParentDirectory[NotebookDirectory[]]], \
+\"adl1t_data\", \"publish\", \"plot_data\"}];
+plotsDir = FileNameJoin[{NotebookDirectory[], \"plots\"}];
+If[! DirectoryQ[plotsDir], CreateDirectory[plotsDir]];
+csvPath[parts__] := FileNameJoin[{dataDir, parts}];
+If[! DirectoryQ[dataDir], Print[\"Data directory not found: \", dataDir]];\
+\>", "Input",
+ CellLabel->"In[1]:=",ExpressionUUID->"792475f8-9775-4009-9dee-215d8dd3e5da"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Configuration", "Subtitle",ExpressionUUID->"2186ca33-125f-4435-a748-8198a8042739"],
+
+Cell["\<\
+tolVibrant = <|
+   \"orange\" -> RGBColor[\"#EE7733\"], \"blue\" -> RGBColor[\"#0077BB\"],
+   \"cyan\" -> RGBColor[\"#33BBEE\"], \"magenta\" -> RGBColor[\"#EE3377\"],
+   \"red\" -> RGBColor[\"#CC3311\"], \"teal\" -> RGBColor[\"#009988\"],
+   \"grey\" -> RGBColor[\"#BBBBBB\"], \"black\" -> RGBColor[\"#000000\"]|>;
+
+runs = {\"EphZB_2025E_run396102\", \"EphZB_2025G_run398183\"};
+runLabels = <|runs[[1]] -> \"Zero bias, run 396102\", runs[[2]] -> \"Zero \
+bias, run 398183\"|>;
+runColours = <|runs[[1]] -> tolVibrant[\"teal\"], runs[[2]] -> \
+tolVibrant[\"blue\"]|>;
+runTags = <|runs[[1]] -> \"2025E\", runs[[2]] -> \"2025G\"|>;
+
+snSample = \"SingleNeutrino_E-10-gun\";
+snLabel = \"SingleNeutrino\";
+snColour = tolVibrant[\"orange\"];
+
+fig8Samples = <|
+   snSample -> snColour,
+   \"ggH-suep-decay-POWHEGnoISR\" -> tolVibrant[\"magenta\"],
+   \"HHHto6B_Par-c3-0-d4-0_TuneCP5_13p6TeV_amcatnlo-pythia8\" -> \
+tolVibrant[\"cyan\"],
+   \"SUSYGluGluToBBHTo2B_Par-M-1200_TuneCP5_13p6TeV_pythia8\" -> \
+tolVibrant[\"red\"],
+   \"TTHto2B_Par-MH-125_TuneCP5_13p6TeV_powheg-pythia8\" -> tolVibrant[\"blue\
+\"]|>;
+
+sampleLabel[s_] := StringReplace[s, {\"_TuneCP5\" ~~ ___ -> \"\", \"_E-10-gun\
+\" -> \"\"}];
+
+etLabel[what_] := Row[{what, \" \", Subscript[Style[\"E\", Italic], \"T\"], \
+\" [GeV]\"}];
+ptLabel[what_] := Row[{what, \" \", Subscript[Style[\"p\", Italic], \"T\"], \
+\" [GeV]\"}];
+
+(* The four particle collections record transverse momentum; only the energy \
+sums are transverse energies. *)
+kinFeatures = {
+   {\"muons\", \"muonIEt\", ptLabel[\"Muon\"]},
+   {\"jets\", \"jetIEt\", ptLabel[\"Jet\"]},
+   {\"egammas\", \"egIEt\", ptLabel[\"e/\[Gamma]\"]},
+   {\"taus\", \"tauIEt\", ptLabel[\"\[Tau]\"]},
+   {\"ET\", \"Et\", etLabel[\"Total\"]},
+   {\"MET\", \"Et\", etLabel[\"Missing\"]}};\
+\>", "Input",
+ CellLabel->"In[6]:=",ExpressionUUID->"cb87132c-6375-4dc7-b15f-92d09568c535"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Loading", "Subtitle",ExpressionUUID->"78213c59-a3a4-4cbc-b823-fcafd6e875c2"],
+
+Cell["\<\
+loadCSV[path_] := Module[{rows},
+  rows = Import[path, \"CSV\"];
+  If[StringQ[rows[[1, 1]]] && StringStartsQ[rows[[1, 1]], \"#\"], rows = \
+Rest[rows]];
+  AssociationThread[rows[[1]] -> Transpose[Rest[rows]]]];
+
+scaleOf[csv_] := With[{i = First[FirstPosition[csv[\"value\"], v_ /; v != 0]]},
+  csv[\"physical\"][[i]]/csv[\"value\"][[i]]];\
+\>", "Input",
+ CellLabel->"In[24]:=",ExpressionUUID->"83b1bcc4-85fe-4b97-93a5-1b6b52c01efa"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Binning", "Subtitle",ExpressionUUID->"02adb5d1-d406-4bf7-a24b-45f0a387080c"],
+
+Cell["\<\
+rebin[vals_, cnts_, range_: Automatic] := Module[{lo, hi, step, n, h},
+  {lo, hi} = Replace[range, Automatic :> MinMax[vals]];
+  step = Max[1, Ceiling[(hi - lo + 1)/256]];
+  n = Ceiling[(hi - lo + 1)/step];
+  h = ConstantArray[0., n];
+  MapThread[(h[[Min[Floor[(#1 - lo)/step] + 1, n]]] += #2) &, {vals, cnts}];
+  {lo - 0.5 + step*Range[0, n], h}];
+
+stepSegments[edges_, heights_, base_: None] := Module[{groups, seg},
+  groups = Select[SplitBy[Range[Length[heights]], heights[[#]] > 0 &], \
+heights[[First[#]]] > 0 &];
+  Table[
+   seg = Join @@ Table[{{edges[[j]], heights[[j]]}, {edges[[j + 1]], \
+heights[[j]]}}, {j, g}];
+   If[base === None, seg,
+    Join[{{edges[[First[g]]], base}}, seg, {{edges[[Last[g] + 1]], base}}]],
+   {g, groups}]];\
+\>", "Input",
+ CellLabel->"In[27]:=",ExpressionUUID->"e03c1c87-c06f-4e98-aa7b-324da24aeeb5"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Ticking", "Subtitle",ExpressionUUID->"218b0c39-5be8-4e21-ba98-1b7ab0351ca0"],
+
+Cell["\<\
+heros[sz_] := Directive[Black, FontFamily -> \"TeX Gyre Heros\", FontSize -> \
+sz,
+   PrivateFontOptions -> {\"OperatorSubstitution\" -> False}];
+herosFont = {FontFamily -> \"TeX Gyre Heros\"};
+tickLabel[x_] := If[Round[x] == x, ToString[Round[x]], \
+ToString[NumberForm[N[x], {Infinity, 2}]]];
+blankTicks[t_] := ReplacePart[#, 2 -> \"\"] & /@ t;
+
+linTicks[min_, max_, label_: True] := Module[{maj, d, minor},
+  maj = Select[N[FindDivisions[{min, max}, 6]], min - 10.^-9 <= # <= max + \
+10.^-9 &];
+  If[maj === {}, maj = N[Subdivide[min, max, 5]]];
+  d = If[Length[maj] > 1, maj[[2]] - maj[[1]], (max - min)/5.];
+  minor = Select[Flatten[Table[m + d k/5, {m, Prepend[maj, First[maj] - d]}, \
+{k, 1, 4}]], min <= # <= max &];
+  Join[Table[{m, If[label, Style[tickLabel[m], heros[22]], \"\"], {0.014, \
+0}}, {m, maj}],
+   Table[{m, \"\", {0.007, 0}}, {m, minor}]]];
+
+intTicks[lo_, hi_] := With[{d = Max[1, Ceiling[(hi - lo + 1)/7]]},
+  Table[{k, Style[ToString[k], heros[22]], {0.014, 0}}, {k, lo, hi, d}]];
+
+logTicks[emin_, emax_, label_: True] := Module[{es, every, subQ, maj, minor},
+  es = Range[Ceiling[emin], Floor[emax]];
+  subQ = Length[es] < 2;
+  every = If[Length[es] > 8, 2, 1];
+  maj = If[Length[es] == 0, {},
+    Table[{e, If[label && Mod[e - First[es], every] == 0, \
+Style[Superscript[10, e], heros[22]], \"\"],
+      {0.014, 0}}, {e, es}]];
+  minor = Flatten[Table[{e + Log10[k],
+      If[label && subQ && MemberQ[{2, 3, 5}, k], Style[Row[{k, \"\[Times]\", \
+Superscript[10, e]}], heros[22]], \"\"],
+      If[subQ && MemberQ[{2, 3, 5}, k], {0.014, 0}, {0.007, 0}]},
+     {e, Floor[emin], Ceiling[emax]}, {k, 2, 9}], 1];
+  Join[maj, Select[minor, emin <= #[[1]] <= emax &]]];\
+\>", "Input",
+ CellLabel->"In[30]:=",ExpressionUUID->"24871f5e-38a5-4630-831b-edc6d8221884"],
+
+Cell["", "Input",
+ CellLabel->"In[40]:=",ExpressionUUID->"4631486f-719d-46cf-b12c-3a38cb564fe8"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Paneling", "Subtitle",ExpressionUUID->"433b2348-df30-4ddb-a007-63fe5cada635"],
+
+Cell["\<\
+panelSize = {640, 520};
+panelPadding = {{112, 22}, {84, 16}};
+frameLabelOf[x_] := If[x === None, None, Style[x, heros[30]]];
+
+Options[framePanel] = {\"XLabel\" -> None, \"YLabel\" -> None, \"XTicks\" -> \
+Automatic,
+   \"YTicks\" -> Automatic, \"Size\" -> Automatic, \"Padding\" -> Automatic, \
+\"Extra\" -> {}, \"Clip\" -> True};
+
+framePanel[prims_, {x0_, x1_}, {y0_, y1_}, OptionsPattern[]] := Module[{xt, \
+yt},
+  xt = Replace[OptionValue[\"XTicks\"], Automatic :> linTicks[x0, x1]];
+  yt = Replace[OptionValue[\"YTicks\"], Automatic :> linTicks[y0, y1]];
+  Graphics[{prims, OptionValue[\"Extra\"]},
+   PlotRange -> {{x0, x1}, {y0, y1}}, Frame -> True, Axes -> False,
+   FrameStyle -> Directive[Black, AbsoluteThickness[1.5]],
+   FrameTicks -> {{yt, blankTicks[yt]}, {xt, blankTicks[xt]}},
+   FrameTicksStyle -> heros[22],
+   FrameLabel -> {frameLabelOf[OptionValue[\"XLabel\"]], \
+frameLabelOf[OptionValue[\"YLabel\"]]},
+   LabelStyle -> heros[24], BaseStyle -> herosFont,
+   ImageSize -> Replace[OptionValue[\"Size\"], Automatic -> panelSize],
+   AspectRatio -> Full, PlotRangePadding -> None,
+   ImagePadding -> Replace[OptionValue[\"Padding\"], Automatic -> \
+panelPadding],
+   PlotRangeClipping -> OptionValue[\"Clip\"], Background -> White]];\
+\>", "Input",
+ CellLabel->"In[41]:=",ExpressionUUID->"7239fb9e-b991-48d3-860c-53e2f1156e28"],
+
+Cell["", "Input",
+ CellLabel->"In[48]:=",ExpressionUUID->"21e59e49-b072-4a8c-82c3-e99b1b9a0ee9"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Legends", "Subtitle",ExpressionUUID->"c988b0f8-2f23-447c-a783-7e30229d3631"],
+
+Cell["\<\
+lineSwatch[colour_] := Graphics[{colour, AbsoluteThickness[4], Line[{{0, 0}, \
+{1, 0}}]},
+   ImageSize -> {34, 14}, AspectRatio -> Full, PlotRange -> {{0, 1}, {-1, \
+1}},
+   PlotRangePadding -> None, ImagePadding -> None];
+
+squareSwatch[colour_] := Graphics[{colour, Rectangle[{-1, -1}, {1, 1}]},
+   ImageSize -> {14, 14}, AspectRatio -> Full, PlotRange -> {{-1.6, 1.6}, \
+{-1.6, 1.6}},
+   PlotRangePadding -> None, ImagePadding -> None];
+
+Options[legendBox] = {\"Pos\" -> {0.97, 0.96}, \"Align\" -> {Right, Top}, \
+\"FontSize\" -> 21,
+   \"Swatch\" -> lineSwatch, \"MarkerSize\" -> {34, 14}};
+
+(* Built on SwatchLegend: long rectangular markers by default, squares when \
+the caller asks for squareSwatch, as the seed-rate panel does. *)
+legendBox[entries_, OptionsPattern[]] := Module[{size},
+  size = If[OptionValue[\"Swatch\"] === squareSwatch, {14, 14}, \
+OptionValue[\"MarkerSize\"]];
+  Inset[SwatchLegend[entries[[All, 1]], entries[[All, 2]],
+    LegendMarkerSize -> size, LabelStyle -> heros[OptionValue[\"FontSize\"]],
+    LegendLayout -> \"Column\", LegendMargins -> 0],
+   Scaled[OptionValue[\"Pos\"]], OptionValue[\"Align\"]]];\
+\>", "Input",
+ CellLabel->"In[49]:=",ExpressionUUID->"75faa4e9-76b4-4493-ab3a-95889e220698"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Spectrum Configuration and Legend", "Subtitle",ExpressionUUID->"a3aac62f-01b7-43d6-a8f7-36c5c589800f"],
+
+Cell["\<\
+Options[spectrumPanel] = {\"XLabel\" -> None, \"YLabel\" -> \"Events\", \
+\"LogY\" -> True,
+   \"XRange\" -> Automatic, \"XTicks\" -> Automatic, \"YFloor\" -> Automatic,
+   \"LegendPos\" -> {0.97, 0.96}, \"LegendAlign\" -> {Right, Top}, \
+\"LegendSize\" -> 21,
+   \"Size\" -> Automatic, \"Padding\" -> Automatic, \"Thickness\" -> 2.2};
+
+spectrumPanel[series_, OptionsPattern[]] := Module[{logQ, xr, allh, pos, \
+floor, base, top, yr, tr, prims, legend},
+  logQ = OptionValue[\"LogY\"];
+  xr = Replace[OptionValue[\"XRange\"],
+    Automatic :> {Min[First[#[\"edges\"]] & /@ series], \
+Max[Last[#[\"edges\"]] & /@ series]}];
+  allh = Join @@ (#[\"heights\"] & /@ series);
+  pos = Select[allh, # > 0 &];
+  floor = Replace[OptionValue[\"YFloor\"], Automatic :> Min[pos]/2];
+  top = If[logQ, 2 Max[pos], 1.12 Max[pos]];
+  base = If[logQ, floor, 0];
+  yr = If[logQ, {Log10[floor], Log10[top]}, {0, top}];
+  tr = If[logQ, {#[[1]], Log10[#[[2]]]} &, # &];
+  prims = Table[{s[\"colour\"], \
+AbsoluteThickness[OptionValue[\"Thickness\"]],
+     Line[Map[tr, stepSegments[s[\"edges\"], s[\"heights\"], base], {2}]]}, \
+{s, series}];
+  legend = legendBox[{#[\"colour\"], #[\"label\"]} & /@ series,
+    \"Pos\" -> OptionValue[\"LegendPos\"], \"Align\" -> \
+OptionValue[\"LegendAlign\"],
+    \"FontSize\" -> OptionValue[\"LegendSize\"]];
+  framePanel[prims, xr, yr, \"XLabel\" -> OptionValue[\"XLabel\"], \"YLabel\" \
+-> OptionValue[\"YLabel\"],
+   \"XTicks\" -> OptionValue[\"XTicks\"],
+   \"YTicks\" -> If[logQ, logTicks[yr[[1]], yr[[2]]], Automatic],
+   \"Size\" -> OptionValue[\"Size\"], \"Padding\" -> \
+OptionValue[\"Padding\"], \"Extra\" -> legend]];\
+\>", "Input",
+ CellLabel->"In[56]:=",ExpressionUUID->"7967ae24-5752-4f67-8806-1c358a3ca905"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Line Configuration and Legend", "Subtitle",ExpressionUUID->"8d5082e3-6c59-4f1a-8d5a-88db42bdffa1"],
+
+Cell["\<\
+Options[linePanel] = {\"XLabel\" -> None, \"YLabel\" -> None, \"XRange\" -> \
+Automatic,
+   \"Markers\" -> False, \"LegendPos\" -> {0.97, 0.96}, \"LegendAlign\" -> \
+{Right, Top},
+   \"Size\" -> Automatic, \"Padding\" -> Automatic};
+
+linePanel[series_, OptionsPattern[]] := Module[{pts, xr, ymax, prims, \
+legend},
+  pts = #[\"points\"] & /@ series;
+  xr = Replace[OptionValue[\"XRange\"], Automatic :> {Min[#[[All, 1]] & /@ \
+pts], Max[#[[All, 1]] & /@ pts]}];
+  ymax = Max[#[[All, 2]] & /@ pts];
+  prims = Table[{series[[i]][\"colour\"], AbsoluteThickness[2.2], \
+Line[pts[[i]]],
+     If[OptionValue[\"Markers\"], {PointSize[0.011], Point[pts[[i]]]}, \
+Nothing]}, {i, Length[series]}];
+  legend = legendBox[{#[\"colour\"], #[\"label\"]} & /@ series,
+    \"Pos\" -> OptionValue[\"LegendPos\"], \"Align\" -> \
+OptionValue[\"LegendAlign\"]];
+  framePanel[prims, xr, {0, 1.15 ymax}, \"XLabel\" -> \
+OptionValue[\"XLabel\"],
+   \"YLabel\" -> OptionValue[\"YLabel\"], \"Size\" -> OptionValue[\"Size\"],
+   \"Padding\" -> OptionValue[\"Padding\"], \"Extra\" -> legend]];\
+\>", "Input",
+ CellLabel->"In[59]:=",ExpressionUUID->"0e7a53be-21f8-4ac4-81b5-c260c7f2aeb6"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Occupancy Heat Maps", "Subtitle",ExpressionUUID->"cb4a4912-09fb-4e5c-bcd8-e52fd0ac0c03"],
+
+Cell["\<\
+seqRainbowPuBr = {\"#6F4C9B\", \"#6059A9\", \"#5568B8\", \"#4E79C5\", \
+\"#4D8AC6\", \"#4E96BC\", \"#549EB3\", \"#59A5A9\", \"#60AB9E\", \"#69B190\", \
+\"#77B77D\", \"#8CBC68\", \"#A6BE54\", \"#BEBC48\", \"#D1B541\", \"#DDAA3C\", \
+\"#E49C39\", \"#E78C35\", \"#E67932\", \"#E4632D\", \"#DF4828\", \"#DA2222\", \
+\"#B8221E\", \"#95211B\", \"#721E17\", \"#521A13\"};
+seqIridescent = {\"#A8D8DC\", \"#9BD2E1\", \"#8DCBE4\", \"#81C4E7\", \
+\"#7BBCE7\", \"#7EB2E4\", \"#88A5DD\", \"#9398D2\", \"#9B8AC4\", \"#9D7DB2\", \
+\"#9A709E\", \"#906388\", \"#805770\", \"#684957\", \"#46353A\"};
+seqStops = RGBColor /@ seqIridescent;
+seqLUT = Table[List @@ Blend[seqStops, k/255.], {k, 0, 255}];
+
+occGrid[occ_] := Module[{eLo, eHi, pLo, pHi},
+  {eLo, eHi} = MinMax[occ[\"eta\"]]; {pLo, pHi} = MinMax[occ[\"phi\"]];
+  {Normal[SparseArray[Transpose[{occ[\"phi\"] - pLo + 1, occ[\"eta\"] - eLo + \
+1}] -> N[occ[\"count\"]],
+     {pHi - pLo + 1, eHi - eLo + 1}]], {eLo, eHi}, {pLo, pHi}}];
+
+colourBar[{x0_, x1_}, {y0_, y1_}, maxLog_] := Module[{at},
+  at[e_] := y0 + (y1 - y0) e/maxLog;
+  {Raster[Transpose[{seqLUT}], {{x0, y0}, {x1, y1}}], Black, \
+AbsoluteThickness[1.2],
+   Line[{{x0, y0}, {x1, y0}, {x1, y1}, {x0, y1}, {x0, y0}}],
+   Table[{Line[{{x1, at[e]}, {x1 + 0.3 (x1 - x0), at[e]}}],
+     Text[Style[Superscript[10, e], heros[19]], {x1 + 0.6 (x1 - x0), at[e]}, \
+{-1, 0}]},
+    {e, 0, Floor[maxLog]}]}];
+
+Options[occupancyPanel] = {\"Title\" -> None, \"Size\" -> Automatic};
+occupancyPanel[occ_, OptionsPattern[]] := Module[{mat, er, pr, maxLog, idx, \
+rgb, x0, x1, y0, y1, w, extra},
+  {mat, er, pr} = occGrid[occ];
+  maxLog = Max[Log10[Max[mat]], 1.];
+  idx = Round[255 Clip[Log10[Clip[mat, {1., Max[mat]}]]/maxLog, {0, 1}]] + 1;
+  rgb = MapThread[If[#2 >= 1., seqLUT[[#1]], {1., 1., 1.}] &, {idx, mat}, 2];
+  {x0, x1} = {er[[1]] - 0.5, er[[2]] + 0.5}; {y0, y1} = {pr[[1]] - 0.5, \
+pr[[2]] + 0.5};
+  w = x1 - x0;
+  extra = {colourBar[{x1 + 0.05 w, x1 + 0.10 w}, {y0, y1}, maxLog],
+    If[OptionValue[\"Title\"] === None, Nothing,
+     Inset[Framed[Style[OptionValue[\"Title\"], heros[24], Bold],
+       Background -> White, FrameStyle -> Black, FrameMargins -> 6], \
+Scaled[{0.035, 0.955}], {Left, Top}]]};
+  framePanel[Raster[rgb, {{x0, y0}, {x1, y1}}], {x0, x1}, {y0, y1},
+   \"XLabel\" -> \"Hardware \[Eta]\", \"YLabel\" -> \"Hardware \[CurlyPhi]\",
+   \"Padding\" -> {{112, 155}, {84, 16}}, \"Clip\" -> False, \"Extra\" -> \
+extra,
+   \"Size\" -> Replace[OptionValue[\"Size\"], Automatic -> panelSize]]];\
+\>", "Input",
+ CellLabel->"In[62]:=",ExpressionUUID->"1aab7105-b6b6-4469-949f-7c9a081b45fb"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Seed Plots", "Subtitle",ExpressionUUID->"8eb5ac1e-7d10-4159-9c1f-8d31395e4417"],
+
+Cell["\<\
+Options[dotChart] = {\"XLabel\" -> None, \"Size\" -> {1020, 1450}, \"NameSize\
+\" -> 12,
+   \"XRange\" -> Automatic, \"LegendPos\" -> {0.985, 0.015}, \"MarkerSize\" -> \
+5.5,
+   \"Marker\" -> \"Disk\", \"Padding\" -> Automatic};
+
+markerAt[shape_, size_, pt_] := If[shape === \"Square\",
+   Rectangle[Offset[{-size, -size}, pt], Offset[{size, size}, pt]],
+   Disk[pt, Offset[{size, size}]]];
+
+dotChart[labels_, series_, OptionsPattern[]] := Module[
+  {n, ys, xs, xr, pad, guides, prims, ticks, legend, shown},
+  n = Length[labels];
+  ys = Reverse[Range[n]];
+  xs = Select[Join @@ (#[\"values\"] & /@ series), NumericQ[#] && # > 0 &];
+  xr = Replace[OptionValue[\"XRange\"], Automatic :> {Log10[Min[xs]] - 0.18, \
+Log10[Max[xs]] + 0.18}];
+  pad = 0.006 (xr[[2]] - xr[[1]]);
+  guides = {GrayLevel[0.45], AbsoluteThickness[0.7], AbsoluteDashing[{3, 3}],
+    Line[Table[{{xr[[1]] + pad, y}, {xr[[2]] - pad, y}}, {y, ys}]]};
+  prims = Table[Module[{s = series[[i]], rows},
+     rows = Select[Transpose[{s[\"values\"], ys + s[\"dy\"],
+        If[ListQ[s[\"colour\"]], s[\"colour\"], ConstantArray[s[\"colour\"], \
+n]]}],
+       NumericQ[#[[1]]] && #[[1]] > 0 &];
+     ({#[[3]], markerAt[OptionValue[\"Marker\"], OptionValue[\"MarkerSize\"],
+         {Log10[#[[1]]], #[[2]]}]} & /@ rows)],
+   {i, Length[series]}];
+  ticks = Table[{ys[[i]], Style[labels[[i]], \
+heros[OptionValue[\"NameSize\"]]], {0.006, 0}}, {i, n}];
+  shown = Select[series, #[\"label\"] =!= \"\" &];
+  legend = If[shown === {}, {},
+    legendBox[{#[\"colour\"], #[\"label\"]} & /@ shown, \"Pos\" -> \
+OptionValue[\"LegendPos\"],
+     \"Align\" -> {Right, Bottom}, \"Swatch\" -> squareSwatch]];
+  framePanel[{guides, prims}, xr, {0.3, n + 0.7}, \"XLabel\" -> \
+OptionValue[\"XLabel\"],
+   \"XTicks\" -> logTicks[xr[[1]], xr[[2]]], \"YTicks\" -> ticks,
+   \"Size\" -> OptionValue[\"Size\"], \"Extra\" -> legend,
+   \"Padding\" -> Replace[OptionValue[\"Padding\"], Automatic -> {{430, 30}, \
+{84, 16}}]]];\
+\>", "Input",
+ CellLabel->"In[73]:=",ExpressionUUID->"e3713c09-5eb7-4ffc-aeed-8a92ab0270d5"],
+
+Cell["", "Input",
+ CellLabel->"In[78]:=",ExpressionUUID->"93cc2db3-2222-45c6-b4e7-1266eb50f568"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Style Additions", "Subtitle",ExpressionUUID->"c99c2f6e-f1ad-43bb-8421-2ac68c21af87"],
+
+Cell["\<\
+cmsText[simQ_] := Row[{Style[\"CMS\", heros[26], Bold],
+   If[simQ, Style[\" Simulation\", heros[26], Italic], \"\"]}];
+tevText = Style[\"13.6 TeV\", heros[26]];
+
+finishPanel[panel_, simQ_: False] := Module[{sz, pad, w, h, hh, xl, xr, yb},
+  sz = ImageSize /. Options[panel, ImageSize];
+  pad = ImagePadding /. Options[panel, ImagePadding];
+  {w, h} = If[ListQ[sz], sz, {sz, sz}];
+  hh = h + 18;
+  xl = pad[[1, 1]]/w;
+  xr = 1 - pad[[1, 2]]/w;
+  yb = (h - pad[[2, 2]] + 3)/hh;
+  Graphics[{Inset[panel, Scaled[{0.5, 0}], {Center, Bottom}, Scaled[{1, \
+h/hh}]],
+    Inset[cmsText[simQ], Scaled[{xl, yb}], {Left, Bottom}],
+    Inset[tevText, Scaled[{xr, yb}], {Right, Bottom}]},
+   PlotRange -> {{0, 1}, {0, 1}}, ImageSize -> {w, hh}, AspectRatio -> hh/w,
+   PlotRangePadding -> None, Background -> White, BaseStyle -> herosFont]];
+
+exportFigure[fig_, name_] :=
+  Export[FileNameJoin[{plotsDir, name <> \".\" <> ToLowerCase[#]}], fig, #] & \
+/@ {\"SVG\", \"PDF\"};
+
+preview[panels_, ncols_: 3] := Magnify[
+   GraphicsGrid[Partition[panels, UpTo[ncols]], Background -> White, \
+ImageSize -> 300 ncols], 0.9];\
+\>", "Input",
+ CellLabel->"In[79]:=",ExpressionUUID->"8e1bd6f0-2f65-4394-adb4-dfef6f5bd821"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Figures", "Chapter",ExpressionUUID->"efec4b5a-5e43-4a32-bd71-5815806e0bca"],
+
+Cell[CellGroupData[{
+
+Cell["Figure 2. Zero-bias object kinematics", "Section",ExpressionUUID->"2eb6d29c-57da-4e7a-8323-7354c538727f"],
+
+Cell["\<\
+fig2Panels = Table[
+   Module[{obj, feat, xlab, csvs, rng, series, panel},
+    {obj, feat, xlab} = kinFeatures[[i]];
+    csvs = Association[# -> loadCSV[csvPath[#, obj, feat <> \".csv\"]] & /@ \
+runs];
+    rng = MinMax[Join @@ (#[\"value\"] & /@ Values[csvs])];
+    series = Table[Module[{eh = rebin[csvs[r][\"value\"], csvs[r][\"count\"], \
+rng]},
+       <|\"edges\" -> eh[[1]] scaleOf[csvs[r]], \"heights\" -> eh[[2]],
+         \"label\" -> runLabels[r], \"colour\" -> runColours[r]|>], {r, runs}];
+    panel = finishPanel[spectrumPanel[series, \"XLabel\" -> xlab, \"YFloor\" \
+-> 0.5]];
+    exportFigure[panel, \"fig2_\" <> obj <> \"_\" <> feat];
+    panel],
+   {i, Length[kinFeatures]}];
+\
+\>", "Input",
+ CellChangeTimes->{3.9965966010445137`*^9},
+ CellLabel->"In[87]:=",ExpressionUUID->"10ef2aee-bab7-427f-a7f7-cc828d2e97f3"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Figure 3. Occupancy in hardware eta and phi", "Section",ExpressionUUID->"e41d553d-2a2b-4a5b-a9a2-914208f5840b"],
+
+Cell["\<\
+occObjects = {{\"muons\", \"Muons\"}, {\"jets\", \"Jets\"}, {\"egammas\", \
+\"e/\[Gamma]\"}, {\"taus\", \"\[Tau]\"}};
+fig3Panels = Table[
+   Module[{panel},
+    panel = finishPanel[
+      occupancyPanel[loadCSV[csvPath[runs[[1]], occObjects[[i, 1]], \
+\"occupancy.csv\"]],
+       \"Title\" -> occObjects[[i, 2]]]];
+    exportFigure[panel, \"fig3_occupancy_\" <> occObjects[[i, 1]]];
+    panel],
+   {i, Length[occObjects]}];\
+\>", "Input",
+ CellChangeTimes->{{3.996596604411519*^9, 3.9965966058090067`*^9}},
+ CellLabel->"In[89]:=",ExpressionUUID->"cc54a86e-8db5-439a-90e4-d663fca96ffb"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Figure 4. Object multiplicities", "Section",ExpressionUUID->"6413bf5f-df23-42a7-ab33-d1b50bd2d95a"],
+
+Cell["\<\
+multObjects = {{\"muons\", \"Muons per event\", 0.96}, {\"jets\", \"Jets per \
+event\", 0.96},
+   {\"egammas\", \"e/\[Gamma] per event\", 0.45}, {\"taus\", \"\[Tau] per \
+event\", 0.45}};
+fig4Panels = Table[
+   Module[{obj, xlab, legendY, csvs, rng, series, panel},
+    {obj, xlab, legendY} = multObjects[[i]];
+    csvs = Association[# -> loadCSV[csvPath[#, obj, \"multiplicity.csv\"]] & \
+/@ runs];
+    rng = MinMax[Join @@ (#[\"value\"] & /@ Values[csvs])];
+    series = Table[Module[{eh = rebin[csvs[r][\"value\"], csvs[r][\"count\"], \
+rng]},
+       <|\"edges\" -> eh[[1]], \"heights\" -> eh[[2]], \"label\" -> \
+runLabels[r], \"colour\" -> runColours[r]|>],
+      {r, runs}];
+    panel = finishPanel[
+      spectrumPanel[series, \"XLabel\" -> xlab, \"YFloor\" -> 0.5,
+       \"XTicks\" -> intTicks[rng[[1]], rng[[2]]], \"LegendPos\" -> {0.97, \
+legendY}]];
+    exportFigure[panel, \"fig4_multiplicity_\" <> obj];
+    panel],
+   {i, Length[multObjects]}];\
+\>", "Input",
+ CellChangeTimes->{{3.996596609168549*^9, 3.996596609439316*^9}},
+ CellLabel->"In[91]:=",ExpressionUUID->"9082abad-aa36-4061-b17f-dbd4f50771bd"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Figure 5. Zero bias against SingleNeutrino", "Section",ExpressionUUID->"b9ed7891-9d0e-4b81-b335-97ba7b8dc573"],
+
+Cell["\<\
+fig5Samples = Join[runs, {snSample}];
+fig5Label[s_] := If[s === snSample, snLabel, runLabels[s]];
+fig5Colour[s_] := If[s === snSample, snColour, runColours[s]];
+
+(* One panel per feature with both runs and SingleNeutrino overlaid; every \
+curve is normalised to its own total, so all three are fractions of entries \
+on a shared binning. *)
+fig5Panels = Table[
+   Module[{obj, feat, xlab, csvs, rng, series, panel},
+    {obj, feat, xlab} = kinFeatures[[i]];
+    csvs = Association[# -> loadCSV[csvPath[#, obj, feat <> \".csv\"]] & /@ \
+fig5Samples];
+    rng = MinMax[Join @@ (#[\"value\"] & /@ Values[csvs])];
+    series = Table[Module[{eh = rebin[csvs[s][\"value\"], csvs[s][\"count\"], \
+rng]},
+       <|\"edges\" -> eh[[1]] scaleOf[csvs[s]],
+         \"heights\" -> eh[[2]]/Total[csvs[s][\"count\"]],
+         \"label\" -> fig5Label[s], \"colour\" -> fig5Colour[s]|>], {s, \
+fig5Samples}];
+    panel = finishPanel[spectrumPanel[series, \"XLabel\" -> xlab,
+       \"YLabel\" -> \"Fraction of entries\"]];
+    exportFigure[panel, \"fig5_\" <> obj <> \"_\" <> feat];
+    panel],
+   {i, Length[kinFeatures]}];
+preview[fig5Panels, 3]\
+\>", "Input",
+ CellChangeTimes->{{3.996596612018022*^9, 3.996596612180943*^9}},
+ CellLabel->"In[93]:=",ExpressionUUID->"2a607e94-48cb-4ff2-a60d-a78378c9b8d9"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Figure 6. Seed firing rates", "Section",ExpressionUUID->"40a2ebd2-129f-4f98-b59d-f52f89d18974"],
+
+Cell[CellGroupData[{
+
+Cell["\<\
+fig6Panel = Module[{cE, cG, top, gMap},
+   cE = loadCSV[csvPath[runs[[1]], \"seeds\", \"seeds.csv\"]];
+   cG = loadCSV[csvPath[runs[[2]], \"seeds\", \"seeds.csv\"]];
+   top = Take[cE[\"name\"], 40];
+   gMap = AssociationThread[cG[\"name\"] -> cG[\"fraction\"]];
+   finishPanel[
+    dotChart[top,
+     {<|\"values\" -> Take[cE[\"fraction\"], 40], \"dy\" -> 0.17,
+       \"colour\" -> runColours[runs[[1]]], \"label\" -> \
+runLabels[runs[[1]]]|>,
+      <|\"values\" -> Lookup[gMap, top, Missing[]], \"dy\" -> -0.17,
+       \"colour\" -> runColours[runs[[2]]], \"label\" -> \
+runLabels[runs[[2]]]|>},
+     \"XLabel\" -> \"Fraction of events firing the seed\", \"Marker\" -> \
+\"Square\"]]];
+exportFigure[fig6Panel, \"fig6_seed_rates\"];
+Magnify[fig6Panel, 0.42]\
+\>", "Input",
+ CellLabel->"In[94]:=",ExpressionUUID->"bc3d3e50-814b-4c1d-81f2-d26eacb860a3"],
+
+Cell[BoxData[
+ StyleBox[
+  GraphicsBox[{InsetBox[
+     GraphicsBox[{{
+        {GrayLevel[0.45], AbsoluteThickness[0.7], AbsoluteDashing[{3, 3}], 
+         LineBox[{{{-4.1442692010501005`, 40}, {-2.904923063286396, 
+             40}}, {{-4.1442692010501005`, 39}, {-2.904923063286396, 
+             39}}, {{-4.1442692010501005`, 38}, {-2.904923063286396, 
+             38}}, {{-4.1442692010501005`, 37}, {-2.904923063286396, 
+             37}}, {{-4.1442692010501005`, 36}, {-2.904923063286396, 
+             36}}, {{-4.1442692010501005`, 35}, {-2.904923063286396, 
+             35}}, {{-4.1442692010501005`, 34}, {-2.904923063286396, 
+             34}}, {{-4.1442692010501005`, 33}, {-2.904923063286396, 
+             33}}, {{-4.1442692010501005`, 32}, {-2.904923063286396, 
+             32}}, {{-4.1442692010501005`, 31}, {-2.904923063286396, 
+             31}}, {{-4.1442692010501005`, 30}, {-2.904923063286396, 
+             30}}, {{-4.1442692010501005`, 29}, {-2.904923063286396, 
+             29}}, {{-4.1442692010501005`, 28}, {-2.904923063286396, 
+             28}}, {{-4.1442692010501005`, 27}, {-2.904923063286396, 
+             27}}, {{-4.1442692010501005`, 26}, {-2.904923063286396, 
+             26}}, {{-4.1442692010501005`, 25}, {-2.904923063286396, 
+             25}}, {{-4.1442692010501005`, 24}, {-2.904923063286396, 
+             24}}, {{-4.1442692010501005`, 23}, {-2.904923063286396, 
+             23}}, {{-4.1442692010501005`, 22}, {-2.904923063286396, 
+             22}}, {{-4.1442692010501005`, 21}, {-2.904923063286396, 
+             21}}, {{-4.1442692010501005`, 20}, {-2.904923063286396, 
+             20}}, {{-4.1442692010501005`, 19}, {-2.904923063286396, 
+             19}}, {{-4.1442692010501005`, 18}, {-2.904923063286396, 
+             18}}, {{-4.1442692010501005`, 17}, {-2.904923063286396, 
+             17}}, {{-4.1442692010501005`, 16}, {-2.904923063286396, 
+             16}}, {{-4.1442692010501005`, 15}, {-2.904923063286396, 
+             15}}, {{-4.1442692010501005`, 14}, {-2.904923063286396, 
+             14}}, {{-4.1442692010501005`, 13}, {-2.904923063286396, 
+             13}}, {{-4.1442692010501005`, 12}, {-2.904923063286396, 
+             12}}, {{-4.1442692010501005`, 11}, {-2.904923063286396, 
+             11}}, {{-4.1442692010501005`, 10}, {-2.904923063286396, 
+             10}}, {{-4.1442692010501005`, 9}, {-2.904923063286396, 
+             9}}, {{-4.1442692010501005`, 8}, {-2.904923063286396, 
+             8}}, {{-4.1442692010501005`, 7}, {-2.904923063286396, 
+             7}}, {{-4.1442692010501005`, 6}, {-2.904923063286396, 
+             6}}, {{-4.1442692010501005`, 5}, {-2.904923063286396, 
+             5}}, {{-4.1442692010501005`, 4}, {-2.904923063286396, 
+             4}}, {{-4.1442692010501005`, 3}, {-2.904923063286396, 
+             3}}, {{-4.1442692010501005`, 2}, {-2.904923063286396, 
+             2}}, {{-4.1442692010501005`, 1}, {-2.904923063286396, 1}}}]}, {{
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.1087518348094005, 40.17}], 
+            Offset[{5.5, 5.5}, {-3.1087518348094005, 40.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.16511657635297, 39.17}], 
+            Offset[{5.5, 5.5}, {-3.16511657635297, 39.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.1759768313811594, 38.17}], 
+            Offset[{5.5, 5.5}, {-3.1759768313811594, 38.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.18256197374553, 37.17}], 
+            Offset[{5.5, 5.5}, {-3.18256197374553, 37.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.214457194502273, 36.17}], 
+            Offset[{5.5, 5.5}, {-3.214457194502273, 36.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.2315427209374574, 35.17}], 
+            Offset[{5.5, 5.5}, {-3.2315427209374574, 35.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.242829369667987, 34.17}], 
+            Offset[{5.5, 5.5}, {-3.242829369667987, 34.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.2444449411289336, 33.17}], 
+            Offset[{5.5, 5.5}, {-3.2444449411289336, 33.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.2479166562997928, 32.17}], 
+            Offset[{5.5, 5.5}, {-3.2479166562997928, 32.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.2674072568551447, 31.17}], 
+            Offset[{5.5, 5.5}, {-3.2674072568551447, 31.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.327454027403784, 30.17}], 
+            Offset[{5.5, 5.5}, {-3.327454027403784, 30.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.402945770284952, 29.17}], 
+            Offset[{5.5, 5.5}, {-3.402945770284952, 29.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.4054966996859832, 28.17}], 
+            Offset[{5.5, 5.5}, {-3.4054966996859832, 28.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.4730657769741518, 27.17}], 
+            Offset[{5.5, 5.5}, {-3.4730657769741518, 27.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.4817456659654105, 26.17}], 
+            Offset[{5.5, 5.5}, {-3.4817456659654105, 26.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.507392188266929, 25.17}], 
+            Offset[{5.5, 5.5}, {-3.507392188266929, 25.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.517207170560528, 24.17}], 
+            Offset[{5.5, 5.5}, {-3.517207170560528, 24.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.5206677026700346, 23.17}], 
+            Offset[{5.5, 5.5}, {-3.5206677026700346, 23.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.5242961481108455, 22.17}], 
+            Offset[{5.5, 5.5}, {-3.5242961481108455, 22.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.6015477526020674, 21.17}], 
+            Offset[{5.5, 5.5}, {-3.6015477526020674, 21.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.6180991819987804, 20.17}], 
+            Offset[{5.5, 5.5}, {-3.6180991819987804, 20.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.652658421391448, 19.17}], 
+            Offset[{5.5, 5.5}, {-3.652658421391448, 19.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.6547350344768486, 18.17}], 
+            Offset[{5.5, 5.5}, {-3.6547350344768486, 18.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.66936042211812, 17.17}], 
+            Offset[{5.5, 5.5}, {-3.66936042211812, 17.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.6885677301841295, 16.17}], 
+            Offset[{5.5, 5.5}, {-3.6885677301841295, 16.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.6918531887420283, 15.17}], 
+            Offset[{5.5, 5.5}, {-3.6918531887420283, 15.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.718633248811581, 14.17}], 
+            Offset[{5.5, 5.5}, {-3.718633248811581, 14.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.73562274433849, 13.17}], 
+            Offset[{5.5, 5.5}, {-3.73562274433849, 13.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.738367110386332, 12.17}], 
+            Offset[{5.5, 5.5}, {-3.738367110386332, 12.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.7388261955050885, 11.17}], 
+            Offset[{5.5, 5.5}, {-3.7388261955050885, 11.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.739745824185197, 10.17}], 
+            Offset[{5.5, 5.5}, {-3.739745824185197, 10.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.7436761178136293, 9.17}], 
+            Offset[{5.5, 5.5}, {-3.7436761178136293, 9.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.7533040188737115, 8.17}], 
+            Offset[{5.5, 5.5}, {-3.7533040188737115, 8.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.7653417762662036, 7.17}], 
+            Offset[{5.5, 5.5}, {-3.7653417762662036, 7.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.771488135320107, 6.17}], 
+            Offset[{5.5, 5.5}, {-3.771488135320107, 6.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.832532757346547, 5.17}], 
+            Offset[{5.5, 5.5}, {-3.832532757346547, 5.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.8467257040359466, 4.17}], 
+            Offset[{5.5, 5.5}, {-3.8467257040359466, 4.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.847905051622598, 3.17}], 
+            Offset[{5.5, 5.5}, {-3.847905051622598, 3.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.862923646422659, 2.17}], 
+            Offset[{5.5, 5.5}, {-3.862923646422659, 2.17}]]}, 
+          {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.8725029240960334, 1.17}], 
+            Offset[{5.5, 5.5}, {-3.8725029240960334, 1.17}]]}}, {
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.0773966697372237, 39.83}], 
+            Offset[{5.5, 5.5}, {-3.0773966697372237, 39.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.1263109996134317, 38.83}], 
+            Offset[{5.5, 5.5}, {-3.1263109996134317, 38.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.1448616075484925, 37.83}], 
+            Offset[{5.5, 5.5}, {-3.1448616075484925, 37.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.1610593066993355, 36.83}], 
+            Offset[{5.5, 5.5}, {-3.1610593066993355, 36.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.2155206268688703, 35.83}], 
+            Offset[{5.5, 5.5}, {-3.2155206268688703, 35.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.199811098419181, 34.83}], 
+            Offset[{5.5, 5.5}, {-3.199811098419181, 34.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.2050067784796754, 33.83}], 
+            Offset[{5.5, 5.5}, {-3.2050067784796754, 33.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.243373146847492, 32.83}], 
+            Offset[{5.5, 5.5}, {-3.243373146847492, 32.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.225254275530562, 31.83}], 
+            Offset[{5.5, 5.5}, {-3.225254275530562, 31.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.2696659500718877, 30.83}], 
+            Offset[{5.5, 5.5}, {-3.2696659500718877, 30.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.2916353143836115, 29.83}], 
+            Offset[{5.5, 5.5}, {-3.2916353143836115, 29.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.4417065669097293, 28.83}], 
+            Offset[{5.5, 5.5}, {-3.4417065669097293, 28.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.362829715114554, 27.83}], 
+            Offset[{5.5, 5.5}, {-3.362829715114554, 27.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.431222115672745, 26.83}], 
+            Offset[{5.5, 5.5}, {-3.431222115672745, 26.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.4896757647660683, 25.83}], 
+            Offset[{5.5, 5.5}, {-3.4896757647660683, 25.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.5530900517376103, 24.83}], 
+            Offset[{5.5, 5.5}, {-3.5530900517376103, 24.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.472436619595832, 23.83}], 
+            Offset[{5.5, 5.5}, {-3.472436619595832, 23.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.4892936314533336, 22.83}], 
+            Offset[{5.5, 5.5}, {-3.4892936314533336, 22.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.5081591704600816, 21.83}], 
+            Offset[{5.5, 5.5}, {-3.5081591704600816, 21.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.587766143273231, 20.83}], 
+            Offset[{5.5, 5.5}, {-3.587766143273231, 20.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.571310658480965, 19.83}], 
+            Offset[{5.5, 5.5}, {-3.571310658480965, 19.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.6171706858103616, 18.83}], 
+            Offset[{5.5, 5.5}, {-3.6171706858103616, 18.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.675040567950711, 17.83}], 
+            Offset[{5.5, 5.5}, {-3.675040567950711, 17.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.6273735736980197, 16.83}], 
+            Offset[{5.5, 5.5}, {-3.6273735736980197, 16.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.6789637606809835, 15.83}], 
+            Offset[{5.5, 5.5}, {-3.6789637606809835, 15.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.632832039608653, 14.83}], 
+            Offset[{5.5, 5.5}, {-3.632832039608653, 14.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.662719330739744, 13.83}], 
+            Offset[{5.5, 5.5}, {-3.662719330739744, 13.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.7255101605991996, 12.83}], 
+            Offset[{5.5, 5.5}, {-3.7255101605991996, 12.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.688325205758186, 11.83}], 
+            Offset[{5.5, 5.5}, {-3.688325205758186, 11.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.6929809357722796, 10.83}], 
+            Offset[{5.5, 5.5}, {-3.6929809357722796, 10.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.6987169840112633, 9.83}], 
+            Offset[{5.5, 5.5}, {-3.6987169840112633, 9.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.7524289777299638, 8.83}], 
+            Offset[{5.5, 5.5}, {-3.7524289777299638, 8.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.7241961067013687, 7.83}], 
+            Offset[{5.5, 5.5}, {-3.7241961067013687, 7.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.7561789803656516, 6.83}], 
+            Offset[{5.5, 5.5}, {-3.7561789803656516, 6.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.793774992157726, 5.83}], 
+            Offset[{5.5, 5.5}, {-3.793774992157726, 5.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.8169709869125863, 4.83}], 
+            Offset[{5.5, 5.5}, {-3.8169709869125863, 4.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.791471037248162, 3.83}], 
+            Offset[{5.5, 5.5}, {-3.791471037248162, 3.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.8788482208686843, 2.83}], 
+            Offset[{5.5, 5.5}, {-3.8788482208686843, 2.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.816159474097386, 1.83}], 
+            Offset[{5.5, 5.5}, {-3.816159474097386, 1.83}]]}, 
+          {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+           RectangleBox[Offset[{-5.5, -5.5}, {-3.971795594599273, 0.83}], 
+            Offset[{5.5, 5.5}, {-3.971795594599273, 0.83}]]}}}}, InsetBox[
+        TagBox[GridBox[{
+           {
+            GraphicsBox[
+             {RGBColor[0.9333333333333333, 0.4666666666666667, 0.2], 
+              RectangleBox[{-1, -1}, {1, 1}]},
+             AspectRatio->Full,
+             ImagePadding->None,
+             ImageSize->{14, 14},
+             PlotRange->{{-1.6, 1.6}, {-1.6, 1.6}},
+             PlotRangePadding->None], 
+            StyleBox["\<\"Zero bias, run 396102\"\>",
+             StripOnInput->False,
+             LineColor->GrayLevel[0],
+             FrontFaceColor->GrayLevel[0],
+             BackFaceColor->GrayLevel[0],
+             GraphicsColor->GrayLevel[0],
+             FontFamily->"TeX Gyre Heros",
+             FontSize->21,
+             PrivateFontOptions->{"OperatorSubstitution"->False},
+             FontColor->GrayLevel[0]]},
+           {
+            GraphicsBox[
+             {RGBColor[0., 0.4666666666666667, 0.7333333333333333], 
+              RectangleBox[{-1, -1}, {1, 1}]},
+             AspectRatio->Full,
+             ImagePadding->None,
+             ImageSize->{14, 14},
+             PlotRange->{{-1.6, 1.6}, {-1.6, 1.6}},
+             PlotRangePadding->None], 
+            StyleBox["\<\"Zero bias, run 398183\"\>",
+             StripOnInput->False,
+             LineColor->GrayLevel[0],
+             FrontFaceColor->GrayLevel[0],
+             BackFaceColor->GrayLevel[0],
+             GraphicsColor->GrayLevel[0],
+             FontFamily->"TeX Gyre Heros",
+             FontSize->21,
+             PrivateFontOptions->{"OperatorSubstitution"->False},
+             FontColor->GrayLevel[0]]}
+          },
+          AutoDelete->False,
+          GridBoxAlignment->{"Columns" -> {{Left}}, "Rows" -> {{Center}}},
+          
+          GridBoxItemSize->{
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}},
+          GridBoxSpacings->{"Columns" -> {{0.7}}, "Rows" -> {{0.55}}}],
+         "Grid"], Scaled[{0.985, 0.3}], {Right, Top}]},
+      AspectRatio->Full,
+      Axes->False,
+      Background->GrayLevel[1],
+      BaseStyle->{FontFamily -> "TeX Gyre Heros"},
+      Frame->True,
+      FrameLabel->{
+        FormBox[
+         StyleBox["\"Fraction of events firing the seed\"", 
+          Directive[
+           GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 30, 
+           PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+          StripOnInput -> False], TraditionalForm], None},
+      FrameStyle->Directive[
+        GrayLevel[0], 
+        AbsoluteThickness[1.5]],
+      FrameTicks->{{{{40, 
+           FormBox[
+            StyleBox["\"L1_SingleIsoEG30er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {39, 
+           FormBox[
+            StyleBox["\"L1_SingleEG36er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {38, 
+           FormBox[
+            StyleBox["\"L1_SingleIsoEG32er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {37, 
+           FormBox[
+            StyleBox["\"L1_SingleIsoEG30er2p1\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {36, 
+           FormBox[
+            StyleBox["\"L1_DoubleIsoTau34er2p1\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {35, 
+           FormBox[
+            StyleBox["\"L1_SingleIsoEG34er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {34, 
+           FormBox[
+            StyleBox["\"L1_SingleEG38er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {33, 
+           FormBox[
+            StyleBox["\"L1_DoubleIsoTau35er2p1\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {32, 
+           FormBox[
+            StyleBox["\"L1_SingleIsoEG32er2p1\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {31, 
+           FormBox[
+            StyleBox["\"L1_DoubleIsoTau36er2p1\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {30, 
+           FormBox[
+            StyleBox["\"L1_SingleEG40er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {29, 
+           FormBox[
+            StyleBox["\"L1_SingleMu22\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {28, 
+           FormBox[
+            StyleBox["\"L1_SingleEG42er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {27, 
+           FormBox[
+            StyleBox["\"L1_DoubleEG_25_12_er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {26, 
+           FormBox[
+            StyleBox["\"L1_SingleMu11_SQ14_BMTF\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {25, 
+           FormBox[
+            StyleBox["\"L1_SingleMu25\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {24, 
+           FormBox[
+            StyleBox["\"L1_SingleEG45er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {23, 
+           FormBox[
+            StyleBox["\"L1_HTT280er\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {22, 
+           FormBox[
+            StyleBox[
+            "\"L1_DoubleTau_Iso34_Iso23_er2p1_Jet55_RmOvlp_dR0p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {21, 
+           FormBox[
+            StyleBox[
+            "\"L1_DoubleTau_Iso34_Iso26_er2p1_Jet55_RmOvlp_dR0p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {20, 
+           FormBox[
+            StyleBox["\"L1_DoubleEG_LooseIso22_12_er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {19, 
+           FormBox[
+            StyleBox["\"L1_DoubleEG_25_14_er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {18, 
+           FormBox[
+            StyleBox["\"L1_DoubleMu4er2p0_SQ_OS_dR_Max1p6\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {17, 
+           FormBox[
+            StyleBox["\"L1_LooseIsoEG22er2p1_IsoTau26er2p1_dR_Min0p3\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {16, 
+           FormBox[
+            StyleBox[
+            "\"L1_DoubleTau_Iso34_Iso23_er2p1_Jet70_RmOvlp_dR0p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {15, 
+           FormBox[
+            StyleBox["\"L1_LooseIsoEG14er2p5_HTT200er\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {14, 
+           FormBox[
+            StyleBox["\"L1_LooseIsoEG16er2p5_HTT200er\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {13, 
+           FormBox[
+            StyleBox["\"L1_DoubleJet30er2p5_Mass_Min250_dEta_Max1p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {12, 
+           FormBox[
+            StyleBox["\"L1_DoubleEG_27_14_er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {11, 
+           FormBox[
+            StyleBox["\"L1_DoubleEG_LooseIso25_12_er2p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {10, 
+           FormBox[
+            StyleBox["\"L1_LooseIsoEG24er2p1_IsoTau27er2p1_dR_Min0p3\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {9, 
+           FormBox[
+            StyleBox["\"L1_SingleMu13_SQ14_BMTF\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {8, 
+           FormBox[
+            StyleBox["\"L1_HTT320er\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {7, 
+           FormBox[
+            StyleBox[
+            "\"L1_DoubleTau_Iso34_Iso26_er2p1_Jet70_RmOvlp_dR0p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {6, 
+           FormBox[
+            StyleBox["\"L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {5, 
+           FormBox[
+            StyleBox["\"L1_SingleJet180\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {4, 
+           FormBox[
+            StyleBox["\"L1_DoubleEG15_er1p5_dEta_Max1p5\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {3, 
+           FormBox[
+            StyleBox["\"L1_DoubleMu4p5er2p0_SQ_OS_Mass_Min7\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {2, 
+           FormBox[
+            StyleBox["\"L1_SingleEG60\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}, {1, 
+           FormBox[
+            StyleBox["\"L1_SingleMuShower_Nominal\"", 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 12, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.006, 0}}}, {{40, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {39, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {38, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {37, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {36, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {35, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {34, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {33, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {32, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {31, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {30, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {29, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {28, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {27, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {26, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {25, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {24, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {23, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {22, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {21, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {20, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {19, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {18, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {17, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {16, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {15, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {14, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {13, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {12, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {11, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {10, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {9, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {8, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {7, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {6, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {5, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {4, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {3, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {2, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}, {1, 
+           FormBox["\"\"", TraditionalForm], {0.006, 0}}}}, {{{-4, 
+           FormBox[
+            StyleBox[
+             TemplateBox[{"10", 
+               RowBox[{"-", "4"}]}, "Superscript", SyntaxForm -> 
+              SuperscriptBox], 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 22, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.014, 0}}, {-3, 
+           FormBox[
+            StyleBox[
+             TemplateBox[{"10", 
+               RowBox[{"-", "3"}]}, "Superscript", SyntaxForm -> 
+              SuperscriptBox], 
+             Directive[
+              GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 22, 
+              PrivateFontOptions -> {"OperatorSubstitution" -> False}], 
+             StripOnInput -> False], TraditionalForm], {0.014, 0}}, {
+           NCache[-5 + Log[8]/Log[10], -4.096910013008056], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-5 + Log[9]/Log[10], -4.045757490560675], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[2]/Log[10], -3.6989700043360187`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[3]/Log[10], -3.5228787452803374`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[4]/Log[10], -3.3979400086720375`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[5]/Log[10], -3.3010299956639813`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[6]/Log[10], -3.2218487496163566`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[7]/Log[10], -3.154901959985743], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[8]/Log[10], -3.0969100130080567`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[9]/Log[10], -3.0457574905606752`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}}, {{-4, 
+           FormBox["\"\"", TraditionalForm], {0.014, 0}}, {-3, 
+           FormBox["\"\"", TraditionalForm], {0.014, 0}}, {
+           NCache[-5 + Log[8]/Log[10], -4.096910013008056], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-5 + Log[9]/Log[10], -4.045757490560675], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[2]/Log[10], -3.6989700043360187`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[3]/Log[10], -3.5228787452803374`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[4]/Log[10], -3.3979400086720375`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[5]/Log[10], -3.3010299956639813`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[6]/Log[10], -3.2218487496163566`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[7]/Log[10], -3.154901959985743], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[8]/Log[10], -3.0969100130080567`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}, {
+           NCache[-4 + Log[9]/Log[10], -3.0457574905606752`], 
+           FormBox["\"\"", TraditionalForm], {0.007, 0}}}}},
+      FrameTicksStyle->Directive[
+        GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 22, 
+        PrivateFontOptions -> {"OperatorSubstitution" -> False}],
+      ImagePadding->{{430, 30}, {84, 16}},
+      ImageSize->{1020, 1450},
+      LabelStyle->Directive[
+        GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 24, 
+        PrivateFontOptions -> {"OperatorSubstitution" -> False}],
+      PlotRange->{{-4.151795594599273, -2.8973966697372235`}, {0.3, 40.7}},
+      PlotRangeClipping->True,
+      PlotRangePadding->None], Scaled[{0.5, 0}], {Center, Bottom}, NCache[
+     Scaled[{1, Rational[725, 734]}], Scaled[{1, 0.9877384196185286}]]], 
+    InsetBox[
+     TemplateBox[{
+       StyleBox["\"CMS\"", 
+        Directive[
+         GrayLevel[0], FontFamily -> "TeX Gyre Heros", FontSize -> 26, 
+         PrivateFontOptions -> {"OperatorSubstitution" -> False}], Bold, 
+        StripOnInput -> False], "\"\""},
+      "RowDefault"], NCache[
+     Scaled[{Rational[43, 102], Rational[1437, 1468]}], 
+      Scaled[{0.4215686274509804, 0.978882833787466}]], {Left, Bottom}], 
+    InsetBox[
+     StyleBox["\<\"13.6 TeV\"\>",
+      StripOnInput->False,
+      LineColor->GrayLevel[0],
+      FrontFaceColor->GrayLevel[0],
+      BackFaceColor->GrayLevel[0],
+      GraphicsColor->GrayLevel[0],
+      FontFamily->"TeX Gyre Heros",
+      FontSize->26,
+      PrivateFontOptions->{"OperatorSubstitution"->False},
+      FontColor->GrayLevel[0]], NCache[
+     Scaled[{Rational[33, 34], Rational[1437, 1468]}], 
+      Scaled[{0.9705882352941176, 0.978882833787466}]], {Right, Bottom}]},
+   AspectRatio->NCache[
+     Rational[367, 255], 1.4392156862745098`],
+   Background->GrayLevel[1],
+   BaseStyle->{FontFamily -> "TeX Gyre Heros"},
+   ImageSize->{1020, 1468},
+   PlotRange->{{0, 1}, {0, 1}},
+   PlotRangePadding->None],
+  StripOnInput->False,
+  Magnification->0.42 Inherited]], "Output",
+ CellChangeTimes->{3.996596020202168*^9, 3.996596645736948*^9},
+ CellLabel->"Out[96]=",ExpressionUUID->"7e5eeece-40a7-4ad3-840a-14d8155af556"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Figure 7. Beam conditions", "Section",ExpressionUUID->"cfedca3a-49f8-410c-83da-db8b034db0f6"],
+
+Cell["\<\
+fig7Panels = Module[{a, b},
+   a = finishPanel[
+     linePanel[
+      Table[Module[{c = loadCSV[csvPath[r, \"event_info\", \"nPV_True.csv\"]]},
+        <|\"points\" -> SortBy[Transpose[{N[c[\"value\"]], c[\"count\"]}], \
+First],
+          \"label\" -> runLabels[r], \"colour\" -> runColours[r]|>], {r, \
+runs}],
+      \"XLabel\" -> \"Interactions per crossing\", \"YLabel\" -> \"Events\", \
+\"Markers\" -> True,
+      \"LegendPos\" -> {0.03, 0.96}, \"LegendAlign\" -> {Left, Top},
+      \"Padding\" -> {{175, 22}, {84, 16}}]];
+   b = finishPanel[
+     linePanel[
+      Table[Module[{c = loadCSV[csvPath[r, \"lumi_profile.csv\"]]},
+        <|\"points\" -> SortBy[Transpose[{c[\"lumi\"], c[\"events\"]}], First],
+          \"label\" -> runLabels[r], \"colour\" -> runColours[r]|>], {r, \
+runs}],
+      \"XLabel\" -> \"Luminosity section\", \"YLabel\" -> \"Events per \
+luminosity section\",
+      \"LegendPos\" -> {0.97, 0.03}, \"LegendAlign\" -> {Right, Bottom},
+      \"Padding\" -> {{175, 22}, {84, 16}}]];
+   exportFigure[a, \"fig7_pileup\"];
+   exportFigure[b, \"fig7_lumi_profile\"];
+   {a, b}];\
+\>", "Input",
+ CellChangeTimes->{{3.996596619105042*^9, 3.996596619288262*^9}},
+ CellLabel->"In[97]:=",ExpressionUUID->"8fb5415a-2ff8-45bb-af35-1ba47a36a4b7"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Figure 8. Signal against background separation", "Section",ExpressionUUID->"1d84886e-1511-496a-9f38-5c9ac8d826b0"],
+
+Cell["\<\
+fig8Panels = Module[{acc, ord, labels, colours, a, jets, groups, sub, rng, \
+series, b},
+   acc = loadCSV[csvPath[\"campaign\", \"l1bit_accept.csv\"]];
+   ord = Reverse[Ordering[acc[\"accept\"]]];
+   labels = If[KeyExistsQ[fig8Samples, #], Style[sampleLabel[#], \
+fig8Samples[#], Bold], sampleLabel[#]] & /@
+     acc[\"sample\"][[ord]];
+   colours = Lookup[fig8Samples, acc[\"sample\"][[ord]], tolVibrant[\"grey\"]];
+   a = finishPanel[
+     dotChart[labels,
+      {<|\"values\" -> acc[\"accept\"][[ord]], \"dy\" -> 0, \"colour\" -> \
+colours, \"label\" -> \"\"|>},
+      \"XLabel\" -> \"Fraction of events accepted\", \"Size\" -> {1180, 820}, \
+\"NameSize\" -> 15,
+      \"MarkerSize\" -> 7, \"Padding\" -> {{470, 34}, {84, 16}}], True];
+   jets = loadCSV[csvPath[\"campaign\", \"jets_jetIEt.csv\"]];
+   groups = GroupBy[Transpose[{jets[\"sample\"], jets[\"value\"], \
+jets[\"count\"]}], First -> Rest];
+   sub = groups /@ Keys[fig8Samples];
+   rng = MinMax[Join @@ (#[[All, 1]] & /@ sub)];
+   series = Table[Module[{g = sub[[i]], eh},
+      eh = rebin[g[[All, 1]], g[[All, 2]], rng];
+      <|\"edges\" -> 0.5 eh[[1]], \"heights\" -> eh[[2]]/Total[g[[All, 2]]],
+        \"label\" -> sampleLabel[Keys[fig8Samples][[i]]], \"colour\" -> \
+Values[fig8Samples][[i]]|>],
+     {i, Length[fig8Samples]}];
+   b = finishPanel[
+     spectrumPanel[series, \"XLabel\" -> ptLabel[\"Jet\"], \"YLabel\" -> \
+\"Fraction of jets\",
+      \"Size\" -> {1180, 850}, \"LegendSize\" -> 15, \"Padding\" -> {{140, \
+30}, {84, 16}}], True];
+   exportFigure[a, \"fig8_accept\"];
+   exportFigure[b, \"fig8_jetIEt\"];
+   {a, b}];\
+\>", "Input",
+ CellChangeTimes->{{3.996596621905046*^9, 3.9965966221319427`*^9}},
+ CellLabel->"In[98]:=",ExpressionUUID->"9791e272-416f-45bc-963f-06f744d90bbd"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{1477, 1341},
+WindowMargins->{{51, Automatic}, {15, Automatic}},
+FrontEndVersion->"14.1 for Mac OS X ARM (64-bit) (July 16, 2024)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"08e93999-d703-444b-a4a2-6c90bceddf9f"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[576, 22, 113, 0, 96, "Title",ExpressionUUID->"265a2805-bf93-4eb2-b156-c2f3eaaea949"],
+Cell[CellGroupData[{
+Cell[714, 26, 79, 0, 67, "Chapter",ExpressionUUID->"db503860-8c1c-43b8-a2c6-cab11af6b999"],
+Cell[796, 28, 472, 9, 98, "Input",ExpressionUUID->"792475f8-9775-4009-9dee-215d8dd3e5da"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[1305, 42, 88, 0, 52, "Subtitle",ExpressionUUID->"2186ca33-125f-4435-a748-8198a8042739"],
+Cell[1396, 44, 1742, 43, 584, "Input",ExpressionUUID->"cb87132c-6375-4dc7-b15f-92d09568c535"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[3175, 92, 82, 0, 52, "Subtitle",ExpressionUUID->"78213c59-a3a4-4cbc-b823-fcafd6e875c2"],
+Cell[3260, 94, 442, 10, 133, "Input",ExpressionUUID->"83b1bcc4-85fe-4b97-93a5-1b6b52c01efa"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[3739, 109, 82, 0, 52, "Subtitle",ExpressionUUID->"02adb5d1-d406-4bf7-a24b-45f0a387080c"],
+Cell[3824, 111, 849, 19, 272, "Input",ExpressionUUID->"e03c1c87-c06f-4e98-aa7b-324da24aeeb5"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[4710, 135, 82, 0, 52, "Subtitle",ExpressionUUID->"218b0c39-5be8-4e21-ba98-1b7ab0351ca0"],
+Cell[4795, 137, 1792, 38, 514, "Input",ExpressionUUID->"24871f5e-38a5-4630-831b-edc6d8221884"],
+Cell[6590, 177, 96, 1, 29, "Input",ExpressionUUID->"4631486f-719d-46cf-b12c-3a38cb564fe8"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6723, 183, 83, 0, 52, "Subtitle",ExpressionUUID->"433b2348-df30-4ddb-a007-63fe5cada635"],
+Cell[6809, 185, 1355, 28, 376, "Input",ExpressionUUID->"7239fb9e-b991-48d3-860c-53e2f1156e28"],
+Cell[8167, 215, 96, 1, 29, "Input",ExpressionUUID->"21e59e49-b072-4a8c-82c3-e99b1b9a0ee9"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[8300, 221, 82, 0, 52, "Subtitle",ExpressionUUID->"c988b0f8-2f23-447c-a783-7e30229d3631"],
+Cell[8385, 223, 982, 23, 289, "Input",ExpressionUUID->"75faa4e9-76b4-4493-ab3a-95889e220698"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[9404, 251, 108, 0, 52, "Subtitle",ExpressionUUID->"a3aac62f-01b7-43d6-a8f7-36c5c589800f"],
+Cell[9515, 253, 1746, 36, 445, "Input",ExpressionUUID->"7967ae24-5752-4f67-8806-1c358a3ca905"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[11298, 294, 104, 0, 52, "Subtitle",ExpressionUUID->"8d5082e3-6c59-4f1a-8d5a-88db42bdffa1"],
+Cell[11405, 296, 1169, 25, 272, "Input",ExpressionUUID->"0e7a53be-21f8-4ac4-81b5-c260c7f2aeb6"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[12611, 326, 94, 0, 52, "Subtitle",ExpressionUUID->"cb4a4912-09fb-4e5c-bcd8-e52fd0ac0c03"],
+Cell[12708, 328, 2608, 49, 601, "Input",ExpressionUUID->"1aab7105-b6b6-4469-949f-7c9a081b45fb"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[15353, 382, 85, 0, 52, "Subtitle",ExpressionUUID->"8eb5ac1e-7d10-4159-9c1f-8d31395e4417"],
+Cell[15441, 384, 2064, 43, 584, "Input",ExpressionUUID->"e3713c09-5eb7-4ffc-aeed-8a92ab0270d5"],
+Cell[17508, 429, 96, 1, 29, "Input",ExpressionUUID->"93cc2db3-2222-45c6-b4e7-1266eb50f568"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[17641, 435, 90, 0, 52, "Subtitle",ExpressionUUID->"c99c2f6e-f1ad-43bb-8421-2ac68c21af87"],
+Cell[17734, 437, 1208, 28, 410, "Input",ExpressionUUID->"8e1bd6f0-2f65-4394-adb4-dfef6f5bd821"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[18979, 470, 81, 0, 67, "Chapter",ExpressionUUID->"efec4b5a-5e43-4a32-bd71-5815806e0bca"],
+Cell[CellGroupData[{
+Cell[19085, 474, 111, 0, 66, "Section",ExpressionUUID->"2eb6d29c-57da-4e7a-8323-7354c538727f"],
+Cell[19199, 476, 840, 19, 237, "Input",ExpressionUUID->"10ef2aee-bab7-427f-a7f7-cc828d2e97f3"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[20076, 500, 117, 0, 66, "Section",ExpressionUUID->"e41d553d-2a2b-4a5b-a9a2-914208f5840b"],
+Cell[20196, 502, 595, 14, 168, "Input",ExpressionUUID->"cc54a86e-8db5-439a-90e4-d663fca96ffb"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[20828, 521, 105, 0, 66, "Section",ExpressionUUID->"6413bf5f-df23-42a7-ab33-d1b50bd2d95a"],
+Cell[20936, 523, 1129, 25, 289, "Input",ExpressionUUID->"9082abad-aa36-4061-b17f-dbd4f50771bd"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[22102, 553, 116, 0, 66, "Section",ExpressionUUID->"b9ed7891-9d0e-4b81-b335-97ba7b8dc573"],
+Cell[22221, 555, 1051, 23, 306, "Input",ExpressionUUID->"2a607e94-48cb-4ff2-a60d-a78378c9b8d9"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[23309, 583, 101, 0, 66, "Section",ExpressionUUID->"40a2ebd2-129f-4f98-b59d-f52f89d18974"],
+Cell[CellGroupData[{
+Cell[23435, 587, 862, 19, 254, "Input",ExpressionUUID->"bc3d3e50-814b-4c1d-81f2-d26eacb860a3"],
+Cell[24300, 608, 43050, 737, 633, "Output",ExpressionUUID->"7e5eeece-40a7-4ad3-840a-14d8155af556"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[67399, 1351, 99, 0, 66, "Section",ExpressionUUID->"cfedca3a-49f8-410c-83da-db8b034db0f6"],
+Cell[67501, 1353, 1227, 27, 341, "Input",ExpressionUUID->"8fb5415a-2ff8-45bb-af35-1ba47a36a4b7"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[68765, 1385, 120, 0, 66, "Section",ExpressionUUID->"1d84886e-1511-496a-9f38-5c9ac8d826b0"],
+Cell[68888, 1387, 1772, 37, 462, "Input",ExpressionUUID->"9791e272-416f-45bc-963f-06f744d90bbd"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+

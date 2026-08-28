@@ -106,8 +106,8 @@
   },
   "haa-4b-ma15": {
     "category": "signal",
-    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/haa-4b-ma15-POWHEG",
-    "fingerprint": "fc02d4b910ded60d7e2ec69fe7fcdc0fa4b8c7438c3bc1bec42db13a07942c67"
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/haa-4b-ma15-ZBoverlay",
+    "fingerprint": "788c538421ed498078956ba43df6863a2f3c629b2b9636a8ea30dc83faf0bc5e"
   },
   "smj-case-A": {
     "category": "signal",

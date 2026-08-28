@@ -134,7 +134,7 @@ Three energy columns are missing from the table: the `muonIEtUnconstrained` coun
 The muon energies also carry an offset, since the hardware `0` marks the absence of a muon: the momentum is (`muonIEt` - 1) x 0.5 GeV and the unconstrained momentum is (`muonIEtUnconstrained` - 1) GeV.
 No other collection has such an offset.
 Quality, charge, isolation, index, and tower-count fields are already integers and unscaled, as is every `seeds` bit and every `event_info` field.
-The only exception is `nPV_True`, which is a float32 average per luminosity section in the zero bias data and an integer count in the simulations.
+The only exception is `nPV_True`, which is a float32 average per luminosity section in the zero bias and in `haa-4b-ma15`, and an integer count in the other simulations.
 
 The four object collections are jagged: they have one entry per in-time object up to the global trigger's capacity of {capacities}.
 
@@ -143,7 +143,16 @@ The four object collections are jagged: they have one entry per in-time object u
 
 **Ordering.**
 Objects arrive in the trigger's readout order, which is ET-descending for the calorimeter objects.
-This is not true for the muons.
+This is not true for the muons, except in `haa-4b-ma15`, whose overlay sorted every collection.
+
+**`haa-4b-ma15` carries overlaid pile-up.**
+The sample was simulated without pile-up, and each of its events is the merge of the simulated event with one zero-bias event of the same split, at the level of the trigger objects.
+The partner events were drawn without replacement with NumPy's PCG64 generator seeded with **{overlay_seed}** from the two zero-bias runs concatenated as `{zb_order}`; they remain in the zero-bias splits.
+All the drawn events come from `val` and 'test', for each stage.
+The four collections are concatenated, ordered by `Et` and cut at the trigger's capacity of {capacities}; `ET`, `HT` and the tower count are added and clipped at their all-ones code; `MET`, `MHT`, `FET` and `FHT` are added as vectors and quantised back to their codes.
+The sample only approximates a simulation with pile-up.
+Its seeds are the OR of the two events' decisions over the simulation menu and `L1bit` the OR of those seeds.
+Its `event_info` is the zero-bias partner's: the sample has real beam coordinates and a float32 `nPV_True`.
 
 **The menu differs between data and simulation.**
 Zero bias has 178 algorithm columns and simulation has 158, of which 145 are shared.
@@ -151,14 +160,15 @@ The two data sets do not have the same order for the trigger algorithms in their
 Therefore, please select seeds by name, not by position.
 
 **`nPV_True` has two types.**
-It is float32 in zero bias and int32 in simulation.
+It is float32 in zero bias and in `haa-4b-ma15`, and int32 in the other simulations.
 
 **Simulation has no beam coordinates in `event_info`.**
-Every simulated sample has `run` of 1, `bx` of 4294967295, and `orbit` of 18446744073709551615, the all-ones codes of their types.
-The zero bias data has non-trivial values for these fields.
+Every simulated sample except `haa-4b-ma15` has `run` of 1, `bx` of 4294967295, and `orbit` of 18446744073709551615, the all-ones codes of their types.
+The zero bias data has non-trivial values for these fields, and `haa-4b-ma15` carries those of its zero-bias partner.
 
 **`jetRawEt` is zero throughout the zero-bias data.**
 The branch is unfilled in original data ntuples, though it contains real values in simulation.
+In `haa-4b-ma15` it is zero for the jets that came from the zero-bias partner.
 
 
 ## Standard Preprocessing
@@ -179,7 +189,7 @@ Concatenating one run after the other gives the right rows in the wrong order.
 ## Provenance
 
 Zero-bias data: CMS, 2025, runs {runs}.
-Simulated samples: CMS Run 3 Winter25 campaign.
+Simulated samples: CMS Run 3 Winter25 campaign; `haa-4b-ma15` from its no-pile-up production (`142XnoPU`), with pile-up overlaid from the zero-bias data as the caveats describe.
 The values are the Level-1 trigger's own reconstructed objects rather than offline reconstruction.
 
 ## Licence
@@ -235,7 +245,7 @@ The folder also contains an `L1bit` field, which encodes the logical OR of the a
 Skip the `seeds` folder if you want kinematics alone and do not want to compare your anomaly detector with the rest of the algorithms.
 
 Row *i* of `<data set>-seeds` is row *i* of `<data set>`, which is the correspondence that always holds.
-Neither column is a key on its own: every event the standard preprocessing dropped carries `order = -1`, and `event` cycles over a hundred values in `ggH-suep-decay`, `haa-4b-ma15` and `smj-case-A`.
+Neither column is a key on its own: every event the standard preprocessing dropped carries `order = -1`, and `event` cycles over a hundred values in `ggH-suep-decay` and `smj-case-A`.
 Among the rows with `order >= 0` it is unique within a split, so a filter or a shuffle can be undone by joining on `order` once those rows are set aside.
 
 ## Loading
@@ -327,28 +337,38 @@ The steps are exact fractions: calorimeter eta is 0.0870/2, muon eta is 0.0870/8
 `muons_muonIEtaAtVtx` and `muons_muonIPhiAtVtx` take the same scales as muon eta and phi.
 Three energies are missing from the table: `muons_muonIEtUnconstrained` is 1 GeV per unit rather than 0.5, `ET_ETTEM` takes the same 0.5 GeV as `ET_Et`, and `jets_jetRawEt` has no documented scale, but it's probably 1 GeV per step.
 The muon energies also carry an offset, since the hardware `0` marks the absence of a muon: the momentum is (`muons_muonIEt` - 1) x 0.5 GeV and the unconstrained momentum is (`muons_muonIEtUnconstrained` - 1) GeV.
-Quality, charge, isolation, index and tower-count fields are already integers and unscaled, as is every seed and every event information field except `nPV_True`, which is a float32 average per luminosity section in the zero bias and an integer count in the simulations.
+Quality, charge, isolation, index and tower-count fields are already integers and unscaled, as is every seed and every event information field except `nPV_True`, which is a float32 average per luminosity section in the zero bias and in `haa-4b-ma15`, and an integer count in the other simulations.
 
 ## Caveats
 
 **Ordering.**
 Objects arrive in the trigger's readout order, which is ET-descending for the calorimeter objects.
-This is not the case for the muons.
+This is not the case for the muons, except in `haa-4b-ma15`, whose overlay sorted every collection.
 The shipped loader sorts objects by ET before processing them.
+
+**`haa-4b-ma15` carries overlaid pile-up.**
+The sample was simulated without pile-up, and each of its events is the merge of the simulated event with one zero-bias event of the same split, at the level of the trigger objects.
+The partner events were drawn without replacement with NumPy's PCG64 generator seeded with **{overlay_seed}** from the two zero-bias runs concatenated as `{zb_order}`; they remain in the zero-bias splits.
+All the drawn events come from `val` and 'test', for each stage.
+The four collections are concatenated, ordered by `Et` and cut at the trigger's capacity of {capacities}; `ET`, `HT` and the tower count are added and clipped at their all-ones code; `MET`, `MHT`, `FET` and `FHT` are added as vectors and quantised back to their codes.
+The sample only approximates a simulation with pile-up.
+Its seeds are the OR of the two events' decisions over the simulation menu and `L1bit` the OR of those seeds.
+Its `event_info` is the zero-bias partner's: the sample has real beam coordinates and a float32 `nPV_True`.
 
 **The menu differs between data and simulation.**
 Zero bias data has 178 algorithm columns and the simulations have 158, of which 145 are shared.
 Additionally, the order of the other trigger algorithm decisions is not the same between zerobias and simulations.
 
 **`nPV_True` has two types.**
-It is float32 in zero bias and int32 in simulation.
+It is float32 in zero bias and in `haa-4b-ma15`, and int32 in the other simulations.
 
 **Simulation carries no beam coordinates.**
-Every simulated sample has `run` of 1, `bx` of 4294967295 and `orbit` of 18446744073709551615, the all-ones codes of their types, in place of the values a collision would have.
-Only the zero bias has non-trivial values in these fields.
+Every simulated sample except `haa-4b-ma15` has `run` of 1, `bx` of 4294967295 and `orbit` of 18446744073709551615, the all-ones codes of their types, in place of the values a collision would have.
+The zero bias has non-trivial values in these fields, and `haa-4b-ma15` carries those of its zero-bias partner.
 
 **`jetRawEt` is zero throughout the zero-bias data.**
 The branch is unfilled in original data ntuples, though it has real values in simulation.
+In `haa-4b-ma15` it is zero for the jets that came from the zero-bias partner.
 
 ## Standard preprocessing
 
@@ -372,7 +392,7 @@ The events cut by this pipeline have the `order` set to `-1`: run over the zero 
 
 ## Provenance
 
-Zero-bias data: CMS, 2025, runs {runs}. Simulated samples: CMS Run 3 Winter25 campaign.
+Zero-bias data: CMS, 2025, runs {runs}. Simulated samples: CMS Run 3 Winter25 campaign; `haa-4b-ma15` from its no-pile-up production (`142XnoPU`), with pile-up overlaid from the zero-bias data as the caveats describe.
 The values are the Level-1 trigger's own reconstructed objects rather than offline reconstruction.
 
 ## Citation
@@ -423,6 +443,7 @@ def render(summary: dict) -> str:
             seed=summary["split_seed"],
             units_table=units_table(),
             capacities=capacities(),
+            overlay_seed=overlay_seed(summary),
             **event_counts(summary["datasets"]),
         )
     )
@@ -444,6 +465,7 @@ def render_hf(summary: dict, labels: dict) -> str:
             seed=summary["split_seed"],
             units_table=units_table(),
             capacities=capacities(),
+            overlay_seed=overlay_seed(summary),
             **event_counts(datasets),
             **category_totals(datasets),
         )
@@ -465,6 +487,11 @@ def event_counts(datasets: dict) -> dict:
         "runs": ", ".join(sorted(k.replace("ZB_run", "") for k in zerobias)),
         "n_signal": sum(1 for v in datasets.values() if v["category"] == "signal"),
     }
+
+
+def overlay_seed(summary: dict) -> int:
+    """Seed of the draw that paired the no-pile-up sample with its zero-bias partners."""
+    return summary["overlay"]["haa-4b-ma15"]["seed"]
 
 
 def split_table(datasets: dict) -> str:

@@ -86,6 +86,15 @@ if 'export' in args.stage:
         index, read(args.summary), splitmap,
         work / "consolidated", tree, args.ncores,
     )
+    # write_manifest builds the manifest out of what this run exported, so a partial
+    # export would otherwise drop every other data set of the release from it.
+    if args.only and (metadata / "release.json").is_file():
+        previous = read(metadata / "release.json")["datasets"]
+        counts = {**{n: e["counts"] for n, e in previous.items()}, **counts}
+        index = {
+            **{n: {"category": e["category"]} for n, e in previous.items()},
+            **index,
+        }
     export.write_manifest(metadata / "release.json", args.version, counts, index)
 
 if 'card' in args.stage:
