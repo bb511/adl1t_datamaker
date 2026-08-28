@@ -75,7 +75,7 @@ The data is published pre-partitioned into training, validation and test splits:
 All the feature values are in the trigger-native format of hardware integers.
 
 Specific technical data can be found in the github repo that was used to produce this data: https://github.com/bb511/adl1t_datamaker
-The data were produced at commit `bca1cbf750555d3ca8fc392d194d5df0155e88e5` of that repository.
+The data were produced at commit `16dcaac` of that repository.
 
 ## Layout
 
@@ -233,7 +233,7 @@ The data is published pre-partitioned into training, validation and test splits:
 All the feature values are in the trigger-native format of hardware integers.
 
 Specific technical data can be found in the github repo that was used to produce this data: https://github.com/bb511/adl1t_datamaker
-The data were produced at commit `bca1cbf750555d3ca8fc392d194d5df0155e88e5` of that repository.
+The data were produced at commit `16dcaac` of that repository.
 
 ## Comparison with other trigger algorithms
 
