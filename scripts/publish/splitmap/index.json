@@ -106,7 +106,7 @@
   },
   "haa-4b-ma15": {
     "category": "signal",
-    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/haa-4b-ma15-ZBoverlay",
+    "raw_dir": "/data/deodagiu/adl1t_data/parquet_files/L1TNtupleRun3-142XWinter25/haa-4b-ma15",
     "fingerprint": "788c538421ed498078956ba43df6863a2f3c629b2b9636a8ea30dc83faf0bc5e"
   },
   "smj-case-A": {
