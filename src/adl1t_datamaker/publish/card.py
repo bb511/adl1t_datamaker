@@ -164,7 +164,7 @@ It is float32 in zero bias and in `haa-4b-ma15`, and int32 in the other simulati
 
 **Simulation has no beam coordinates in `event_info`.**
 Every simulated sample except `haa-4b-ma15` has `run` of 1, `bx` of 4294967295, and `orbit` of 18446744073709551615, the all-ones codes of their types.
-The zero bias data has non-trivial values for these fields, and `haa-4b-ma15` carries those of its zero-bias partner.
+The zero bias data has non-trivial values for these fields, and `haa-4b-ma15` has those of its zero-bias partner.
 
 **`jetRawEt` is zero throughout the zero-bias data.**
 The branch is unfilled in original data ntuples, though it contains real values in simulation.
