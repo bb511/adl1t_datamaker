@@ -362,9 +362,10 @@ Additionally, the order of the other trigger algorithm decisions is not the same
 **`nPV_True` has two types.**
 It is float32 in zero bias and in `haa-4b-ma15`, and int32 in the other simulations.
 
-**Simulation carries no beam coordinates.**
-Every simulated sample except `haa-4b-ma15` has `run` of 1, `bx` of 4294967295 and `orbit` of 18446744073709551615, the all-ones codes of their types, in place of the values a collision would have.
-The zero bias has non-trivial values in these fields, and `haa-4b-ma15` carries those of its zero-bias partner.
+**Simulation has no beam coordinates.**
+Every simulated sample except `haa-4b-ma15` has `run` of 1 and `bx` and `orbit` of 4294967295, the all-ones code of 32 bits, in place of the values a collision would have.
+On Zenodo `orbit` holds the all-ones code of its 64 bits instead, 18446744073709551615, which the Hub's viewer cannot render; this is the only place the two copies differ.
+The zero bias has non-trivial values in these fields, and `haa-4b-ma15` has those of its zero-bias partner.
 
 **`jetRawEt` is zero throughout the zero-bias data.**
 The branch is unfilled in original data ntuples, though it has real values in simulation.

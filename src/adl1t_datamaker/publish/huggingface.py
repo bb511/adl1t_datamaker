@@ -120,7 +120,7 @@ def joined_table(split_dir: Path, dataset: str, label: int) -> pa.Table:
 
     rows = len(next(iter(columns.values())))
     table = ak.to_arrow_table(ak.Array(columns), extensionarray=False)
-    table = unwrapped(table, event_level).append_column(
+    table = viewer_safe_orbit(unwrapped(table, event_level)).append_column(
         "dataset", pa.array([dataset] * rows)
     )
 
@@ -165,6 +165,27 @@ def unwrapped(table: pa.Table, names) -> pa.Table:
         table = table.set_column(table.schema.get_field_index(name), name, flat)
 
     return table
+
+
+# The Hub's viewer takes a column's extrema through float64, where 2**64 - 1 rounds up to
+# 2**64 and breaks its serialisation. The all-ones code of the 32-bit orbit counter is the
+# value ``bx`` already carries for the same purpose.
+ORBIT_UNDEFINED = 2**32 - 1
+
+
+def viewer_safe_orbit(table: pa.Table) -> pa.Table:
+    """Lower the simulation's all-ones ``orbit`` to the all-ones code of 32 bits.
+
+    The record keeps 2**64 - 1; the mirror alone departs from it, so that the viewer's
+    statistics and preview jobs do not fail on the simulated samples.
+    """
+    index = table.schema.get_field_index("orbit")
+    if index < 0:
+        return table
+    orbit = table["orbit"]
+    undefined = pc.equal(orbit, pa.scalar(2**64 - 1, pa.uint64()))
+    lowered = pc.if_else(undefined, pa.scalar(ORBIT_UNDEFINED, pa.uint64()), orbit)
+    return table.set_column(index, "orbit", lowered)
 
 
 def write_shards(table: pa.Table, out_dir: Path, split: str) -> int:

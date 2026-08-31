@@ -4,6 +4,9 @@ The `publish` script compiles the data into a zenodo-ready record.
 The `export_hf` script prepares it for HuggingFace; its `--stage finish` rewrites the card,
 the loader, the configs and `requirements.txt` of a mirror that is already on disk, reading
 the configs back from the mirror's own data files instead of rebuilding them.
+In the mirror the simulation's all-ones `orbit` is lowered to the all-ones code of
+32 bits, 4294967295, which the Hub's viewer can render; the record itself keeps the
+64-bit code.
 
 The `overlay` script adds pile-up to a sample that was simulated without it: each event of
 the sample receives one zero-bias event of the same split, merged into it at the level of
